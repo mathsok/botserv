@@ -47,13 +47,14 @@ menu_teacher = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="➕ Додати учня"), KeyboardButton(text="📋 Список учнів")],
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="✔️ Відмітити заняття")],
-        [KeyboardButton(text="💳 Баланси")],
+        [KeyboardButton(text="💳 Баланси"), KeyboardButton(text="📝 Відправити домашнє завдання")],
     ], resize_keyboard=True
 )
 
 menu_student = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")]
+        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
+        [KeyboardButton(text="📚 Домашні завдання")]
     ], resize_keyboard=True
 )
 
@@ -100,6 +101,17 @@ def new_code():
         code = str(random.randint(1000, 9999))
         if code not in existing:
             return code
+
+def new_hw_id():
+    """Генерує унікальний ID для домашнього завдання"""
+    all_ids = set()
+    for d in students.values():
+        for hw in d.get("homework", []):
+            all_ids.add(hw.get("id", ""))
+    while True:
+        hw_id = str(random.randint(10000, 99999))
+        if hw_id not in all_ids:
+            return hw_id
 
 
 # ─── НАГАДУВАННЯ ───────────────────────────────────────────────────────────────
@@ -349,6 +361,326 @@ async def teacher_balances(message: types.Message):
     await message.answer(text, parse_mode="Markdown")
 
 
+# ─── ВЧИТЕЛЬ: ДОМАШНЄ ЗАВДАННЯ — ВИБІР УЧНЯ ───────────────────────────────────
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text == "📝 Відправити домашнє завдання")
+async def hw_choose_student(message: types.Message):
+    if not students:
+        await message.answer("Учнів немає.", reply_markup=menu_teacher)
+        return
+
+    kb = [[KeyboardButton(text=f"ДЗ для: {n}")] for n in students]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer(
+        "Обери учня, якому хочеш надіслати домашнє завдання:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    )
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text.startswith("ДЗ для: "))
+async def hw_enter_text(message: types.Message):
+    name = message.text.replace("ДЗ для: ", "")
+    if name not in students:
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+
+    user_state[message.from_user.id] = {"state": "hw_waiting_text", "name": name}
+    await message.answer(
+        f"📝 Введи текст домашнього завдання для {name}:\n"
+        f"(або надішли фото із підписом)",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+    )
+
+
+# ─── ВЧИТЕЛЬ: ДОМАШНЄ ЗАВДАННЯ — ОТРИМАННЯ ТЕКСТУ АБО ФОТО ───────────────────
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "hw_waiting_text",
+    F.photo
+)
+async def hw_receive_photo(message: types.Message):
+    """Учитель надсилає ДЗ у вигляді фото"""
+    uid = message.from_user.id
+    state = user_state[uid]
+    name = state["name"]
+
+    caption = message.caption or ""
+    hw_id = new_hw_id()
+    date_str = datetime.now().strftime("%d.%m.%Y")
+
+    if "homework" not in students[name]:
+        students[name]["homework"] = []
+
+    students[name]["homework"].append({
+        "id": hw_id,
+        "text": caption or "Дивись фото",
+        "photo_id": message.photo[-1].file_id,
+        "date": date_str,
+        "status": "new"  # new | done
+    })
+    save_data()
+    user_state[uid] = None
+
+    await message.answer(
+        f"✅ Домашнє завдання надіслано учню {name}!",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення учню
+    u_id = students[name].get("u_id")
+    if u_id:
+        try:
+            await bot.send_photo(
+                u_id,
+                message.photo[-1].file_id,
+                caption=(
+                    f"📝 Нове домашнє завдання!\n"
+                    f"📅 {date_str}\n"
+                    f"{caption}\n\n"
+                    f"Перейди у розділ 📚 *Домашні завдання*, щоб відмітити виконання."
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "hw_waiting_text"
+)
+async def hw_receive_text(message: types.Message):
+    """Учитель надсилає ДЗ у вигляді тексту"""
+    uid = message.from_user.id
+    state = user_state[uid]
+    name = state["name"]
+
+    hw_id = new_hw_id()
+    date_str = datetime.now().strftime("%d.%m.%Y")
+
+    if "homework" not in students[name]:
+        students[name]["homework"] = []
+
+    students[name]["homework"].append({
+        "id": hw_id,
+        "text": message.text,
+        "photo_id": None,
+        "date": date_str,
+        "status": "new"
+    })
+    save_data()
+    user_state[uid] = None
+
+    await message.answer(
+        f"✅ Домашнє завдання надіслано учню {name}!",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення учню
+    u_id = students[name].get("u_id")
+    if u_id:
+        try:
+            await bot.send_message(
+                u_id,
+                f"📝 Нове домашнє завдання!\n"
+                f"📅 {date_str}\n\n"
+                f"{message.text}\n\n"
+                f"Перейди у розділ 📚 *Домашні завдання*, щоб відмітити виконання.",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+
+# ─── УЧЕНЬ: ДОМАШНІ ЗАВДАННЯ — СПИСОК ─────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📚 Домашні завдання")
+async def student_hw_list(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        return
+
+    homework = data.get("homework", [])
+    if not homework:
+        await message.answer("📚 Домашніх завдань немає.")
+        return
+
+    # Показуємо кнопки для кожного ДЗ
+    kb = []
+    for hw in homework:
+        status_icon = "✅" if hw["status"] == "done" else "🔴"
+        label = f"{status_icon} ДЗ від {hw['date']}: {hw['text'][:25]}{'…' if len(hw['text']) > 25 else ''}"
+        kb.append([KeyboardButton(text=f"ДЗ#{hw['id']}")])
+
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+
+    # Формуємо текстовий список
+    text = "📚 *Твої домашні завдання:*\n\n"
+    for hw in homework:
+        status_icon = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
+        text += f"*ДЗ від {hw['date']}* (#{hw['id']})\n{hw['text'][:60]}{'…' if len(hw['text']) > 60 else ''}\nСтатус: {status_icon}\n\n"
+
+    text += "Натисни на номер ДЗ нижче, щоб відкрити його:"
+
+    await message.answer(
+        text,
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    )
+
+
+# ─── УЧЕНЬ: ДОМАШНЄ ЗАВДАННЯ — ДЕТАЛІ ─────────────────────────────────────────
+
+@dp.message(lambda m: m.text and m.text.startswith("ДЗ#"))
+async def student_hw_detail(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        return
+
+    hw_id = message.text.replace("ДЗ#", "").strip()
+    homework = data.get("homework", [])
+    hw = next((h for h in homework if h["id"] == hw_id), None)
+
+    if not hw:
+        await message.answer("Домашнє завдання не знайдено.")
+        return
+
+    status_text = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
+    text = (
+        f"📝 *Домашнє завдання від {hw['date']}*\n\n"
+        f"{hw['text']}\n\n"
+        f"Статус: {status_text}"
+    )
+
+    # Зберігаємо поточне ДЗ у стані
+    user_state[uid] = {"state": "viewing_hw", "hw_id": hw_id}
+
+    # Кнопки залежать від статусу
+    if hw["status"] == "done":
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+    else:
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="✅ Відмітити як виконане")],
+            [KeyboardButton(text="📸 Надіслати фото виконання")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+
+    # Якщо є фото — надсилаємо фото з підписом
+    if hw.get("photo_id"):
+        await message.answer_photo(
+            hw["photo_id"],
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=kb
+        )
+    else:
+        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+
+# ─── УЧЕНЬ: ВІДМІТИТИ ДЗ ЯК ВИКОНАНЕ ─────────────────────────────────────────
+
+@dp.message(
+    lambda m: isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "viewing_hw"
+    and m.text == "✅ Відмітити як виконане"
+)
+async def hw_mark_done(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        return
+
+    hw_id = user_state[uid]["hw_id"]
+    for hw in data.get("homework", []):
+        if hw["id"] == hw_id:
+            hw["status"] = "done"
+            break
+
+    save_data()
+    user_state[uid] = None
+
+    await message.answer("✅ Чудово! Домашнє завдання відмічено як виконане.", reply_markup=menu_student)
+
+    # Сповіщення вчителю
+    try:
+        await bot.send_message(
+            ADMIN_ID,
+            f"✅ {name} відмітив домашнє завдання як виконане.\n"
+            f"📅 ДЗ від {next((h['date'] for h in data['homework'] if h['id'] == hw_id), '?')}"
+        )
+    except Exception:
+        pass
+
+
+# ─── УЧЕНЬ: НАДІСЛАТИ ФОТО ВИКОНАННЯ ──────────────────────────────────────────
+
+@dp.message(
+    lambda m: isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "viewing_hw"
+    and m.text == "📸 Надіслати фото виконання"
+)
+async def hw_request_photo(message: types.Message):
+    uid = message.from_user.id
+    hw_id = user_state[uid]["hw_id"]
+    user_state[uid] = {"state": "hw_sending_photo", "hw_id": hw_id}
+    await message.answer(
+        "📸 Надішли фото виконаного домашнього завдання:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@dp.message(
+    lambda m: isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "hw_sending_photo",
+    F.photo
+)
+async def hw_receive_done_photo(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        return
+
+    hw_id = user_state[uid]["hw_id"]
+    hw_date = "?"
+    for hw in data.get("homework", []):
+        if hw["id"] == hw_id:
+            hw["status"] = "done"
+            hw_date = hw["date"]
+            break
+
+    save_data()
+    user_state[uid] = None
+
+    await message.answer("✅ Фото надіслано вчителю! Домашнє завдання відмічено як виконане.", reply_markup=menu_student)
+
+    # Пересилаємо фото вчителю
+    try:
+        await bot.send_photo(
+            ADMIN_ID,
+            message.photo[-1].file_id,
+            caption=(
+                f"📸 {name} надіслав виконане домашнє завдання!\n"
+                f"📅 ДЗ від {hw_date}\n"
+                f"Коментар: {message.caption or '—'}"
+            )
+        )
+    except Exception:
+        pass
+
+
 # ─── УЧЕНЬ: БАЛАНС ─────────────────────────────────────────────────────────────
 
 @dp.message(lambda m: m.text == "💳 Мій баланс")
@@ -550,6 +882,7 @@ async def handle(message: types.Message):
                 "price": state["price"],
                 "balance": 0,
                 "sessions": state["sessions"],
+                "homework": [],
                 "u_code": u_code,
                 "u_id": None,
                 "p_code": p_code,
