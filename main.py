@@ -54,14 +54,16 @@ menu_teacher = ReplyKeyboardMarkup(
 menu_student = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-        [KeyboardButton(text="📚 Домашні завдання")]
+        [KeyboardButton(text="📚 Домашні завдання")],
+        [KeyboardButton(text="🚪 Вийти з кабінета")]
     ], resize_keyboard=True
 )
 
 menu_parent = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Розклад дитини"), KeyboardButton(text="💳 Баланс дитини")],
-        [KeyboardButton(text="💰 Поповнити баланс")]
+        [KeyboardButton(text="💰 Поповнити баланс")],
+        [KeyboardButton(text="🚪 Вийти з кабінета")]
     ], resize_keyboard=True
 )
 
@@ -679,6 +681,43 @@ async def hw_receive_done_photo(message: types.Message):
         )
     except Exception:
         pass
+
+
+# ─── ВИХІД З КАБІНЕТУ ─────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "🚪 Вийти з кабінета")
+async def logout(message: types.Message):
+    uid = message.from_user.id
+
+    # Визначаємо хто виходить і скидаємо прив'язку
+    for name, data in students.items():
+        if data.get("u_id") == uid:
+            data["u_id"] = None
+            data["u_code"] = new_code()  # генеруємо новий код для повторного входу
+            save_data()
+            user_state[uid] = None
+            await message.answer(
+                f"👋 Ти вийшов з кабінету.\n\n"
+                f"Новий код для входу: *{data['u_code']}*\n"
+                f"Збережи його, якщо захочеш увійти знову.",
+                parse_mode="Markdown",
+                reply_markup=types.ReplyKeyboardRemove()
+            )
+            return
+
+        if data.get("p_id") == uid:
+            data["p_id"] = None
+            data["p_code"] = new_code()
+            save_data()
+            user_state[uid] = None
+            await message.answer(
+                f"👋 Ви вийшли з кабінету.\n\n"
+                f"Новий код для входу: *{data['p_code']}*\n"
+                f"Збережіть його, якщо захочете увійти знову.",
+                parse_mode="Markdown",
+                reply_markup=types.ReplyKeyboardRemove()
+            )
+            return
 
 
 # ─── УЧЕНЬ: БАЛАНС ─────────────────────────────────────────────────────────────
