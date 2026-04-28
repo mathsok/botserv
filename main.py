@@ -2,23 +2,23 @@ import asyncio
 import os
 import json
 import random
-import urllib.parse
-import time
 from datetime import datetime
+from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart
+
+load_dotenv()
 
 # ─── КОНФІГУРАЦІЯ ──────────────────────────────────────────────────────────────
 
-TOKEN = os.environ["8212597362:AAEBeYKcBHDOCA5kxNB7cbVo5gVLV6oUqXE"]
-ADMIN_ID = 777785304
+TOKEN = os.environ["BOT_TOKEN"]
+ADMIN_ID = int(os.environ["ADMIN_ID"])
 DATA_FILE = "students_db.json"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Структура: { "StudentName": { price, balance, sessions[], u_code, u_id, p_code, p_id } }
 students = {}
 user_state = {}
 
@@ -34,8 +34,12 @@ def load_data():
             students = json.load(f)
 
 def save_data():
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+    # Атомарний запис: спочатку у тимчасовий файл, потім перейменовуємо
+    # Це захищає від пошкодження даних при збої під час запису
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(students, f, ensure_ascii=False, indent=4)
+    os.replace(tmp, DATA_FILE)
 
 
 # ─── КЛАВІАТУРИ ────────────────────────────────────────────────────────────────
@@ -87,7 +91,17 @@ def find_by_pid(pid):
     return None, None
 
 def new_code():
-    return str(random.randint(1000, 9999))
+    """Генерує унікальний 4-значний код, якого ще немає серед учнів"""
+    existing = set()
+    for d in students.values():
+        if d.get("u_code"):
+            existing.add(d["u_code"])
+        if d.get("p_code"):
+            existing.add(d["p_code"])
+    while True:
+        code = str(random.randint(1000, 9999))
+        if code not in existing:
+            return code
 
 
 # ─── СТАРТ ─────────────────────────────────────────────────────────────────────
@@ -97,67 +111,23 @@ async def start(message: types.Message):
     load_data()
     uid = message.from_user.id
 
-    try:
-        if uid == ADMIN_ID:
-            students_list = [
-                {"n": name, "b": d["balance"], "s": "|".join([f"{s['day']} {s['time']}" for s in d.get("sessions", [])])}
-                for name, d in students.items()
-            ]
-            data_str = json.dumps(students_list, ensure_ascii=False)
-            encoded_data = urllib.parse.quote(data_str)"
-            text = "Вітаю, Вчителю! Ваша панель керування:"
+    if uid == ADMIN_ID:
+        await message.answer("Вітаю, Вчителю! Ваша панель керування:", reply_markup=menu_teacher)
+        return
 
-            kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="➕ Додати учня"), KeyboardButton(text="📋 Список учнів")],
-                    [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="✔️ Відмітити заняття")],
-                    [KeyboardButton(text="💳 Баланси")]
-                ], resize_keyboard=True
-            )
-            await message.answer(text, reply_markup=kb)
-            return
+    s_name, _ = find_by_uid(uid)
+    if s_name:
+        await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=menu_student)
+        return
 
-        # Учень
-        s_name, s_data = find_by_uid(uid)
-        if s_name:
-            sched_str = "|".join([f"{s['day']} {s['time']}" for s in s_data.get("sessions", [])])
-            params = urllib.parse.urlencode({"role": "user", "name": s_name, "bal": s_data["balance"], "sched": sched_str, "v": int(time.time())})
-            web_app_url = f"{WEB_APP_URL}?{params}"
-            kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="📅 Моє розклад"), KeyboardButton(text="💳 Мій баланс")]
-                ], resize_keyboard=True
-            )
-            await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=kb)
-            return
+    p_name, _ = find_by_pid(uid)
+    if p_name:
+        await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=menu_parent)
+        return
 
-        # Батьки
-        p_name, p_data = find_by_pid(uid)
-        if p_name:
-            sched_str = "|".join([f"{s['day']} {s['time']}" for s in p_data.get("sessions", [])])
-            params = urllib.parse.urlencode({"role": "parent", "name": p_name, "bal": p_data["balance"], "sched": sched_str, "v": int(time.time())})
-            web_app_url = f"{WEB_APP_URL}?{params}"
-            kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="📅 Розклад дитини"), KeyboardButton(text="💳 Баланс дитини")],
-                    [KeyboardButton(text="💰 Поповнити баланс")]
-                ], resize_keyboard=True
-            )
-            await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=kb)
-            return
-
-        # Незареєстрований
-        web_app_url = f"{WEB_APP_URL}?role=new&v={int(time.time())}"
-        kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="Відкрити Кабінет 📱", web_app=WebAppInfo(url=web_app_url))]],
-            resize_keyboard=True
-        )
-        user_state[uid] = "waiting_auth_code"
-        await message.answer("Привіт! Ви ще не зареєстровані. Введіть код доступу, який надав вчитель:", reply_markup=kb)
-
-    except Exception as e:
-        print(f"Помилка в start: {e}")
-        await message.answer("Сталася помилка при створенні посилання. Перевір консоль.")
+    # Незареєстрований
+    user_state[uid] = "waiting_auth_code"
+    await message.answer("Привіт! Ви ще не зареєстровані. Введіть код доступу, який надав вчитель:")
 
 
 # ─── АВТОРИЗАЦІЯ ───────────────────────────────────────────────────────────────
@@ -207,7 +177,6 @@ async def manage_student(message: types.Message):
 
     s = students[name]
 
-    # Генеруємо коди якщо їх немає
     if not s.get("u_id") and not s.get("u_code"):
         s["u_code"] = new_code()
     if not s.get("p_id") and not s.get("p_code"):
@@ -351,7 +320,7 @@ async def student_balance(message: types.Message):
 
 # ─── УЧЕНЬ: РОЗКЛАД ────────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text == "📅 Моє розклад")
+@dp.message(lambda m: m.text == "📅 Мій розклад")
 async def student_schedule(message: types.Message):
     name, data = find_by_uid(message.from_user.id)
     if data:
@@ -508,6 +477,11 @@ async def handle(message: types.Message):
         return
 
     if isinstance(state, dict) and state.get("state") == "waiting_time":
+        # Валідація формату часу HH:MM
+        import re
+        if not re.match(r"^\d{1,2}:\d{2}$", message.text):
+            await message.answer("Введи час у форматі ГГ:ХХ, наприклад 18:00")
+            return
         state["sessions"].append({"day": state["current_day"], "time": message.text})
         state["state"] = "confirm_more_days"
         user_state[uid] = state
@@ -556,7 +530,7 @@ async def handle(message: types.Message):
             )
         return
 
-    # ── Керування учнем: кнопки з іменем ──
+    # ── Керування учнем ──
     if isinstance(state, dict) and state.get("state") == "managing_student":
         name = state["name"]
 
@@ -619,118 +593,6 @@ async def handle(message: types.Message):
         except ValueError:
             await message.answer("Введи число")
         return
-
-    # ── Відмітити заняття: вибір ──
-    if state == "choose_session":
-        parts = message.text.split(". ", 1)
-        if len(parts) != 2 or parts[0] not in students:
-            await message.answer("Обери заняття зі списку")
-            return
-        name = parts[0]
-        user_state[uid] = {"state": "choose_status", "name": name}
-        buttons = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="✅ Проведено")],
-                [KeyboardButton(text="❌ Скасовано")],
-                [KeyboardButton(text="🔄 Перенесено")]
-            ],
-            resize_keyboard=True
-        )
-        await message.answer(f"Статус для {message.text}:", reply_markup=buttons)
-        return
-
-    # ── Відмітити заняття: статус ──
-    if isinstance(state, dict) and state.get("state") == "choose_status":
-        name = state["name"]
-        if message.text == "✅ Проведено":
-            students[name]["balance"] -= students[name]["price"]
-            save_data()
-            text = f"−{students[name]['price']}₴ списано з балансу {name}"
-        elif message.text == "❌ Скасовано":
-            text = "Заняття скасовано"
-        elif message.text == "🔄 Перенесено":
-            text = "Заняття перенесено"
-        else:
-            return
-        user_state[uid] = None
-        await message.answer(f"✔️ {text}", reply_markup=menu_teacher)
-        return
-
-
-# ─── WEBAPP ДАНІ ───────────────────────────────────────────────────────────────
-
-@dp.message(F.web_app_data)
-async def web_app_receive(message: types.Message):
-    data = message.web_app_data.data
-    uid = message.from_user.id
-
-    if data == "my_balance":
-        s_name, s_data = find_by_uid(uid)
-        p_name, p_data = find_by_pid(uid)
-        if s_data:
-            await message.answer(f"💰 Твій баланс: {s_data['balance']}₴")
-        elif p_data:
-            await message.answer(f"💰 Баланс {p_name}: {p_data['balance']}₴")
-        else:
-            await message.answer("💰 Інформацію не знайдено.")
-
-    elif data == "admin_list":
-        if uid != ADMIN_ID:
-            return
-        if not students:
-            await message.answer("📋 Список учнів порожній.")
-            return
-        text = "📋 Список учнів:\n"
-        for i, (name, d) in enumerate(students.items(), 1):
-            text += f"{i}. {name} — {d['balance']}₴\n"
-        await message.answer(text)
-
-    elif data == "admin_add":
-        if uid != ADMIN_ID:
-            return
-        user_state[uid] = "waiting_name"
-        await message.answer("Введіть ім'я нового учня:")
-
-    elif data == "admin_marks":
-        if uid != ADMIN_ID:
-            return
-        if not students:
-            await message.answer("Учнів немає.")
-            return
-        kb = [[KeyboardButton(text=f"Проведено: {n}")] for n in students]
-        kb.append([KeyboardButton(text="⬅️ Назад")])
-        await message.answer(
-            "Оберіть учня для відмітки заняття:",
-            reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
-        )
-
-    elif data.startswith("edit_"):
-        if uid != ADMIN_ID:
-            return
-        name = data.replace("edit_", "")
-        if name in students:
-            user_state[uid] = {"state": "managing_student", "name": name}
-            s = students[name]
-            bal = s["balance"]
-            bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
-            kb = ReplyKeyboardMarkup(keyboard=[
-                [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
-                [KeyboardButton(text=f"❌ Видалити {name}"), KeyboardButton(text=f"🔑 Оновити коди {name}")],
-                [KeyboardButton(text="⬅️ Назад")]
-            ], resize_keyboard=True)
-            await message.answer(
-                f"👤 Керування учнем: {name}\n💳 Баланс: {bal_str}",
-                reply_markup=kb
-            )
-        else:
-            await message.answer(f"Учня '{name}' не знайдено.")
-
-    elif data.startswith("request_payment"):
-        user_state[uid] = "pay_sum"
-        await message.answer("💰 Введіть суму поповнення (₴):")
-
-    else:
-        await message.answer(f"Отримано команду: {data}")
 
 
 # ─── ЗАПУСК ────────────────────────────────────────────────────────────────────
