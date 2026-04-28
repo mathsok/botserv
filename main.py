@@ -693,28 +693,22 @@ async def logout(message: types.Message):
     for name, data in students.items():
         if data.get("u_id") == uid:
             data["u_id"] = None
-            data["u_code"] = new_code()  # генеруємо новий код для повторного входу
             save_data()
             user_state[uid] = None
             await message.answer(
-                f"👋 Ти вийшов з кабінету.\n\n"
-                f"Новий код для входу: *{data['u_code']}*\n"
-                f"Збережи його, якщо захочеш увійти знову.",
-                parse_mode="Markdown",
+                f"👋 Ти вийшов з кабінету {name}.\n"
+                f"Щоб увійти знову — введи свій код після /start.",
                 reply_markup=types.ReplyKeyboardRemove()
             )
             return
 
         if data.get("p_id") == uid:
             data["p_id"] = None
-            data["p_code"] = new_code()
             save_data()
             user_state[uid] = None
             await message.answer(
-                f"👋 Ви вийшли з кабінету.\n\n"
-                f"Новий код для входу: *{data['p_code']}*\n"
-                f"Збережіть його, якщо захочете увійти знову.",
-                parse_mode="Markdown",
+                f"👋 Ви вийшли з кабінету {name}.\n"
+                f"Щоб увійти знову — введіть свій код після /start.",
                 reply_markup=types.ReplyKeyboardRemove()
             )
             return
