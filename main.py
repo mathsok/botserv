@@ -2,7 +2,8 @@ import asyncio
 import os
 import json
 import random
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
@@ -34,8 +35,6 @@ def load_data():
             students = json.load(f)
 
 def save_data():
-    # Атомарний запис: спочатку у тимчасовий файл, потім перейменовуємо
-    # Це захищає від пошкодження даних при збої під час запису
     tmp = DATA_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(students, f, ensure_ascii=False, indent=4)
@@ -91,7 +90,6 @@ def find_by_pid(pid):
     return None, None
 
 def new_code():
-    """Генерує унікальний 4-значний код, якого ще немає серед учнів"""
     existing = set()
     for d in students.values():
         if d.get("u_code"):
@@ -102,6 +100,51 @@ def new_code():
         code = str(random.randint(1000, 9999))
         if code not in existing:
             return code
+
+
+# ─── НАГАДУВАННЯ ───────────────────────────────────────────────────────────────
+
+async def send_reminders():
+    """Кожну хвилину перевіряє: чи є заняття рівно через 4 години"""
+    while True:
+        try:
+            now = datetime.now()
+            target = now + timedelta(hours=4)
+            target_day = days[target.weekday()]
+            target_time = target.strftime("%H:%M")
+
+            for name, data in students.items():
+                for session in data.get("sessions", []):
+                    if session["day"] == target_day and session["time"] == target_time:
+
+                        u_id = data.get("u_id")
+                        if u_id:
+                            try:
+                                await bot.send_message(
+                                    u_id,
+                                    f"🔔 Нагадування!\n"
+                                    f"Сьогодні о {target_time} у тебе заняття.\n"
+                                    f"Не забудь підготуватись! 📚"
+                                )
+                            except Exception:
+                                pass
+
+                        p_id = data.get("p_id")
+                        if p_id:
+                            try:
+                                await bot.send_message(
+                                    p_id,
+                                    f"🔔 Нагадування!\n"
+                                    f"Сьогодні о {target_time} заняття у {name}.\n"
+                                    f"Не забудьте нагадати дитині! 📚"
+                                )
+                            except Exception:
+                                pass
+
+        except Exception as e:
+            print(f"Помилка в нагадуваннях: {e}")
+
+        await asyncio.sleep(60)
 
 
 # ─── СТАРТ ─────────────────────────────────────────────────────────────────────
@@ -125,7 +168,6 @@ async def start(message: types.Message):
         await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=menu_parent)
         return
 
-    # Незареєстрований
     user_state[uid] = "waiting_auth_code"
     await message.answer("Привіт! Ви ще не зареєстровані. Введіть код доступу, який надав вчитель:")
 
@@ -440,14 +482,12 @@ async def handle(message: types.Message):
     uid = message.from_user.id
     state = user_state.get(uid)
 
-    # ── Назад ──
     if message.text == "⬅️ Назад":
         user_state[uid] = None
         kb = get_menu(uid) or menu_teacher
         await message.answer("Головне меню", reply_markup=kb)
         return
 
-    # ── Додати учня: ім'я ──
     if state == "waiting_name":
         user_state[uid] = {"state": "waiting_price", "name": message.text}
         await message.answer("Введи ціну заняття (₴):")
@@ -477,8 +517,6 @@ async def handle(message: types.Message):
         return
 
     if isinstance(state, dict) and state.get("state") == "waiting_time":
-        # Валідація формату часу HH:MM
-        import re
         if not re.match(r"^\d{1,2}:\d{2}$", message.text):
             await message.answer("Введи час у форматі ГГ:ХХ, наприклад 18:00")
             return
@@ -530,7 +568,6 @@ async def handle(message: types.Message):
             )
         return
 
-    # ── Керування учнем ──
     if isinstance(state, dict) and state.get("state") == "managing_student":
         name = state["name"]
 
@@ -564,7 +601,6 @@ async def handle(message: types.Message):
             )
             return
 
-    # ── Поповнення балансу вчителем ──
     if isinstance(state, dict) and state.get("state") == "balance_add":
         try:
             amount = int(message.text)
@@ -579,7 +615,6 @@ async def handle(message: types.Message):
             await message.answer("Введи число")
         return
 
-    # ── Списання з балансу ──
     if isinstance(state, dict) and state.get("state") == "balance_sub":
         try:
             amount = int(message.text)
@@ -600,6 +635,7 @@ async def handle(message: types.Message):
 async def main():
     load_data()
     print("Бот запущено...")
+    asyncio.create_task(send_reminders())
     await dp.start_polling(bot)
 
 
