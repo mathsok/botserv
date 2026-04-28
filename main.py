@@ -14,7 +14,6 @@ from aiogram.filters import CommandStart
 TOKEN = os.environ["8212597362:AAEBeYKcBHDOCA5kxNB7cbVo5gVLV6oUqXE"]
 ADMIN_ID = 777785304
 DATA_FILE = "students_db.json"
-WEB_APP_URL = "https://mathsok.github.io/"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -51,16 +50,14 @@ menu_teacher = ReplyKeyboardMarkup(
 
 menu_student = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-        [KeyboardButton(text="Відкрити меню 📱", web_app=WebAppInfo(url=WEB_APP_URL))]
+        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")]
     ], resize_keyboard=True
 )
 
 menu_parent = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Розклад дитини"), KeyboardButton(text="💳 Баланс дитини")],
-        [KeyboardButton(text="💰 Поповнити баланс")],
-        [KeyboardButton(text="Відкрити меню 📱", web_app=WebAppInfo(url=WEB_APP_URL))]
+        [KeyboardButton(text="💰 Поповнити баланс")]
     ], resize_keyboard=True
 )
 
@@ -107,16 +104,14 @@ async def start(message: types.Message):
                 for name, d in students.items()
             ]
             data_str = json.dumps(students_list, ensure_ascii=False)
-            encoded_data = urllib.parse.quote(data_str)
-            web_app_url = f"{WEB_APP_URL}?role=admin&data={encoded_data}&v={int(time.time())}"
+            encoded_data = urllib.parse.quote(data_str)"
             text = "Вітаю, Вчителю! Ваша панель керування:"
 
             kb = ReplyKeyboardMarkup(
                 keyboard=[
                     [KeyboardButton(text="➕ Додати учня"), KeyboardButton(text="📋 Список учнів")],
                     [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="✔️ Відмітити заняття")],
-                    [KeyboardButton(text="💳 Баланси")],
-                    [KeyboardButton(text="Відкрити Кабінет 📱", web_app=WebAppInfo(url=web_app_url))]
+                    [KeyboardButton(text="💳 Баланси")]
                 ], resize_keyboard=True
             )
             await message.answer(text, reply_markup=kb)
@@ -130,8 +125,7 @@ async def start(message: types.Message):
             web_app_url = f"{WEB_APP_URL}?{params}"
             kb = ReplyKeyboardMarkup(
                 keyboard=[
-                    [KeyboardButton(text="📅 Моє розклад"), KeyboardButton(text="💳 Мій баланс")],
-                    [KeyboardButton(text="Відкрити Кабінет 📱", web_app=WebAppInfo(url=web_app_url))]
+                    [KeyboardButton(text="📅 Моє розклад"), KeyboardButton(text="💳 Мій баланс")]
                 ], resize_keyboard=True
             )
             await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=kb)
@@ -146,8 +140,7 @@ async def start(message: types.Message):
             kb = ReplyKeyboardMarkup(
                 keyboard=[
                     [KeyboardButton(text="📅 Розклад дитини"), KeyboardButton(text="💳 Баланс дитини")],
-                    [KeyboardButton(text="💰 Поповнити баланс")],
-                    [KeyboardButton(text="Відкрити Кабінет 📱", web_app=WebAppInfo(url=web_app_url))]
+                    [KeyboardButton(text="💰 Поповнити баланс")]
                 ], resize_keyboard=True
             )
             await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=kb)
