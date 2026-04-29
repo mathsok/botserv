@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart
+from aiogram.exceptions import TelegramAPIError
 
 load_dotenv()
 
@@ -1754,6 +1755,15 @@ async def links_delete_start(message: types.Message):
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     )
     user_state[message.from_user.id] = "links_waiting_delete"
+
+
+# ─── ОБРОБНИК ПОМИЛОК ─────────────────────────────────────────────────────────
+
+@dp.errors()
+async def error_handler(event: types.ErrorEvent):
+    print(f"[ERROR] {event.exception.__class__.__name__}: {event.exception}")
+    import traceback
+    traceback.print_exc()
 
 
 # ─── ЗАПУСК ────────────────────────────────────────────────────────────────────
