@@ -1307,6 +1307,30 @@ async def handle(message: types.Message):
     uid = message.from_user.id
     state = user_state.get(uid)
 
+    # ── Матеріали до заняття (фото або документ) ──
+    if isinstance(state, dict) and state.get("state") == "lesson_send_materials":
+        if message.photo:
+            user_state[uid]["materials"].append({
+                "type": "photo",
+                "file_id": message.photo[-1].file_id,
+                "caption": message.caption or ""
+            })
+            count = len(user_state[uid]["materials"])
+            await message.answer(f"🖼 Фото {count} додано. Надішліть ще або натисніть *Готово*.", parse_mode="Markdown")
+            return
+        if message.document:
+            mime = message.document.mime_type or ""
+            icon = "📄" if "pdf" in mime else ("🖼" if "image" in mime else "📎")
+            user_state[uid]["materials"].append({
+                "type": "document",
+                "file_id": message.document.file_id,
+                "caption": message.caption or "",
+                "name": message.document.file_name or "файл"
+            })
+            count = len(user_state[uid]["materials"])
+            await message.answer(f"{icon} {message.document.file_name or 'Файл'} ({count}) додано. Надішліть ще або натисніть *Готово*.", parse_mode="Markdown")
+            return
+
     if message.text == "⬅️ Назад":
         user_state[uid] = None
         kb = get_menu(uid) or menu_teacher
