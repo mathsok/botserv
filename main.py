@@ -251,6 +251,7 @@ async def manage_student(message: types.Message):
 
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
+        [KeyboardButton(text=f"📅 Змінити розклад {name}")],
         [KeyboardButton(text=f"❌ Видалити {name}"), KeyboardButton(text=f"🔑 Оновити коди {name}")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True)
@@ -328,6 +329,18 @@ async def mark_lesson_confirm(message: types.Message):
             await bot.send_message(
                 p_id,
                 f"🔔 Заняття проведено.\nЗ балансу списано: {price}₴\nПоточний баланс: {new_balance}₴"
+            )
+        except Exception:
+            pass
+
+    # Сповіщення батькам якщо баланс пішов у мінус
+    if new_balance < 0 and p_id:
+        try:
+            await bot.send_message(
+                p_id,
+                f"⚠️ Увага! Баланс учня {name} став від'ємним.\n"
+                f"💳 Поточний баланс: {new_balance}₴\n"
+                f"Будь ласка, поповніть баланс."
             )
         except Exception:
             pass
@@ -904,29 +917,53 @@ async def handle(message: types.Message):
             await message.answer("Обери ще один день:", reply_markup=buttons)
         elif message.text == "✅ Готово":
             name = state["name"]
-            u_code = new_code()
-            p_code = new_code()
-            students[name] = {
-                "price": state["price"],
-                "balance": 0,
-                "sessions": state["sessions"],
-                "homework": [],
-                "u_code": u_code,
-                "u_id": None,
-                "p_code": p_code,
-                "p_id": None
-            }
-            save_data()
-            user_state[uid] = None
-            sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
-            await message.answer(
-                f"✅ {name} доданий\n"
-                f"💰 {state['price']}₴\n"
-                f"📅 Розклад:\n{sessions_text}\n\n"
-                f"🔑 Код учня: {u_code}\n"
-                f"👨‍👩‍👦 Код батьків: {p_code}",
-                reply_markup=menu_teacher
-            )
+
+            # ── Редагування розкладу існуючого учня ──
+            if state.get("editing"):
+                students[name]["sessions"] = state["sessions"]
+                save_data()
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(
+                    f"✅ Розклад {name} оновлено!\n📅\n{sessions_text}",
+                    reply_markup=menu_teacher
+                )
+                # Сповіщення учню про зміну розкладу
+                u_id = students[name].get("u_id")
+                if u_id:
+                    try:
+                        await bot.send_message(
+                            u_id,
+                            f"📅 Твій розклад було оновлено!\n\n{sessions_text}"
+                        )
+                    except Exception:
+                        pass
+
+            # ── Додавання нового учня ──
+            else:
+                u_code = new_code()
+                p_code = new_code()
+                students[name] = {
+                    "price": state["price"],
+                    "balance": 0,
+                    "sessions": state["sessions"],
+                    "homework": [],
+                    "u_code": u_code,
+                    "u_id": None,
+                    "p_code": p_code,
+                    "p_id": None
+                }
+                save_data()
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(
+                    f"✅ {name} доданий\n"
+                    f"💰 {state['price']}₴\n"
+                    f"📅 Розклад:\n{sessions_text}\n\n"
+                    f"🔑 Код учня: {u_code}\n"
+                    f"👨‍👩‍👦 Код батьків: {p_code}",
+                    reply_markup=menu_teacher
+                )
         return
 
     if isinstance(state, dict) and state.get("state") == "managing_student":
@@ -940,6 +977,20 @@ async def handle(message: types.Message):
         if message.text == f"➖ Списати {name}":
             user_state[uid] = {"state": "balance_sub", "name": name}
             await message.answer("Введи суму для списання (₴):")
+            return
+
+        if message.text == f"📅 Змінити розклад {name}":
+            current = " | ".join([f"{s['day']} {s['time']}" for s in students[name].get("sessions", [])])
+            user_state[uid] = {"state": "waiting_day", "name": name, "price": students[name]["price"], "sessions": [], "editing": True}
+            buttons = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text=day)] for day in days],
+                resize_keyboard=True
+            )
+            await message.answer(
+                f"📅 Поточний розклад {name}: {current or 'не встановлено'}\n\n"
+                f"Обери новий перший день (старий розклад буде замінено):",
+                reply_markup=buttons
+            )
             return
 
         if message.text == f"❌ Видалити {name}":
@@ -986,6 +1037,19 @@ async def handle(message: types.Message):
             bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
             user_state[uid] = None
             await message.answer(f"✅ З балансу {name} списано −{amount}₴\n💳 Новий баланс: {bal_str}", reply_markup=menu_teacher)
+            # Сповіщення батькам якщо баланс пішов у мінус
+            if bal < 0:
+                p_id = students[name].get("p_id")
+                if p_id:
+                    try:
+                        await bot.send_message(
+                            p_id,
+                            f"⚠️ Увага! Баланс учня {name} став від'ємним.\n"
+                            f"💳 Поточний баланс: {bal}₴\n"
+                            f"Будь ласка, поповніть баланс."
+                        )
+                    except Exception:
+                        pass
         except ValueError:
             await message.answer("Введи число")
         return
