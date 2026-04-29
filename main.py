@@ -78,6 +78,7 @@ menu_student = ReplyKeyboardMarkup(
 menu_student_lessons = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📚 Домашні завдання")],
+        [KeyboardButton(text="📒 Журнал занять")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
@@ -401,40 +402,14 @@ async def mark_lesson_confirm(message: types.Message):
         return
 
     if message.text == "✅ Проведено":
-        user_state[uid] = None
-        price = students[name]["price"]
-        students[name]["balance"] -= price
-        save_data()
-
-        new_balance = students[name]["balance"]
+        user_state[uid] = {"state": "lesson_enter_topic", "name": name}
         await message.answer(
-            f"✅ Відмічено! З балансу {name} списано {price}₴.\nЗалишок: {new_balance}₴",
-            reply_markup=menu_teacher
+            f"Введіть тему заняття з {name}:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+                resize_keyboard=True
+            )
         )
-
-        p_id = students[name].get("p_id")
-        su_id = students[name].get("su_id")
-        notify_ids = [i for i in [p_id, su_id] if i]
-        for nid in notify_ids:
-            try:
-                await bot.send_message(
-                    nid,
-                    f"🔔 Заняття проведено.\nЗ балансу списано: {price}₴\nПоточний баланс: {new_balance}₴"
-                )
-            except Exception:
-                pass
-
-        if new_balance < 0:
-            for nid in notify_ids:
-                try:
-                    await bot.send_message(
-                        nid,
-                        f"⚠️ Увага! Баланс став від'ємним.\n"
-                        f"💳 Поточний баланс: {new_balance}₴\n"
-                        f"Будь ласка, поповніть баланс."
-                    )
-                except Exception:
-                    pass
 
     elif message.text == "❌ Скасовано":
         user_state[uid] = {"state": "cancel_enter_date", "name": name}
@@ -455,6 +430,163 @@ async def mark_lesson_confirm(message: types.Message):
                 resize_keyboard=True
             )
         )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "lesson_enter_topic"
+)
+async def lesson_enter_topic(message: types.Message):
+    uid = message.from_user.id
+    name = user_state[uid]["name"]
+    topic = message.text.strip()
+    date_str = datetime.now().strftime("%d.%m.%Y")
+
+    user_state[uid] = {
+        "state": "lesson_send_materials",
+        "name": name,
+        "topic": topic,
+        "date": date_str,
+        "materials": []  # список file_id фото/документів
+    }
+
+    await message.answer(
+        f"✏️ Тема: *{topic}*\n\n"
+        f"Тепер надішліть матеріали до заняття (фото або файли).\n"
+        f"Коли закінчите — натисніть *Готово*.",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="✅ Готово (без матеріалів)")],
+                [KeyboardButton(text="✅ Готово")]
+            ],
+            resize_keyboard=True
+        )
+    )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "lesson_send_materials",
+    F.photo
+)
+async def lesson_receive_material_photo(message: types.Message):
+    uid = message.from_user.id
+    user_state[uid]["materials"].append({
+        "type": "photo",
+        "file_id": message.photo[-1].file_id,
+        "caption": message.caption or ""
+    })
+    count = len(user_state[uid]["materials"])
+    await message.answer(
+        f"📎 Матеріал {count} додано. Надішліть ще або натисніть *Готово*.",
+        parse_mode="Markdown"
+    )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "lesson_send_materials",
+    F.document
+)
+async def lesson_receive_material_doc(message: types.Message):
+    uid = message.from_user.id
+    user_state[uid]["materials"].append({
+        "type": "document",
+        "file_id": message.document.file_id,
+        "caption": message.caption or "",
+        "name": message.document.file_name or "файл"
+    })
+    count = len(user_state[uid]["materials"])
+    await message.answer(
+        f"📎 Матеріал {count} додано. Надішліть ще або натисніть *Готово*.",
+        parse_mode="Markdown"
+    )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "lesson_send_materials"
+    and m.text in ["✅ Готово", "✅ Готово (без матеріалів)"]
+)
+async def lesson_finish(message: types.Message):
+    uid = message.from_user.id
+    state = user_state[uid]
+    name = state["name"]
+    topic = state["topic"]
+    date_str = state["date"]
+    materials = state["materials"]
+    user_state[uid] = None
+
+    # Списуємо з балансу
+    price = students[name]["price"]
+    students[name]["balance"] -= price
+
+    # Зберігаємо заняття в журнал
+    if "journal" not in students[name]:
+        students[name]["journal"] = []
+
+    students[name]["journal"].append({
+        "date": date_str,
+        "topic": topic,
+        "materials": materials
+    })
+    save_data()
+
+    new_balance = students[name]["balance"]
+    await message.answer(
+        f"✅ Заняття відмічено!\n"
+        f"👤 {name} | 📖 {topic}\n"
+        f"З балансу списано {price}₴. Залишок: {new_balance}₴",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення всім з темою та матеріалами
+    p_id = students[name].get("p_id")
+    su_id = students[name].get("su_id")
+    u_id = students[name].get("u_id")
+    notify_pay = [i for i in [p_id, su_id] if i]
+    notify_all = [i for i in [u_id, su_id, p_id] if i]
+
+    for nid in notify_pay:
+        try:
+            await bot.send_message(
+                nid,
+                f"🔔 Заняття проведено.\n"
+                f"📖 Тема: {topic}\n"
+                f"З балансу списано: {price}₴\nПоточний баланс: {new_balance}₴"
+            )
+        except Exception:
+            pass
+
+    if new_balance < 0:
+        for nid in notify_pay:
+            try:
+                await bot.send_message(
+                    nid,
+                    f"⚠️ Баланс став від'ємним.\n"
+                    f"💳 Поточний баланс: {new_balance}₴\n"
+                    f"Будь ласка, поповніть баланс."
+                )
+            except Exception:
+                pass
+
+    # Надсилаємо матеріали учню
+    if materials:
+        for nid in [i for i in [u_id, su_id] if i]:
+            try:
+                await bot.send_message(nid, f"📚 Матеріали до заняття *{topic}* ({date_str}):", parse_mode="Markdown")
+                for mat in materials:
+                    if mat["type"] == "photo":
+                        await bot.send_photo(nid, mat["file_id"], caption=mat["caption"] or None)
+                    elif mat["type"] == "document":
+                        await bot.send_document(nid, mat["file_id"], caption=mat["caption"] or None)
+            except Exception:
+                pass
 
 
 @dp.message(
@@ -714,6 +846,80 @@ async def student_section_lessons(message: types.Message):
     if uid == ADMIN_ID:
         return
     await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
+
+
+# ─── УЧЕНЬ: ЖУРНАЛ ЗАНЯТЬ ──────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📒 Журнал занять")
+async def student_journal(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
+    if not data:
+        return
+
+    journal = data.get("journal", [])
+    if not journal:
+        await message.answer("📒 Журнал занять порожній.")
+        return
+
+    # Показуємо список занять — останні зверху
+    kb = []
+    for i, entry in enumerate(reversed(journal)):
+        kb.append([KeyboardButton(text=f"📒 Заняття {len(journal) - i}: {entry['date']}")])
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+
+    text = "📒 *Журнал занять:*\n\n"
+    for entry in reversed(journal):
+        mat_count = len(entry.get("materials", []))
+        mat_str = f" | 📎 {mat_count} матеріал(ів)" if mat_count else ""
+        text += f"📅 {entry['date']} — *{entry['topic']}*{mat_str}\n"
+
+    await message.answer(text, parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+
+@dp.message(lambda m: m.text and m.text.startswith("📒 Заняття "))
+async def student_journal_detail(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
+    if not data:
+        return
+
+    # Витягуємо номер заняття з тексту кнопки "📒 Заняття 3: 05.05.2025"
+    try:
+        part = message.text.replace("📒 Заняття ", "")
+        idx = int(part.split(":")[0].strip()) - 1
+        journal = data.get("journal", [])
+        entry = journal[idx]
+    except (ValueError, IndexError):
+        await message.answer("Заняття не знайдено.")
+        return
+
+    materials = entry.get("materials", [])
+    mat_str = f"📎 Матеріалів: {len(materials)}" if materials else "📎 Матеріалів немає"
+
+    await message.answer(
+        f"📒 *Заняття {idx + 1}*\n"
+        f"📅 Дата: {entry['date']}\n"
+        f"📖 Тема: {entry['topic']}\n"
+        f"{mat_str}",
+        parse_mode="Markdown"
+    )
+
+    # Надсилаємо матеріали якщо є
+    if materials:
+        for mat in materials:
+            try:
+                if mat["type"] == "photo":
+                    await message.answer_photo(mat["file_id"], caption=mat.get("caption") or None)
+                elif mat["type"] == "document":
+                    await message.answer_document(mat["file_id"], caption=mat.get("caption") or None)
+            except Exception:
+                pass
 
 
 # ─── УЧЕНЬ: ДОМАШНІ ЗАВДАННЯ — СПИСОК ─────────────────────────────────────────
