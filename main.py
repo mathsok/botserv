@@ -322,11 +322,6 @@ async def teacher_section_students(message: types.Message):
     await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📖 Заняття і матеріали")
-async def teacher_section_lessons(message: types.Message):
-    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
-
-
 # ─── ВЧИТЕЛЬ: ДОДАТИ УЧНЯ ──────────────────────────────────────────────────────
 
 @dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "➕ Додати учня")
@@ -855,10 +850,14 @@ async def hw_receive_text(message: types.Message):
 
 # ─── УЧЕНЬ: РОЗДІЛ ЗАНЯТТЯ І МАТЕРІАЛИ ────────────────────────────────────────
 
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📖 Заняття і матеріали")
+async def teacher_section_lessons(message: types.Message):
+    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
+
+
 @dp.message(lambda m: m.text and m.text == "📖 Заняття і матеріали")
 async def student_section_lessons(message: types.Message):
     uid = message.from_user.id
-    # Перевіряємо чи це учень або супер-учень (не вчитель)
     if uid == ADMIN_ID:
         return
     await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
@@ -1690,31 +1689,39 @@ async def teacher_journal_detail(message: types.Message):
 @dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання")
 async def links_menu(message: types.Message):
     uid = message.from_user.id
+    links = students.get("__links__", {})
 
-    # Учитель — показуємо керування посиланнями
+    # Учитель
     if uid == ADMIN_ID:
-        links = students.get("__links__", {})
         if not links:
-            text = "🔗 Посилань поки немає.\nДодай перше!"
+            # Посилань немає — одразу пропонуємо додати
+            user_state[uid] = "links_waiting_label"
+            await message.answer(
+                "🔗 Посилань поки немає.\n\n"
+                "Як назвемо перше посилання? (наприклад: *Посилання на конференцію*, *Підручник*)",
+                parse_mode="Markdown",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+                    resize_keyboard=True
+                )
+            )
         else:
+            # Є посилання — показуємо список і кнопки керування
             text = "🔗 *Корисні посилання:*\n\n"
             for label, url in links.items():
                 text += f"• {label}: {url}\n"
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="➕ Додати посилання")],
+                [KeyboardButton(text="🗑 Видалити посилання")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
-        kb = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text="➕ Додати посилання")],
-            [KeyboardButton(text="🗑 Видалити посилання")],
-            [KeyboardButton(text="⬅️ Назад")]
-        ], resize_keyboard=True)
-        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
-
-    # Учень / супер-учень — тільки перегляд
+    # Учень / супер-учень / батьки
     else:
-        links = students.get("__links__", {})
         if not links:
-            await message.answer("🔗 Посилань поки немає.")
+            await message.answer("🔗 Посилань поки немає. Зверніться до вчителя.")
             return
-
         text = "🔗 *Корисні посилання:*\n\n"
         for label, url in links.items():
             text += f"• [{label}]({url})\n"
@@ -1725,7 +1732,7 @@ async def links_menu(message: types.Message):
 async def links_add_start(message: types.Message):
     user_state[message.from_user.id] = "links_waiting_label"
     await message.answer(
-        "Введи назву посилання (наприклад: *Конференція*, *Підручник*):",
+        "Як назвемо посилання? (наприклад: *Посилання на конференцію*, *Підручник*)",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
@@ -1740,7 +1747,6 @@ async def links_delete_start(message: types.Message):
     if not links:
         await message.answer("Посилань немає.")
         return
-
     kb = [[KeyboardButton(text=f"🗑 {label}")] for label in links]
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer(
