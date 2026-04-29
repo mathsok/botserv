@@ -469,8 +469,8 @@ async def lesson_enter_topic(message: types.Message):
 @dp.message(
     lambda m: m.from_user.id == ADMIN_ID
     and isinstance(user_state.get(m.from_user.id), dict)
-    and user_state[m.from_user.id].get("state") == "lesson_send_materials",
-    F.photo
+    and user_state[m.from_user.id].get("state") == "lesson_send_materials"
+    and (m.photo is not None)
 )
 async def lesson_receive_material_photo(message: types.Message):
     uid = message.from_user.id
@@ -489,11 +489,22 @@ async def lesson_receive_material_photo(message: types.Message):
 @dp.message(
     lambda m: m.from_user.id == ADMIN_ID
     and isinstance(user_state.get(m.from_user.id), dict)
-    and user_state[m.from_user.id].get("state") == "lesson_send_materials",
-    F.document
+    and user_state[m.from_user.id].get("state") == "lesson_send_materials"
+    and (m.document is not None)
 )
 async def lesson_receive_material_doc(message: types.Message):
     uid = message.from_user.id
+    mime = message.document.mime_type or ""
+    # Визначаємо іконку за типом файлу
+    if "pdf" in mime:
+        icon = "📄"
+    elif "image" in mime:
+        icon = "🖼"
+    elif "video" in mime:
+        icon = "🎬"
+    else:
+        icon = "📎"
+
     user_state[uid]["materials"].append({
         "type": "document",
         "file_id": message.document.file_id,
@@ -502,7 +513,7 @@ async def lesson_receive_material_doc(message: types.Message):
     })
     count = len(user_state[uid]["materials"])
     await message.answer(
-        f"📎 Матеріал {count} додано. Надішліть ще або натисніть *Готово*.",
+        f"{icon} Матеріал {count} ({message.document.file_name or 'файл'}) додано. Надішліть ще або натисніть *Готово*.",
         parse_mode="Markdown"
     )
 
