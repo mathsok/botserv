@@ -74,6 +74,7 @@ menu_student = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
         [KeyboardButton(text="📖 Заняття і матеріали")],
+        [KeyboardButton(text="🔗 Корисні посилання")],
         [KeyboardButton(text="🚪 Вийти з кабінета")]
     ], resize_keyboard=True
 )
@@ -82,7 +83,6 @@ menu_student_lessons = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📚 Домашні завдання")],
         [KeyboardButton(text="📒 Журнал занять")],
-        [KeyboardButton(text="🔗 Корисні посилання")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
@@ -99,6 +99,7 @@ menu_super = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
         [KeyboardButton(text="📖 Заняття і матеріали"), KeyboardButton(text="💰 Поповнити баланс")],
+        [KeyboardButton(text="🔗 Корисні посилання")],
         [KeyboardButton(text="🚪 Вийти з кабінета")]
     ], resize_keyboard=True
 )
@@ -308,6 +309,7 @@ async def manage_student(message: types.Message):
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
         [KeyboardButton(text=f"📅 Змінити розклад {name}"), KeyboardButton(text=f"💲 Змінити ціну {name}")],
+        [KeyboardButton(text=f"🔗 Посилання {name}")],
         [KeyboardButton(text=f"❌ Видалити {name}"), KeyboardButton(text=f"🔑 Оновити коди {name}")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True)
@@ -1489,6 +1491,48 @@ async def handle(message: types.Message):
             await message.answer("Введи суму для списання (₴):")
             return
 
+        if message.text == f"🔗 Посилання {name}":
+            links = students[name].get("links", {})
+            if not links:
+                text = f"🔗 У {name} посилань немає.\nДодай перше!"
+            else:
+                text = f"🔗 *Посилання {name}:*\n\n"
+                for label, url in links.items():
+                    text += f"• {label}: {url}\n"
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text=f"➕ Додати посилання учню {name}")],
+                [KeyboardButton(text=f"🗑 Видалити посилання учня {name}")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            user_state[uid] = {"state": "managing_student", "name": name}
+            await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+            return
+
+        if message.text == f"➕ Додати посилання учню {name}":
+            user_state[uid] = {"state": "student_links_waiting_label", "name": name}
+            await message.answer(
+                f"Як назвемо посилання для {name}?",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+                    resize_keyboard=True
+                )
+            )
+            return
+
+        if message.text == f"🗑 Видалити посилання учня {name}":
+            links = students[name].get("links", {})
+            if not links:
+                await message.answer("Посилань немає.")
+                return
+            kb = [[KeyboardButton(text=f"🗑л {label}")] for label in links]
+            kb.append([KeyboardButton(text="⬅️ Назад")])
+            user_state[uid] = {"state": "student_links_waiting_delete", "name": name}
+            await message.answer(
+                "Оберіть посилання для видалення:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+            )
+            return
+
         if message.text == f"💲 Змінити ціну {name}":
             user_state[uid] = {"state": "edit_price", "name": name}
             await message.answer(
@@ -1588,6 +1632,43 @@ async def handle(message: types.Message):
                         pass
         except ValueError:
             await message.answer("Введи число")
+        return
+
+    # ── Посилання учня: введення назви ──
+    if isinstance(state, dict) and state.get("state") == "student_links_waiting_label":
+        name = state["name"]
+        user_state[uid] = {"state": "student_links_waiting_url", "name": name, "label": message.text.strip()}
+        await message.answer(f"Тепер вставте посилання для *{message.text.strip()}*:", parse_mode="Markdown")
+        return
+
+    # ── Посилання учня: введення URL ──
+    if isinstance(state, dict) and state.get("state") == "student_links_waiting_url":
+        url = message.text.strip()
+        name = state["name"]
+        label = state["label"]
+        if not url.startswith("http"):
+            await message.answer("Посилання повинно починатись з http:// або https://")
+            return
+        if "links" not in students[name]:
+            students[name]["links"] = {}
+        students[name]["links"][label] = url
+        save_data()
+        user_state[uid] = None
+        await message.answer(f"✅ Посилання *{label}* додано для {name}!", parse_mode="Markdown", reply_markup=menu_teacher)
+        return
+
+    # ── Посилання учня: видалення ──
+    if isinstance(state, dict) and state.get("state") == "student_links_waiting_delete" and message.text and message.text.startswith("🗑л "):
+        name = state["name"]
+        label = message.text.replace("🗑л ", "").strip()
+        links = students[name].get("links", {})
+        if label in links:
+            del links[label]
+            save_data()
+            await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
+        else:
+            await message.answer("Посилання не знайдено.", reply_markup=menu_teacher)
+        user_state[uid] = None
         return
 
     # ── Корисні посилання: введення назви ──
@@ -1715,16 +1796,15 @@ async def teacher_journal_detail(message: types.Message):
 @dp.message(lambda m: m.text and "Корисні посилання" in m.text)
 async def links_menu(message: types.Message):
     uid = message.from_user.id
-    links = students.get("__links__", {})
 
-    # Учитель
+    # Учитель — свої глобальні посилання
     if uid == ADMIN_ID:
+        links = students.get("__links__", {})
         if not links:
-            # Посилань немає — одразу пропонуємо додати
             user_state[uid] = "links_waiting_label"
             await message.answer(
                 "🔗 Посилань поки немає.\n\n"
-                "Як назвемо перше посилання? (наприклад: *Посилання на конференцію*, *Підручник*)",
+                "Як назвемо перше посилання? (наприклад: *Посилання на конференцію*)",
                 parse_mode="Markdown",
                 reply_markup=ReplyKeyboardMarkup(
                     keyboard=[[KeyboardButton(text="⬅️ Назад")]],
@@ -1732,7 +1812,6 @@ async def links_menu(message: types.Message):
                 )
             )
         else:
-            # Є посилання — показуємо список і кнопки керування
             text = "🔗 *Корисні посилання:*\n\n"
             for label, url in links.items():
                 text += f"• {label}: {url}\n"
@@ -1743,8 +1822,14 @@ async def links_menu(message: types.Message):
             ], resize_keyboard=True)
             await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
-    # Учень / супер-учень / батьки
+    # Учень / супер-учень — власні посилання
     else:
+        name, data = find_by_uid(uid)
+        if not data:
+            name, data = find_by_suid(uid)
+        if not data:
+            return
+        links = data.get("links", {})
         if not links:
             await message.answer("🔗 Посилань поки немає. Зверніться до вчителя.")
             return
@@ -1758,7 +1843,7 @@ async def links_menu(message: types.Message):
 async def links_add_start(message: types.Message):
     user_state[message.from_user.id] = "links_waiting_label"
     await message.answer(
-        "Як назвемо посилання? (наприклад: *Посилання на конференцію*, *Підручник*)",
+        "Як назвемо посилання? (наприклад: *Посилання на конференцію*)",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
