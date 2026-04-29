@@ -251,7 +251,7 @@ async def manage_student(message: types.Message):
 
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
-        [KeyboardButton(text=f"📅 Змінити розклад {name}")],
+        [KeyboardButton(text=f"📅 Змінити розклад {name}"), KeyboardButton(text=f"💲 Змінити ціну {name}")],
         [KeyboardButton(text=f"❌ Видалити {name}"), KeyboardButton(text=f"🔑 Оновити коди {name}")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True)
@@ -298,10 +298,15 @@ async def mark_lesson(message: types.Message):
         await message.answer("Учнів немає.")
         return
 
-    kb = [[KeyboardButton(text=f"Проведено: {n}")] for n in students]
+    kb = []
+    for n in students:
+        kb.append([
+            KeyboardButton(text=f"Проведено: {n}"),
+            KeyboardButton(text=f"Скасовано: {n}")
+        ])
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer(
-        "Оберіть учня, який відвідав заняття:",
+        "Оберіть учня та статус заняття:",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     )
 
@@ -341,6 +346,30 @@ async def mark_lesson_confirm(message: types.Message):
                 f"⚠️ Увага! Баланс учня {name} став від'ємним.\n"
                 f"💳 Поточний баланс: {new_balance}₴\n"
                 f"Будь ласка, поповніть баланс."
+            )
+        except Exception:
+            pass
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text.startswith("Скасовано: "))
+async def cancel_lesson_confirm(message: types.Message):
+    name = message.text.replace("Скасовано: ", "")
+    if name not in students:
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+
+    await message.answer(
+        f"❌ Заняття з {name} скасовано. Баланс не змінено.",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення учню
+    u_id = students[name].get("u_id")
+    if u_id:
+        try:
+            await bot.send_message(
+                u_id,
+                f"❌ Заняття скасовано.\nБаланс не змінювався."
             )
         except Exception:
             pass
@@ -979,6 +1008,14 @@ async def handle(message: types.Message):
             await message.answer("Введи суму для списання (₴):")
             return
 
+        if message.text == f"💲 Змінити ціну {name}":
+            user_state[uid] = {"state": "edit_price", "name": name}
+            await message.answer(
+                f"Поточна ціна заняття для {name}: {students[name]['price']}₴\n"
+                f"Введи нову ціну (₴):"
+            )
+            return
+
         if message.text == f"📅 Змінити розклад {name}":
             current = " | ".join([f"{s['day']} {s['time']}" for s in students[name].get("sessions", [])])
             user_state[uid] = {"state": "waiting_day", "name": name, "price": students[name]["price"], "sessions": [], "editing": True}
@@ -1012,6 +1049,22 @@ async def handle(message: types.Message):
                 f"Батьки: {students[name]['p_code']}"
             )
             return
+
+    if isinstance(state, dict) and state.get("state") == "edit_price":
+        try:
+            new_price = int(message.text)
+            name = state["name"]
+            old_price = students[name]["price"]
+            students[name]["price"] = new_price
+            save_data()
+            user_state[uid] = None
+            await message.answer(
+                f"✅ Ціна для {name} змінена: {old_price}₴ → {new_price}₴",
+                reply_markup=menu_teacher
+            )
+        except ValueError:
+            await message.answer("Введи число")
+        return
 
     if isinstance(state, dict) and state.get("state") == "balance_add":
         try:
