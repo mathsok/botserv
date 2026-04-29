@@ -67,10 +67,20 @@ menu_parent = ReplyKeyboardMarkup(
     ], resize_keyboard=True
 )
 
+menu_super = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
+        [KeyboardButton(text="📚 Домашні завдання"), KeyboardButton(text="💰 Поповнити баланс")],
+        [KeyboardButton(text="🚪 Вийти з кабінета")]
+    ], resize_keyboard=True
+)
+
 def get_menu(uid):
     if uid == ADMIN_ID:
         return menu_teacher
     for name, data in students.items():
+        if data.get("su_id") == uid:
+            return menu_super
         if data.get("u_id") == uid:
             return menu_student
         if data.get("p_id") == uid:
@@ -92,13 +102,18 @@ def find_by_pid(pid):
             return name, data
     return None, None
 
+def find_by_suid(uid):
+    for name, data in students.items():
+        if data.get("su_id") == uid:
+            return name, data
+    return None, None
+
 def new_code():
     existing = set()
     for d in students.values():
-        if d.get("u_code"):
-            existing.add(d["u_code"])
-        if d.get("p_code"):
-            existing.add(d["p_code"])
+        for key in ("u_code", "p_code", "su_code"):
+            if d.get(key):
+                existing.add(d[key])
     while True:
         code = str(random.randint(1000, 9999))
         if code not in existing:
@@ -134,7 +149,7 @@ async def send_reminders():
                     match = session["day"] == target_day and session["time"] == target_time
                     print(f"  {name}: '{session['day']} {session['time']}' → {'✅ збіг!' if match else '—'}")
                     if match:
-                        u_id = data.get("u_id")
+                        u_id = data.get("u_id") or data.get("su_id")
                         print(f"  → u_id = {u_id}")
                         if u_id:
                             try:
@@ -167,6 +182,11 @@ async def start(message: types.Message):
         await message.answer("Вітаю, Вчителю! Ваша панель керування:", reply_markup=menu_teacher)
         return
 
+    su_name, _ = find_by_suid(uid)
+    if su_name:
+        await message.answer(f"Привіт, {su_name}! Твій кабінет:", reply_markup=menu_super)
+        return
+
     s_name, _ = find_by_uid(uid)
     if s_name:
         await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=menu_student)
@@ -189,6 +209,13 @@ async def auth(message: types.Message):
     uid = message.from_user.id
 
     for name, data in students.items():
+        if data.get("su_code") == code:
+            data["su_id"] = uid
+            data["su_code"] = None
+            save_data()
+            user_state[uid] = None
+            await message.answer(f"✅ Вітаю, {name}! Ти зайшов як супер-учень.", reply_markup=menu_super)
+            return
         if data.get("u_code") == code:
             data["u_id"] = uid
             data["u_code"] = None
@@ -238,15 +265,17 @@ async def manage_student(message: types.Message):
     bal = s["balance"]
     bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
 
-    u_status = "✅ Прив'язано" if s.get("u_id") else f"🔑 Код учня: {s.get('u_code')}"
-    p_status = "✅ Прив'язано" if s.get("p_id") else f"🔑 Код батьків: {s.get('p_code')}"
+    u_status = "✅ Прив'язано" if s.get("u_id") else f"🔑 Код учня: {s.get('u_code') or '—'}"
+    p_status = "✅ Прив'язано" if s.get("p_id") else f"🔑 Код батьків: {s.get('p_code') or '—'}"
+    su_status = "✅ Прив'язано" if s.get("su_id") else f"🔑 Код супер-учня: {s.get('su_code') or '—'}"
 
     text = (
         f"👤 {name}\n"
         f"💰 Ціна: {s['price']}₴ | Баланс: {bal_str}\n"
         f"📅 {sessions_text or 'Розклад не встановлено'}\n"
         f"📱 {u_status}\n"
-        f"👨‍👩‍👦 {p_status}"
+        f"👨‍👩‍👦 {p_status}\n"
+        f"⭐ {su_status}"
     )
 
     kb = ReplyKeyboardMarkup(keyboard=[
@@ -551,6 +580,8 @@ async def student_hw_list(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
     if not data:
+        name, data = find_by_suid(uid)
+    if not data:
         return
 
     homework = data.get("homework", [])
@@ -588,6 +619,8 @@ async def student_hw_list(message: types.Message):
 async def student_hw_detail(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
     if not data:
         return
 
@@ -757,12 +790,26 @@ async def logout(message: types.Message):
             )
             return
 
+        if data.get("su_id") == uid:
+            data["su_id"] = None
+            save_data()
+            user_state[uid] = None
+            await message.answer(
+                f"👋 Ти вийшов з кабінету {name}.\n"
+                f"Щоб увійти знову — введи свій код після /start.",
+                reply_markup=types.ReplyKeyboardRemove()
+            )
+            return
+
 
 # ─── УЧЕНЬ: БАЛАНС ─────────────────────────────────────────────────────────────
 
 @dp.message(lambda m: m.text == "💳 Мій баланс")
 async def student_balance(message: types.Message):
-    name, data = find_by_uid(message.from_user.id)
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
     if data:
         bal = data["balance"]
         status = "✅" if bal >= 0 else "⚠️ (заборгованість)"
@@ -773,7 +820,10 @@ async def student_balance(message: types.Message):
 
 @dp.message(lambda m: m.text == "📅 Мій розклад")
 async def student_schedule(message: types.Message):
-    name, data = find_by_uid(message.from_user.id)
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
     if data:
         sessions = "\n".join([f"🔹 {s['day']} {s['time']}" for s in data.get("sessions", [])])
         await message.answer(f"📅 Твій розклад:\n{sessions or 'Розклад ще не встановлено'}")
@@ -807,6 +857,8 @@ async def pay_start(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_pid(uid)
     if not data:
+        name, data = find_by_suid(uid)
+    if not data:
         await message.answer("Доступ заборонено.")
         return
     user_state[uid] = "pay_sum"
@@ -832,6 +884,8 @@ async def pay_photo(message: types.Message):
     amount = state_data["sum"]
 
     child_name, _ = find_by_pid(uid)
+    if not child_name:
+        child_name, _ = find_by_suid(uid)
     child_name = child_name or "Учень"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -855,14 +909,14 @@ async def pay_photo(message: types.Message):
 @dp.callback_query(F.data.startswith("confirm_"))
 async def confirm_pay(callback: types.CallbackQuery):
     parts = callback.data.split("_")
-    p_id, amount = int(parts[1]), int(parts[2])
+    payer_id, amount = int(parts[1]), int(parts[2])
 
     for name, data in students.items():
-        if data.get("p_id") == p_id:
+        if data.get("p_id") == payer_id or data.get("su_id") == payer_id:
             data["balance"] += amount
             save_data()
             await bot.send_message(
-                p_id,
+                payer_id,
                 f"✅ Поповнення на {amount}₴ підтверджено!\n💳 Новий баланс: {data['balance']}₴"
             )
             await callback.message.edit_caption(
@@ -979,6 +1033,7 @@ async def handle(message: types.Message):
             else:
                 u_code = new_code()
                 p_code = new_code()
+                su_code = new_code()
                 students[name] = {
                     "price": state["price"],
                     "balance": 0,
@@ -987,7 +1042,9 @@ async def handle(message: types.Message):
                     "u_code": u_code,
                     "u_id": None,
                     "p_code": p_code,
-                    "p_id": None
+                    "p_id": None,
+                    "su_code": su_code,
+                    "su_id": None
                 }
                 save_data()
                 user_state[uid] = None
@@ -997,7 +1054,8 @@ async def handle(message: types.Message):
                     f"💰 {state['price']}₴\n"
                     f"📅 Розклад:\n{sessions_text}\n\n"
                     f"🔑 Код учня: {u_code}\n"
-                    f"👨‍👩‍👦 Код батьків: {p_code}",
+                    f"👨‍👩‍👦 Код батьків: {p_code}\n"
+                    f"⭐ Код супер-учня: {su_code}",
                     reply_markup=menu_teacher
                 )
         return
@@ -1049,11 +1107,14 @@ async def handle(message: types.Message):
             students[name]["u_id"] = None
             students[name]["p_code"] = new_code()
             students[name]["p_id"] = None
+            students[name]["su_code"] = new_code()
+            students[name]["su_id"] = None
             save_data()
             await message.answer(
                 f"🔑 Нові коди для {name}:\n"
                 f"Учень: {students[name]['u_code']}\n"
-                f"Батьки: {students[name]['p_code']}"
+                f"Батьки: {students[name]['p_code']}\n"
+                f"⭐ Супер-учень: {students[name]['su_code']}"
             )
             return
 
