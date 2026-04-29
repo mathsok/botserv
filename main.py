@@ -263,7 +263,7 @@ async def auth(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: СПИСОК УЧНІВ ─────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📋 Список учнів")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Список учнів" in m.text)
 async def teacher_list(message: types.Message):
     if not students:
         await message.answer("Учнів поки немає.", reply_markup=menu_teacher)
@@ -318,14 +318,14 @@ async def manage_student(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗДІЛИ МЕНЮ ────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "👥 Керування учнями")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Керування учнями" in m.text)
 async def teacher_section_students(message: types.Message):
     await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
 
 
 # ─── ВЧИТЕЛЬ: ДОДАТИ УЧНЯ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "➕ Додати учня")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Додати учня" in m.text)
 async def add_student(message: types.Message):
     user_state[message.from_user.id] = "waiting_name"
     await message.answer("Введи ім'я учня:")
@@ -333,7 +333,7 @@ async def add_student(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗКЛАД ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📅 Мій розклад")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Мій розклад" in m.text)
 async def teacher_schedule(message: types.Message):
     if not students:
         await message.answer("Немає учнів.")
@@ -355,7 +355,7 @@ async def teacher_schedule(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ВІДМІТИТИ ЗАНЯТТЯ ────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "✔️ Відмітити заняття")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Відмітити заняття" in m.text)
 async def mark_lesson(message: types.Message):
     if not students:
         await message.answer("Учнів немає.")
@@ -689,7 +689,7 @@ async def reschedule_enter_new_date(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: БАЛАНСИ ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "💳 Баланси")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Баланси" in m.text)
 async def teacher_balances(message: types.Message):
     load_data()
     if not students:
@@ -714,7 +714,7 @@ async def teacher_balances(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ДОМАШНЄ ЗАВДАННЯ — ВИБІР УЧНЯ ───────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📝 Відправити домашнє завдання")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Відправити домашнє завдання" in m.text)
 async def hw_choose_student(message: types.Message):
     if not students:
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
@@ -851,12 +851,12 @@ async def hw_receive_text(message: types.Message):
 
 # ─── УЧЕНЬ: РОЗДІЛ ЗАНЯТТЯ І МАТЕРІАЛИ ────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📖 Заняття і матеріали")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Заняття і матеріали" in m.text)
 async def teacher_section_lessons(message: types.Message):
     await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
 
 
-@dp.message(lambda m: m.text and m.text == "📖 Заняття і матеріали")
+@dp.message(lambda m: m.text and "Заняття і матеріали" in m.text)
 async def student_section_lessons(message: types.Message):
     uid = message.from_user.id
     if uid == ADMIN_ID:
@@ -866,7 +866,7 @@ async def student_section_lessons(message: types.Message):
 
 # ─── УЧЕНЬ: ЖУРНАЛ ЗАНЯТЬ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📒 Журнал занять")
+@dp.message(lambda m: m.text and "Журнал занять" in m.text)
 async def student_journal(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -940,7 +940,7 @@ async def student_journal_detail(message: types.Message):
 
 # ─── УЧЕНЬ: ДОМАШНІ ЗАВДАННЯ — СПИСОК ─────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📚 Домашні завдання")
+@dp.message(lambda m: m.text and "Домашні завдання" in m.text)
 async def student_hw_list(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -1127,7 +1127,7 @@ async def hw_receive_done_photo(message: types.Message):
 
 # ─── ВИХІД З КАБІНЕТУ ─────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "🚪 Вийти з кабінета")
+@dp.message(lambda m: m.text and "Вийти з кабінета" in m.text)
 async def logout(message: types.Message):
     uid = message.from_user.id
 
@@ -1169,7 +1169,7 @@ async def logout(message: types.Message):
 
 # ─── УЧЕНЬ: БАЛАНС ─────────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "💳 Мій баланс")
+@dp.message(lambda m: m.text and "Мій баланс" in m.text)
 async def student_balance(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -1183,7 +1183,7 @@ async def student_balance(message: types.Message):
 
 # ─── УЧЕНЬ: РОЗКЛАД ────────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📅 Мій розклад")
+@dp.message(lambda m: m.text and "Мій розклад" in m.text)
 async def student_schedule(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -1196,7 +1196,7 @@ async def student_schedule(message: types.Message):
 
 # ─── БАТЬКИ: БАЛАНС ────────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "💳 Баланс дитини")
+@dp.message(lambda m: m.text and "Баланс дитини" in m.text)
 async def parent_balance(message: types.Message):
     name, data = find_by_pid(message.from_user.id)
     if data:
@@ -1207,7 +1207,7 @@ async def parent_balance(message: types.Message):
 
 # ─── БАТЬКИ: РОЗКЛАД ───────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📅 Розклад дитини")
+@dp.message(lambda m: m.text and "Розклад дитини" in m.text)
 async def parent_schedule(message: types.Message):
     name, data = find_by_pid(message.from_user.id)
     if data:
@@ -1217,7 +1217,7 @@ async def parent_schedule(message: types.Message):
 
 # ─── БАТЬКИ: ПОПОВНЕННЯ ЧЕРЕЗ ФОТО ────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "💰 Поповнити баланс")
+@dp.message(lambda m: m.text and "Поповнити баланс" in m.text)
 async def pay_start(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_pid(uid)
@@ -1340,6 +1340,31 @@ async def handle(message: types.Message):
         user_state[uid] = None
         kb = get_menu(uid) or menu_teacher
         await message.answer("Головне меню", reply_markup=kb)
+        return
+
+    # ── Корисні посилання ──
+    if message.text == "🔗 Корисні посилання":
+        await links_menu(message)
+        return
+
+    if message.text == "➕ Додати посилання" and uid == ADMIN_ID:
+        await links_add_start(message)
+        return
+
+    if message.text == "🗑 Видалити посилання" and uid == ADMIN_ID:
+        await links_delete_start(message)
+        return
+
+    # ── Розділи меню ──
+    if message.text == "👥 Керування учнями" and uid == ADMIN_ID:
+        await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
+        return
+
+    if message.text == "📖 Заняття і матеріали":
+        if uid == ADMIN_ID:
+            await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
+        else:
+            await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
         return
 
     if state == "waiting_name":
@@ -1609,7 +1634,7 @@ async def handle(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ЖУРНАЛ ЗАНЯТЬ ────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📒 Журнал занять")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Журнал занять" in m.text)
 async def teacher_journal_choose_student(message: types.Message):
     if not students:
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
@@ -1687,7 +1712,7 @@ async def teacher_journal_detail(message: types.Message):
 
 # ─── КОРИСНІ ПОСИЛАННЯ ────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання")
+@dp.message(lambda m: m.text and "Корисні посилання" in m.text)
 async def links_menu(message: types.Message):
     uid = message.from_user.id
     links = students.get("__links__", {})
@@ -1729,7 +1754,7 @@ async def links_menu(message: types.Message):
         await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "➕ Додати посилання")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Додати посилання" in m.text)
 async def links_add_start(message: types.Message):
     user_state[message.from_user.id] = "links_waiting_label"
     await message.answer(
@@ -1742,7 +1767,7 @@ async def links_add_start(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "🗑 Видалити посилання")
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Видалити посилання" in m.text)
 async def links_delete_start(message: types.Message):
     links = students.get("__links__", {})
     if not links:
