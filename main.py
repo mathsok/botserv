@@ -127,11 +127,15 @@ async def send_reminders():
             target_day = days[target.weekday()]
             target_time = target.strftime("%H:%M")
 
+            print(f"[{now.strftime('%H:%M')}] Нагадування: шукаю заняття на {target_day} {target_time}")
+
             for name, data in students.items():
                 for session in data.get("sessions", []):
-                    if session["day"] == target_day and session["time"] == target_time:
-
+                    match = session["day"] == target_day and session["time"] == target_time
+                    print(f"  {name}: '{session['day']} {session['time']}' → {'✅ збіг!' if match else '—'}")
+                    if match:
                         u_id = data.get("u_id")
+                        print(f"  → u_id = {u_id}")
                         if u_id:
                             try:
                                 await bot.send_message(
@@ -140,20 +144,11 @@ async def send_reminders():
                                     f"Сьогодні о {target_time} у тебе заняття.\n"
                                     f"Не забудь підготуватись! 📚"
                                 )
-                            except Exception:
-                                pass
-
-                        p_id = data.get("p_id")
-                        if p_id:
-                            try:
-                                await bot.send_message(
-                                    p_id,
-                                    f"🔔 Нагадування!\n"
-                                    f"Сьогодні о {target_time} заняття у {name}.\n"
-                                    f"Не забудьте нагадати дитині! 📚"
-                                )
-                            except Exception:
-                                pass
+                                print(f"  → Нагадування надіслано {name}")
+                            except Exception as e:
+                                print(f"  → Помилка надсилання: {e}")
+                        else:
+                            print(f"  → u_id не прив'язано, пропускаємо")
 
         except Exception as e:
             print(f"Помилка в нагадуваннях: {e}")
