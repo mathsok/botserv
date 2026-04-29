@@ -474,6 +474,7 @@ async def lesson_enter_topic(message: types.Message):
 )
 async def lesson_receive_material_photo(message: types.Message):
     uid = message.from_user.id
+    print(f"[PHOTO] state={user_state.get(uid)}")
     user_state[uid]["materials"].append({
         "type": "photo",
         "file_id": message.photo[-1].file_id,
@@ -494,6 +495,7 @@ async def lesson_receive_material_photo(message: types.Message):
 )
 async def lesson_receive_material_doc(message: types.Message):
     uid = message.from_user.id
+    print(f"[DOC] state={user_state.get(uid)}, file={message.document.file_name}, mime={message.document.mime_type}")
     mime = message.document.mime_type or ""
     # Визначаємо іконку за типом файлу
     if "pdf" in mime:
