@@ -70,8 +70,15 @@ menu_teacher_lessons = ReplyKeyboardMarkup(
 menu_student = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-        [KeyboardButton(text="📚 Домашні завдання")],
+        [KeyboardButton(text="📖 Заняття і матеріали")],
         [KeyboardButton(text="🚪 Вийти з кабінета")]
+    ], resize_keyboard=True
+)
+
+menu_student_lessons = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📚 Домашні завдання")],
+        [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
 
@@ -86,7 +93,7 @@ menu_parent = ReplyKeyboardMarkup(
 menu_super = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-        [KeyboardButton(text="📚 Домашні завдання"), KeyboardButton(text="💰 Поповнити баланс")],
+        [KeyboardButton(text="📖 Заняття і матеріали"), KeyboardButton(text="💰 Поповнити баланс")],
         [KeyboardButton(text="🚪 Вийти з кабінета")]
     ], resize_keyboard=True
 )
@@ -371,7 +378,8 @@ async def mark_lesson_choose_action(message: types.Message):
 
     user_state[message.from_user.id] = {"state": "mark_lesson_action", "name": name}
     kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text=f"✅ Проведено"), KeyboardButton(text=f"❌ Скасовано")],
+        [KeyboardButton(text="✅ Проведено"), KeyboardButton(text="❌ Скасовано")],
+        [KeyboardButton(text="🔄 Перенести заняття")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True)
     await message.answer(f"Що сталось із заняттям у {name}?", reply_markup=kb)
@@ -381,18 +389,19 @@ async def mark_lesson_choose_action(message: types.Message):
     lambda m: m.from_user.id == ADMIN_ID
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "mark_lesson_action"
-    and m.text in ["✅ Проведено", "❌ Скасовано"]
+    and m.text in ["✅ Проведено", "❌ Скасовано", "🔄 Перенести заняття"]
 )
 async def mark_lesson_confirm(message: types.Message):
     uid = message.from_user.id
     name = user_state[uid]["name"]
-    user_state[uid] = None
 
     if name not in students:
         await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        user_state[uid] = None
         return
 
     if message.text == "✅ Проведено":
+        user_state[uid] = None
         price = students[name]["price"]
         students[name]["balance"] -= price
         save_data()
@@ -405,7 +414,6 @@ async def mark_lesson_confirm(message: types.Message):
 
         p_id = students[name].get("p_id")
         su_id = students[name].get("su_id")
-
         notify_ids = [i for i in [p_id, su_id] if i]
         for nid in notify_ids:
             try:
@@ -429,17 +437,110 @@ async def mark_lesson_confirm(message: types.Message):
                     pass
 
     elif message.text == "❌ Скасовано":
+        user_state[uid] = {"state": "cancel_enter_date", "name": name}
         await message.answer(
-            f"❌ Заняття з {name} скасовано. Баланс не змінено.",
-            reply_markup=menu_teacher
+            f"Введіть дату заняття, яке бажаєте скасувати (наприклад 05.05):",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+                resize_keyboard=True
+            )
         )
 
-        u_id = students[name].get("u_id") or students[name].get("su_id")
-        if u_id:
-            try:
-                await bot.send_message(u_id, f"❌ Заняття скасовано.\nБаланс не змінювався.")
-            except Exception:
-                pass
+    elif message.text == "🔄 Перенести заняття":
+        user_state[uid] = {"state": "reschedule_enter_date", "name": name}
+        await message.answer(
+            f"Введіть дату заняття, яке переносите (наприклад 05.05):",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+                resize_keyboard=True
+            )
+        )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "cancel_enter_date"
+)
+async def cancel_enter_date(message: types.Message):
+    uid = message.from_user.id
+    name = user_state[uid]["name"]
+    date = message.text.strip()
+    user_state[uid] = None
+
+    await message.answer(
+        f"❌ Заняття з {name} {date} скасовано. Баланс не змінено.",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення всім
+    notify_ids = [i for i in [
+        students[name].get("u_id"),
+        students[name].get("su_id"),
+        students[name].get("p_id")
+    ] if i]
+    for nid in notify_ids:
+        try:
+            await bot.send_message(
+                nid,
+                f"❌ Заняття {date} скасовано.\nБаланс не змінювався."
+            )
+        except Exception:
+            pass
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "reschedule_enter_date"
+)
+async def reschedule_enter_date(message: types.Message):
+    uid = message.from_user.id
+    name = user_state[uid]["name"]
+    old_date = message.text.strip()
+    user_state[uid] = {"state": "reschedule_enter_new_date", "name": name, "old_date": old_date}
+    await message.answer(
+        f"На яку дату переносимо? (наприклад 10.05, можна також вказати час: 10.05 о 18:00):",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@dp.message(
+    lambda m: m.from_user.id == ADMIN_ID
+    and isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "reschedule_enter_new_date"
+)
+async def reschedule_enter_new_date(message: types.Message):
+    uid = message.from_user.id
+    name = user_state[uid]["name"]
+    old_date = user_state[uid]["old_date"]
+    new_date = message.text.strip()
+    user_state[uid] = None
+
+    await message.answer(
+        f"🔄 Заняття з {name} перенесено з {old_date} на {new_date}.",
+        reply_markup=menu_teacher
+    )
+
+    # Сповіщення всім
+    notify_ids = [i for i in [
+        students[name].get("u_id"),
+        students[name].get("su_id"),
+        students[name].get("p_id")
+    ] if i]
+    for nid in notify_ids:
+        try:
+            await bot.send_message(
+                nid,
+                f"🔄 Заняття перенесено!\n"
+                f"Було: {old_date}\n"
+                f"Стало: {new_date}"
+            )
+        except Exception:
+            pass
 
 
 # ─── ВЧИТЕЛЬ: БАЛАНСИ ──────────────────────────────────────────────────────────
@@ -462,7 +563,7 @@ async def teacher_balances(message: types.Message):
             total_debt += bal
 
     if total_debt < 0:
-        text += f"\nОбща заборгованість: {total_debt}₴"
+        text += f"\nЗагальна заборгованість: {total_debt}₴"
 
     await message.answer(text, parse_mode="Markdown")
 
@@ -602,6 +703,17 @@ async def hw_receive_text(message: types.Message):
             )
         except Exception:
             pass
+
+
+# ─── УЧЕНЬ: РОЗДІЛ ЗАНЯТТЯ І МАТЕРІАЛИ ────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📖 Заняття і матеріали")
+async def student_section_lessons(message: types.Message):
+    uid = message.from_user.id
+    # Перевіряємо чи це учень або супер-учень (не вчитель)
+    if uid == ADMIN_ID:
+        return
+    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
 
 
 # ─── УЧЕНЬ: ДОМАШНІ ЗАВДАННЯ — СПИСОК ─────────────────────────────────────────
