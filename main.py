@@ -1307,6 +1307,8 @@ async def handle(message: types.Message):
     uid = message.from_user.id
     state = user_state.get(uid)
 
+    print(f"[HANDLE] uid={uid} state={state} text={message.text!r} photo={bool(message.photo)} doc={bool(message.document)}")
+
     # ── Матеріали до заняття (фото або документ) ──
     if isinstance(state, dict) and state.get("state") == "lesson_send_materials":
         if message.photo:
