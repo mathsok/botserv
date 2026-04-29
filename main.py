@@ -45,9 +45,25 @@ def save_data():
 
 menu_teacher = ReplyKeyboardMarkup(
     keyboard=[
+        [KeyboardButton(text="👥 Керування учнями")],
+        [KeyboardButton(text="📖 Заняття і матеріали")],
+        [KeyboardButton(text="📅 Мій розклад")],
+    ], resize_keyboard=True
+)
+
+menu_teacher_students = ReplyKeyboardMarkup(
+    keyboard=[
         [KeyboardButton(text="➕ Додати учня"), KeyboardButton(text="📋 Список учнів")],
-        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="✔️ Відмітити заняття")],
-        [KeyboardButton(text="💳 Баланси"), KeyboardButton(text="📝 Відправити домашнє завдання")],
+        [KeyboardButton(text="💳 Баланси")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ], resize_keyboard=True
+)
+
+menu_teacher_lessons = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="✔️ Відмітити заняття")],
+        [KeyboardButton(text="📝 Відправити домашнє завдання")],
+        [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
 
@@ -286,6 +302,18 @@ async def manage_student(message: types.Message):
 
     user_state[message.from_user.id] = {"state": "managing_student", "name": name}
     await message.answer(text, reply_markup=kb)
+
+
+# ─── ВЧИТЕЛЬ: РОЗДІЛИ МЕНЮ ────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text == "👥 Керування учнями")
+async def teacher_section_students(message: types.Message):
+    await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text == "📖 Заняття і матеріали")
+async def teacher_section_lessons(message: types.Message):
+    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
 
 
 # ─── ВЧИТЕЛЬ: ДОДАТИ УЧНЯ ──────────────────────────────────────────────────────
