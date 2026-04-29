@@ -48,6 +48,7 @@ menu_teacher = ReplyKeyboardMarkup(
         [KeyboardButton(text="👥 Керування учнями")],
         [KeyboardButton(text="📖 Заняття і матеріали")],
         [KeyboardButton(text="📅 Мій розклад")],
+        [KeyboardButton(text="🔗 Корисні посилання")],
     ], resize_keyboard=True
 )
 
@@ -63,6 +64,7 @@ menu_teacher_lessons = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="✔️ Відмітити заняття")],
         [KeyboardButton(text="📝 Відправити домашнє завдання")],
+        [KeyboardButton(text="📒 Журнал занять")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
@@ -79,6 +81,7 @@ menu_student_lessons = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📚 Домашні завдання")],
         [KeyboardButton(text="📒 Журнал занять")],
+        [KeyboardButton(text="🔗 Корисні посилання")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True
 )
@@ -1561,6 +1564,190 @@ async def handle(message: types.Message):
         except ValueError:
             await message.answer("Введи число")
         return
+
+    # ── Корисні посилання: введення назви ──
+    if state == "links_waiting_label":
+        user_state[uid] = {"state": "links_waiting_url", "label": message.text.strip()}
+        await message.answer(
+            f"Тепер вставте посилання для *{message.text.strip()}*:",
+            parse_mode="Markdown"
+        )
+        return
+
+    # ── Корисні посилання: введення URL ──
+    if isinstance(state, dict) and state.get("state") == "links_waiting_url":
+        url = message.text.strip()
+        label = state["label"]
+        if not url.startswith("http"):
+            await message.answer("Посилання повинно починатись з http:// або https://")
+            return
+        if "__links__" not in students:
+            students["__links__"] = {}
+        students["__links__"][label] = url
+        save_data()
+        user_state[uid] = None
+        await message.answer(
+            f"✅ Посилання *{label}* збережено!",
+            parse_mode="Markdown",
+            reply_markup=menu_teacher
+        )
+        return
+
+    # ── Корисні посилання: видалення ──
+    if state == "links_waiting_delete" and message.text and message.text.startswith("🗑 "):
+        label = message.text.replace("🗑 ", "").strip()
+        links = students.get("__links__", {})
+        if label in links:
+            del links[label]
+            save_data()
+            await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
+        else:
+            await message.answer("Посилання не знайдено.", reply_markup=menu_teacher)
+        user_state[uid] = None
+        return
+
+
+# ─── ВЧИТЕЛЬ: ЖУРНАЛ ЗАНЯТЬ ────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "📒 Журнал занять")
+async def teacher_journal_choose_student(message: types.Message):
+    if not students:
+        await message.answer("Учнів немає.", reply_markup=menu_teacher)
+        return
+
+    kb = [[KeyboardButton(text=f"Журнал: {n}")] for n in students if not n.startswith("__")]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer(
+        "Обери учня, журнал якого хочеш переглянути:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    )
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Журнал: "))
+async def teacher_journal_list(message: types.Message):
+    name = message.text.replace("Журнал: ", "").strip()
+    if name not in students:
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+
+    journal = students[name].get("journal", [])
+    if not journal:
+        await message.answer(f"📒 У {name} ще немає занять у журналі.", reply_markup=menu_teacher)
+        return
+
+    kb = []
+    for i, entry in enumerate(reversed(journal)):
+        kb.append([KeyboardButton(text=f"Т.Журнал {name} #{len(journal) - i}: {entry['date']}")])
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+
+    text = f"📒 *Журнал занять — {name}:*\n\n"
+    for entry in reversed(journal):
+        mat_count = len(entry.get("materials", []))
+        mat_str = f" | 📎 {mat_count}" if mat_count else ""
+        text += f"📅 {entry['date']} — *{entry['topic']}*{mat_str}\n"
+
+    await message.answer(text, parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Т.Журнал "))
+async def teacher_journal_detail(message: types.Message):
+    # Формат: "Т.Журнал Іван #3: 05.05.2026"
+    try:
+        part = message.text.replace("Т.Журнал ", "")
+        name, rest = part.split(" #", 1)
+        idx = int(rest.split(":")[0].strip()) - 1
+        journal = students[name].get("journal", [])
+        entry = journal[idx]
+    except (ValueError, IndexError, KeyError):
+        await message.answer("Заняття не знайдено.")
+        return
+
+    materials = entry.get("materials", [])
+    mat_str = f"📎 Матеріалів: {len(materials)}" if materials else "📎 Матеріалів немає"
+
+    await message.answer(
+        f"📒 *Заняття {idx + 1} — {name}*\n"
+        f"📅 Дата: {entry['date']}\n"
+        f"📖 Тема: {entry['topic']}\n"
+        f"{mat_str}",
+        parse_mode="Markdown"
+    )
+
+    if materials:
+        for mat in materials:
+            try:
+                if mat["type"] == "photo":
+                    await message.answer_photo(mat["file_id"], caption=mat.get("caption") or None)
+                elif mat["type"] == "document":
+                    await message.answer_document(mat["file_id"], caption=mat.get("caption") or None)
+            except Exception:
+                pass
+
+
+# ─── КОРИСНІ ПОСИЛАННЯ ────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання")
+async def links_menu(message: types.Message):
+    uid = message.from_user.id
+
+    # Учитель — показуємо керування посиланнями
+    if uid == ADMIN_ID:
+        links = students.get("__links__", {})
+        if not links:
+            text = "🔗 Посилань поки немає.\nДодай перше!"
+        else:
+            text = "🔗 *Корисні посилання:*\n\n"
+            for label, url in links.items():
+                text += f"• {label}: {url}\n"
+
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="➕ Додати посилання")],
+            [KeyboardButton(text="🗑 Видалити посилання")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+    # Учень / супер-учень — тільки перегляд
+    else:
+        links = students.get("__links__", {})
+        if not links:
+            await message.answer("🔗 Посилань поки немає.")
+            return
+
+        text = "🔗 *Корисні посилання:*\n\n"
+        for label, url in links.items():
+            text += f"• [{label}]({url})\n"
+        await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "➕ Додати посилання")
+async def links_add_start(message: types.Message):
+    user_state[message.from_user.id] = "links_waiting_label"
+    await message.answer(
+        "Введи назву посилання (наприклад: *Конференція*, *Підручник*):",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "🗑 Видалити посилання")
+async def links_delete_start(message: types.Message):
+    links = students.get("__links__", {})
+    if not links:
+        await message.answer("Посилань немає.")
+        return
+
+    kb = [[KeyboardButton(text=f"🗑 {label}")] for label in links]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer(
+        "Оберіть посилання для видалення:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    )
+    user_state[message.from_user.id] = "links_waiting_delete"
 
 
 # ─── ЗАПУСК ────────────────────────────────────────────────────────────────────
