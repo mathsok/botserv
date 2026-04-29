@@ -186,7 +186,6 @@ async def start(message: types.Message):
     if su_name:
         await message.answer(f"Привіт, {su_name}! Твій кабінет:", reply_markup=menu_super)
         return
-
     s_name, _ = find_by_uid(uid)
     if s_name:
         await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=menu_student)
@@ -214,7 +213,7 @@ async def auth(message: types.Message):
             data["su_code"] = None
             save_data()
             user_state[uid] = None
-            await message.answer(f"✅ Вітаю, {name}! Ти зайшов як супер-учень.", reply_markup=menu_super)
+            await message.answer(f"✅ Вітаю, {name}! Ти зайшов як учень.", reply_markup=menu_super)
             return
         if data.get("u_code") == code:
             data["u_id"] = uid
@@ -377,25 +376,29 @@ async def mark_lesson_confirm(message: types.Message):
         )
 
         p_id = students[name].get("p_id")
-        if p_id:
+        su_id = students[name].get("su_id")
+
+        notify_ids = [i for i in [p_id, su_id] if i]
+        for nid in notify_ids:
             try:
                 await bot.send_message(
-                    p_id,
+                    nid,
                     f"🔔 Заняття проведено.\nЗ балансу списано: {price}₴\nПоточний баланс: {new_balance}₴"
                 )
             except Exception:
                 pass
 
-        if new_balance < 0 and p_id:
-            try:
-                await bot.send_message(
-                    p_id,
-                    f"⚠️ Увага! Баланс учня {name} став від'ємним.\n"
-                    f"💳 Поточний баланс: {new_balance}₴\n"
-                    f"Будь ласка, поповніть баланс."
-                )
-            except Exception:
-                pass
+        if new_balance < 0:
+            for nid in notify_ids:
+                try:
+                    await bot.send_message(
+                        nid,
+                        f"⚠️ Увага! Баланс став від'ємним.\n"
+                        f"💳 Поточний баланс: {new_balance}₴\n"
+                        f"Будь ласка, поповніть баланс."
+                    )
+                except Exception:
+                    pass
 
     elif message.text == "❌ Скасовано":
         await message.answer(
@@ -403,7 +406,7 @@ async def mark_lesson_confirm(message: types.Message):
             reply_markup=menu_teacher
         )
 
-        u_id = students[name].get("u_id")
+        u_id = students[name].get("u_id") or students[name].get("su_id")
         if u_id:
             try:
                 await bot.send_message(u_id, f"❌ Заняття скасовано.\nБаланс не змінювався.")
@@ -1158,14 +1161,13 @@ async def handle(message: types.Message):
             bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
             user_state[uid] = None
             await message.answer(f"✅ З балансу {name} списано −{amount}₴\n💳 Новий баланс: {bal_str}", reply_markup=menu_teacher)
-            # Сповіщення батькам якщо баланс пішов у мінус
             if bal < 0:
-                p_id = students[name].get("p_id")
-                if p_id:
+                notify_ids = [i for i in [students[name].get("p_id"), students[name].get("su_id")] if i]
+                for nid in notify_ids:
                     try:
                         await bot.send_message(
-                            p_id,
-                            f"⚠️ Увага! Баланс учня {name} став від'ємним.\n"
+                            nid,
+                            f"⚠️ Увага! Баланс став від'ємним.\n"
                             f"💳 Поточний баланс: {bal}₴\n"
                             f"Будь ласка, поповніть баланс."
                         )
