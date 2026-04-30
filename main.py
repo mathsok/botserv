@@ -289,33 +289,26 @@ async def manage_student(message: types.Message):
         s["p_code"] = new_code()
     save_data()
 
-    sessions_text = " | ".join([f"{x['day']} {x['time']}" for x in s.get("sessions", [])])
     bal = s["balance"]
     bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
-
-    u_status = "✅ Прив'язано" if s.get("u_id") else f"🔑 Код учня: {s.get('u_code') or '—'}"
-    p_status = "✅ Прив'язано" if s.get("p_id") else f"🔑 Код батьків: {s.get('p_code') or '—'}"
-    su_status = "✅ Прив'язано" if s.get("su_id") else f"🔑 Код супер-учня: {s.get('su_code') or '—'}"
+    u_status = "✅" if s.get("u_id") else f"🔑 {s.get('u_code') or '—'}"
+    p_status = "✅" if s.get("p_id") else f"🔑 {s.get('p_code') or '—'}"
+    su_status = "✅" if s.get("su_id") else f"🔑 {s.get('su_code') or '—'}"
 
     text = (
-        f"👤 {name}\n"
+        f"👤 *{name}*\n"
         f"💰 Ціна: {s['price']}₴ | Баланс: {bal_str}\n"
-        f"📅 {sessions_text or 'Розклад не встановлено'}\n"
-        f"📱 {u_status}\n"
-        f"👨‍👩‍👦 {p_status}\n"
-        f"⭐ {su_status}"
+        f"📱 Учень: {u_status} | 👨‍👩‍👦 Батьки: {p_status} | ⭐ Супер: {su_status}"
     )
 
     kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
-        [KeyboardButton(text=f"📅 Змінити розклад {name}"), KeyboardButton(text=f"💲 Змінити ціну {name}")],
-        [KeyboardButton(text=f"🔗 Посилання {name}")],
-        [KeyboardButton(text=f"❌ Видалити {name}"), KeyboardButton(text=f"🔑 Оновити коди {name}")],
+        [KeyboardButton(text=f"💳 Керування балансом {name}"), KeyboardButton(text=f"📅 Розклад {name}")],
+        [KeyboardButton(text=f"⚙️ Редагування {name}"), KeyboardButton(text=f"🔗 Посилання {name}")],
         [KeyboardButton(text="⬅️ Назад")]
     ], resize_keyboard=True)
 
     user_state[message.from_user.id] = {"state": "managing_student", "name": name}
-    await message.answer(text, reply_markup=kb)
+    await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
 
 # ─── ВЧИТЕЛЬ: РОЗДІЛИ МЕНЮ ────────────────────────────────────────────────────
@@ -868,7 +861,7 @@ async def student_section_lessons(message: types.Message):
 
 # ─── УЧЕНЬ: ЖУРНАЛ ЗАНЯТЬ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and "Журнал занять" in m.text)
+@dp.message(lambda m: m.text and m.text == "📒 Журнал занять" and m.from_user.id != ADMIN_ID)
 async def student_journal(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -1344,6 +1337,14 @@ async def handle(message: types.Message):
         await message.answer("Головне меню", reply_markup=kb)
         return
 
+    # ── Журнал занять ──
+    if message.text == "📒 Журнал занять":
+        if uid == ADMIN_ID:
+            await teacher_journal_choose_student(message)
+        else:
+            await student_journal(message)
+        return
+
     # ── Корисні посилання ──
     if message.text == "🔗 Корисні посилання":
         await links_menu(message)
@@ -1481,6 +1482,18 @@ async def handle(message: types.Message):
     if isinstance(state, dict) and state.get("state") == "managing_student":
         name = state["name"]
 
+        # ── Керування балансом ──
+        if message.text == f"💳 Керування балансом {name}":
+            bal = students[name]["balance"]
+            bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
+                [KeyboardButton(text=f"👁 Баланс {name}")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            await message.answer(f"💳 Баланс {name}: *{bal_str}*", parse_mode="Markdown", reply_markup=kb)
+            return
+
         if message.text == f"💰 Поповнити {name}":
             user_state[uid] = {"state": "balance_add", "name": name}
             await message.answer("Введи суму поповнення (₴):")
@@ -1491,10 +1504,84 @@ async def handle(message: types.Message):
             await message.answer("Введи суму для списання (₴):")
             return
 
+        if message.text == f"👁 Баланс {name}":
+            bal = students[name]["balance"]
+            bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
+            await message.answer(f"💳 Поточний баланс {name}: *{bal_str}*\n💲 Ціна заняття: {students[name]['price']}₴", parse_mode="Markdown")
+            return
+
+        # ── Розклад ──
+        if message.text == f"📅 Розклад {name}":
+            sessions = students[name].get("sessions", [])
+            if sessions:
+                text = f"📅 *Розклад {name}:*\n\n"
+                for s in sessions:
+                    text += f"🔹 {s['day']} {s['time']}\n"
+            else:
+                text = f"📅 Розклад {name} не встановлено."
+            await message.answer(text, parse_mode="Markdown")
+            return
+
+        # ── Редагування ──
+        if message.text == f"⚙️ Редагування {name}":
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text=f"📅 Змінити розклад {name}"), KeyboardButton(text=f"💲 Змінити ціну {name}")],
+                [KeyboardButton(text=f"🔑 Оновити коди {name}"), KeyboardButton(text=f"❌ Видалити {name}")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            await message.answer(f"⚙️ Редагування {name}:", reply_markup=kb)
+            return
+
+        if message.text == f"💲 Змінити ціну {name}":
+            user_state[uid] = {"state": "edit_price", "name": name}
+            await message.answer(
+                f"Поточна ціна для {name}: {students[name]['price']}₴\n"
+                f"Введи нову ціну (₴):"
+            )
+            return
+
+        if message.text == f"📅 Змінити розклад {name}":
+            current = " | ".join([f"{s['day']} {s['time']}" for s in students[name].get("sessions", [])])
+            user_state[uid] = {"state": "waiting_day", "name": name, "price": students[name]["price"], "sessions": [], "editing": True}
+            buttons = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text=day)] for day in days],
+                resize_keyboard=True
+            )
+            await message.answer(
+                f"📅 Поточний розклад {name}: {current or 'не встановлено'}\n\n"
+                f"Обери новий перший день:",
+                reply_markup=buttons
+            )
+            return
+
+        if message.text == f"❌ Видалити {name}":
+            students.pop(name, None)
+            save_data()
+            user_state[uid] = None
+            await message.answer(f"🗑 {name} видалений.", reply_markup=menu_teacher)
+            return
+
+        if message.text == f"🔑 Оновити коди {name}":
+            students[name]["u_code"] = new_code()
+            students[name]["u_id"] = None
+            students[name]["p_code"] = new_code()
+            students[name]["p_id"] = None
+            students[name]["su_code"] = new_code()
+            students[name]["su_id"] = None
+            save_data()
+            await message.answer(
+                f"🔑 Нові коди для {name}:\n"
+                f"Учень: {students[name]['u_code']}\n"
+                f"Батьки: {students[name]['p_code']}\n"
+                f"⭐ Супер-учень: {students[name]['su_code']}"
+            )
+            return
+
+        # ── Посилання ──
         if message.text == f"🔗 Посилання {name}":
             links = students[name].get("links", {})
             if not links:
-                text = f"🔗 У {name} посилань немає.\nДодай перше!"
+                text = f"🔗 У {name} посилань немає."
             else:
                 text = f"🔗 *Посилання {name}:*\n\n"
                 for label, url in links.items():
@@ -1530,51 +1617,6 @@ async def handle(message: types.Message):
             await message.answer(
                 "Оберіть посилання для видалення:",
                 reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
-            )
-            return
-
-        if message.text == f"💲 Змінити ціну {name}":
-            user_state[uid] = {"state": "edit_price", "name": name}
-            await message.answer(
-                f"Поточна ціна заняття для {name}: {students[name]['price']}₴\n"
-                f"Введи нову ціну (₴):"
-            )
-            return
-
-        if message.text == f"📅 Змінити розклад {name}":
-            current = " | ".join([f"{s['day']} {s['time']}" for s in students[name].get("sessions", [])])
-            user_state[uid] = {"state": "waiting_day", "name": name, "price": students[name]["price"], "sessions": [], "editing": True}
-            buttons = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text=day)] for day in days],
-                resize_keyboard=True
-            )
-            await message.answer(
-                f"📅 Поточний розклад {name}: {current or 'не встановлено'}\n\n"
-                f"Обери новий перший день (старий розклад буде замінено):",
-                reply_markup=buttons
-            )
-            return
-
-        if message.text == f"❌ Видалити {name}":
-            students.pop(name, None)
-            save_data()
-            user_state[uid] = None
-            await message.answer(f"🗑 {name} видалений.", reply_markup=menu_teacher)
-            return
-
-        if message.text == f"🔑 Оновити коди {name}":
-            students[name]["u_code"] = new_code()
-            students[name]["u_id"] = None
-            students[name]["p_code"] = new_code()
-            students[name]["p_id"] = None
-            students[name]["su_code"] = new_code()
-            students[name]["su_id"] = None
-            save_data()
-            await message.answer(
-                f"🔑 Нові коди для {name}:\n"
-                f"Учень: {students[name]['u_code']}\n"
-                f"Батьки: {students[name]['p_code']}\n"
-                f"⭐ Супер-учень: {students[name]['su_code']}"
             )
             return
 
