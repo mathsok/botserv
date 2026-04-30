@@ -107,7 +107,7 @@ menu_super = ReplyKeyboardMarkup(
 def get_menu(uid):
     if uid == ADMIN_ID:
         return menu_teacher
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("su_id") == uid:
             return menu_super
         if data.get("u_id") == uid:
@@ -120,19 +120,19 @@ def get_menu(uid):
 # ─── ДОПОМІЖНІ ФУНКЦІЇ ─────────────────────────────────────────────────────────
 
 def find_by_uid(uid):
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("u_id") == uid:
             return name, data
     return None, None
 
 def find_by_pid(pid):
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("p_id") == pid:
             return name, data
     return None, None
 
 def find_by_suid(uid):
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("su_id") == uid:
             return name, data
     return None, None
@@ -173,7 +173,7 @@ async def send_reminders():
 
             print(f"[{now.strftime('%H:%M')}] Нагадування: шукаю заняття на {target_day} {target_time}")
 
-            for name, data in students.items():
+            for name, data in students.items() if not name.startswith("__"):
                 for session in data.get("sessions", []):
                     match = session["day"] == target_day and session["time"] == target_time
                     print(f"  {name}: '{session['day']} {session['time']}' → {'✅ збіг!' if match else '—'}")
@@ -236,7 +236,7 @@ async def auth(message: types.Message):
     code = message.text.strip()
     uid = message.from_user.id
 
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("su_code") == code:
             data["su_id"] = uid
             data["su_code"] = None
@@ -269,7 +269,7 @@ async def teacher_list(message: types.Message):
     if not students:
         await message.answer("Учнів поки немає.", reply_markup=menu_teacher)
         return
-    kb = [[KeyboardButton(text=f"Учень: {n}")] for n in students]
+    kb = [[KeyboardButton(text=f"Учень: {n}")] for n in students if not n.startswith("__")]
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer("Обери учня для керування:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
@@ -338,7 +338,7 @@ async def teacher_schedule(message: types.Message):
     text = f"📅 Сьогодні ({today}):\n\n"
 
     today_sessions = []
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         for s in data.get("sessions", []):
             if s["day"] == today:
                 today_sessions.append((s["time"], name))
@@ -356,7 +356,7 @@ async def mark_lesson(message: types.Message):
         await message.answer("Учнів немає.")
         return
 
-    kb = [[KeyboardButton(text=f"Заняття: {n}")] for n in students]
+    kb = [[KeyboardButton(text=f"Заняття: {n}")] for n in students if not n.startswith("__")]
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer(
         "Оберіть учня:",
@@ -694,7 +694,7 @@ async def teacher_balances(message: types.Message):
     text = "💳 *Поточні баланси учнів:*\n\n"
     total_debt = 0
 
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         bal = data.get("balance", 0)
         status = "✅" if bal >= 0 else "⚠️ (борг)"
         text += f"👤 {name}: {bal}₴ {status}\n"
@@ -715,7 +715,7 @@ async def hw_choose_student(message: types.Message):
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
         return
 
-    kb = [[KeyboardButton(text=f"ДЗ для: {n}")] for n in students]
+    kb = [[KeyboardButton(text=f"ДЗ для: {n}")] for n in students if not n.startswith("__")]
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer(
         "Обери учня, якому хочеш надіслати домашнє завдання:",
@@ -1127,7 +1127,7 @@ async def logout(message: types.Message):
     uid = message.from_user.id
 
     # Визначаємо хто виходить і скидаємо прив'язку
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("u_id") == uid:
             data["u_id"] = None
             save_data()
@@ -1271,7 +1271,7 @@ async def confirm_pay(callback: types.CallbackQuery):
     parts = callback.data.split("_")
     payer_id, amount = int(parts[1]), int(parts[2])
 
-    for name, data in students.items():
+    for name, data in students.items() if not name.startswith("__"):
         if data.get("p_id") == payer_id or data.get("su_id") == payer_id:
             data["balance"] += amount
             save_data()
