@@ -48,7 +48,7 @@ menu_teacher = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="👥 Керування учнями")],
         [KeyboardButton(text="📖 Заняття і матеріали")],
-        [KeyboardButton(text="📅 Мій розклад")],
+        [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="🗓 Розклад на тиждень")],
         [KeyboardButton(text="🔗 Корисні посилання")],
     ], resize_keyboard=True
 )
@@ -346,6 +346,36 @@ async def teacher_schedule(message: types.Message):
     today_sessions.sort(key=lambda x: x[0])
     text += "\n".join([f"{name} — {time}" for time, name in today_sessions]) if today_sessions else "Немає занять"
     await message.answer(text)
+
+
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "🗓 Розклад на тиждень")
+async def teacher_week_schedule(message: types.Message):
+    if not students:
+        await message.answer("Немає учнів.")
+        return
+
+    today = days[datetime.today().weekday()]
+    text = "🗓 *Розклад на тиждень:*\n"
+
+    for day in days:
+        day_sessions = []
+        for name, data in students.items() if not name.startswith("__"):
+            for s in data.get("sessions", []):
+                if s["day"] == day:
+                    day_sessions.append((s["time"], name))
+
+        day_sessions.sort(key=lambda x: x[0])
+
+        marker = " ← сьогодні" if day == today else ""
+        text += f"\n*{day}*{marker}\n"
+        text += "─────────────\n"
+        if day_sessions:
+            for time, name in day_sessions:
+                text += f"  {time} — {name}\n"
+        else:
+            text += "  Немає занять\n"
+
+    await message.answer(text, parse_mode="Markdown")
 
 
 # ─── ВЧИТЕЛЬ: ВІДМІТИТИ ЗАНЯТТЯ ────────────────────────────────────────────────
@@ -1335,6 +1365,10 @@ async def handle(message: types.Message):
         user_state[uid] = None
         kb = get_menu(uid) or menu_teacher
         await message.answer("Головне меню", reply_markup=kb)
+        return
+
+    if message.text == "🗓 Розклад на тиждень" and uid == ADMIN_ID:
+        await teacher_week_schedule(message)
         return
 
     # ── Журнал занять ──
