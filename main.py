@@ -1345,6 +1345,26 @@ async def handle(message: types.Message):
             await student_journal(message)
         return
 
+    if uid == ADMIN_ID and message.text and message.text.startswith("Журнал: "):
+        await teacher_journal_list(message)
+        return
+
+    if uid == ADMIN_ID and message.text and message.text.startswith("Т.Журнал "):
+        await teacher_journal_detail(message)
+        return
+
+    if message.text and message.text.startswith("📒 Заняття "):
+        await student_journal_detail(message)
+        return
+
+    if message.text and message.text.startswith("ДЗ#"):
+        await student_hw_detail(message)
+        return
+
+    if uid == ADMIN_ID and message.text and message.text.startswith("Заняття: "):
+        await mark_lesson_choose_action(message)
+        return
+
     # ── Корисні посилання ──
     if message.text == "🔗 Корисні посилання":
         await links_menu(message)
