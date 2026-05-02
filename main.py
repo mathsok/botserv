@@ -16,6 +16,8 @@ load_dotenv()
 
 TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])
+ADMIN_ID_2 = int(os.environ.get("ADMIN_ID_2", 0))
+ADMINS = {ADMIN_ID, ADMIN_ID_2} - {0}
 DATA_FILE = "students_db.json"
 
 bot = Bot(token=TOKEN)
@@ -105,7 +107,7 @@ menu_super = ReplyKeyboardMarkup(
 )
 
 def get_menu(uid):
-    if uid == ADMIN_ID:
+    if uid in ADMINS:
         return menu_teacher
     for name, data in {k: v for k, v in students.items() if not k.startswith("__")}.items():
         if data.get("su_id") == uid:
@@ -207,7 +209,7 @@ async def start(message: types.Message):
     load_data()
     uid = message.from_user.id
 
-    if uid == ADMIN_ID:
+    if uid in ADMINS:
         await message.answer("Вітаю, Вчителю! Ваша панель керування:", reply_markup=menu_teacher)
         return
 
@@ -239,21 +241,18 @@ async def auth(message: types.Message):
     for name, data in {k: v for k, v in students.items() if not k.startswith("__")}.items():
         if data.get("su_code") == code:
             data["su_id"] = uid
-            data["su_code"] = None
             save_data()
             user_state[uid] = None
             await message.answer(f"✅ Вітаю, {name}! Ти зайшов як учень.", reply_markup=menu_super)
             return
         if data.get("u_code") == code:
             data["u_id"] = uid
-            data["u_code"] = None
             save_data()
             user_state[uid] = None
             await message.answer(f"✅ Вітаю, {name}! Ти зайшов як учень.", reply_markup=menu_student)
             return
         if data.get("p_code") == code:
             data["p_id"] = uid
-            data["p_code"] = None
             save_data()
             user_state[uid] = None
             await message.answer(f"✅ Вітаю! Ви зайшли як батько/мати учня {name}.", reply_markup=menu_parent)
@@ -264,7 +263,7 @@ async def auth(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: СПИСОК УЧНІВ ─────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Список учнів" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Список учнів" in m.text)
 async def teacher_list(message: types.Message):
     if not students:
         await message.answer("Учнів поки немає.", reply_markup=menu_teacher)
@@ -274,7 +273,7 @@ async def teacher_list(message: types.Message):
     await message.answer("Обери учня для керування:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Учень: "))
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text.startswith("Учень: "))
 async def manage_student(message: types.Message):
     name = message.text.replace("Учень: ", "")
     if name not in students:
@@ -313,14 +312,14 @@ async def manage_student(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗДІЛИ МЕНЮ ────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Керування учнями" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Керування учнями" in m.text)
 async def teacher_section_students(message: types.Message):
     await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
 
 
 # ─── ВЧИТЕЛЬ: ДОДАТИ УЧНЯ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Додати учня" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Додати учня" in m.text)
 async def add_student(message: types.Message):
     user_state[message.from_user.id] = "waiting_name"
     await message.answer("Введи ім'я учня:")
@@ -328,7 +327,7 @@ async def add_student(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗКЛАД ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Мій розклад" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Мій розклад" in m.text)
 async def teacher_schedule(message: types.Message):
     if not students:
         await message.answer("Немає учнів.")
@@ -348,7 +347,7 @@ async def teacher_schedule(message: types.Message):
     await message.answer(text)
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text == "🗓 Розклад на тиждень")
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text == "🗓 Розклад на тиждень")
 async def teacher_week_schedule(message: types.Message):
     if not students:
         await message.answer("Немає учнів.")
@@ -380,7 +379,7 @@ async def teacher_week_schedule(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ВІДМІТИТИ ЗАНЯТТЯ ────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Відмітити заняття" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Відмітити заняття" in m.text)
 async def mark_lesson(message: types.Message):
     if not students:
         await message.answer("Учнів немає.")
@@ -394,7 +393,7 @@ async def mark_lesson(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Заняття: "))
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text.startswith("Заняття: "))
 async def mark_lesson_choose_action(message: types.Message):
     name = message.text.replace("Заняття: ", "")
     if name not in students:
@@ -411,7 +410,7 @@ async def mark_lesson_choose_action(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "mark_lesson_action"
     and m.text in ["✅ Проведено", "❌ Скасовано", "🔄 Перенести заняття"]
@@ -457,7 +456,7 @@ async def mark_lesson_confirm(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "lesson_enter_topic"
 )
@@ -491,7 +490,7 @@ async def lesson_enter_topic(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "lesson_send_materials"
     and (m.photo is not None)
@@ -512,7 +511,7 @@ async def lesson_receive_material_photo(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "lesson_send_materials"
     and (m.document is not None)
@@ -545,7 +544,7 @@ async def lesson_receive_material_doc(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "lesson_send_materials"
     and m.text in ["✅ Готово", "✅ Готово (без матеріалів)"]
@@ -627,7 +626,7 @@ async def lesson_finish(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "cancel_enter_date"
 )
@@ -659,7 +658,7 @@ async def cancel_enter_date(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "reschedule_enter_date"
 )
@@ -678,7 +677,7 @@ async def reschedule_enter_date(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "reschedule_enter_new_date"
 )
@@ -714,7 +713,7 @@ async def reschedule_enter_new_date(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: БАЛАНСИ ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Баланси" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Баланси" in m.text)
 async def teacher_balances(message: types.Message):
     load_data()
     if not students:
@@ -739,7 +738,7 @@ async def teacher_balances(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ДОМАШНЄ ЗАВДАННЯ — ВИБІР УЧНЯ ───────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Відправити домашнє завдання" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Відправити домашнє завдання" in m.text)
 async def hw_choose_student(message: types.Message):
     if not students:
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
@@ -753,7 +752,7 @@ async def hw_choose_student(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("ДЗ для: "))
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text.startswith("ДЗ для: "))
 async def hw_enter_text(message: types.Message):
     name = message.text.replace("ДЗ для: ", "")
     if name not in students:
@@ -774,7 +773,7 @@ async def hw_enter_text(message: types.Message):
 # ─── ВЧИТЕЛЬ: ДОМАШНЄ ЗАВДАННЯ — ОТРИМАННЯ ТЕКСТУ АБО ФОТО ───────────────────
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "hw_waiting_text",
     F.photo
@@ -827,7 +826,7 @@ async def hw_receive_photo(message: types.Message):
 
 
 @dp.message(
-    lambda m: m.from_user.id == ADMIN_ID
+    lambda m: m.from_user.id in ADMINS
     and isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "hw_waiting_text"
 )
@@ -876,7 +875,7 @@ async def hw_receive_text(message: types.Message):
 
 # ─── УЧЕНЬ: РОЗДІЛ ЗАНЯТТЯ І МАТЕРІАЛИ ────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Заняття і матеріали" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Заняття і матеріали" in m.text)
 async def teacher_section_lessons(message: types.Message):
     await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
 
@@ -884,14 +883,14 @@ async def teacher_section_lessons(message: types.Message):
 @dp.message(lambda m: m.text and "Заняття і матеріали" in m.text)
 async def student_section_lessons(message: types.Message):
     uid = message.from_user.id
-    if uid == ADMIN_ID:
+    if uid in ADMINS:
         return
     await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
 
 
 # ─── УЧЕНЬ: ЖУРНАЛ ЗАНЯТЬ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📒 Журнал занять" and m.from_user.id != ADMIN_ID)
+@dp.message(lambda m: m.text and m.text == "📒 Журнал занять" and m.from_user.id not in ADMINS)
 async def student_journal(message: types.Message):
     uid = message.from_user.id
     name, data = find_by_uid(uid)
@@ -979,28 +978,67 @@ async def student_hw_list(message: types.Message):
         await message.answer("📚 Домашніх завдань немає.")
         return
 
-    # Показуємо кнопки для кожного ДЗ
+    # Список кнопок — останні зверху
     kb = []
-    for hw in homework:
+    for i, hw in enumerate(reversed(homework)):
         status_icon = "✅" if hw["status"] == "done" else "🔴"
-        label = f"{status_icon} ДЗ від {hw['date']}: {hw['text'][:25]}{'…' if len(hw['text']) > 25 else ''}"
-        kb.append([KeyboardButton(text=f"ДЗ#{hw['id']}")])
-
+        kb.append([KeyboardButton(text=f"ДЗ {len(homework) - i}: {hw['date']} {status_icon}")])
     kb.append([KeyboardButton(text="⬅️ Назад")])
 
-    # Формуємо текстовий список
-    text = "📚 *Твої домашні завдання:*\n\n"
-    for hw in homework:
+    text = "📚 *Домашні завдання:*\n\n"
+    for hw in reversed(homework):
         status_icon = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
-        text += f"*ДЗ від {hw['date']}* (#{hw['id']})\n{hw['text'][:60]}{'…' if len(hw['text']) > 60 else ''}\nСтатус: {status_icon}\n\n"
-
-    text += "Натисни на номер ДЗ нижче, щоб відкрити його:"
+        text += f"📅 {hw['date']} — {hw['text'][:40]}{'…' if len(hw['text']) > 40 else ''}\n{status_icon}\n\n"
 
     await message.answer(
         text,
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     )
+
+
+@dp.message(lambda m: m.text and m.text.startswith("ДЗ ") and ":" in m.text)
+async def student_hw_by_date(message: types.Message):
+    uid = message.from_user.id
+    name, data = find_by_uid(uid)
+    if not data:
+        name, data = find_by_suid(uid)
+    if not data:
+        return
+
+    try:
+        part = message.text.split(":")[0].replace("ДЗ ", "").strip()
+        idx = int(part) - 1
+        homework = data.get("homework", [])
+        hw = homework[idx]
+    except (ValueError, IndexError):
+        await message.answer("ДЗ не знайдено.")
+        return
+
+    status_text = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
+    text = (
+        f"📝 *Домашнє завдання від {hw['date']}*\n\n"
+        f"{hw['text']}\n\n"
+        f"Статус: {status_text}"
+    )
+
+    user_state[uid] = {"state": "viewing_hw", "hw_id": hw["id"]}
+
+    if hw["status"] == "done":
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+    else:
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="✅ Відмітити як виконане")],
+            [KeyboardButton(text="📸 Надіслати фото виконання")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+
+    if hw.get("photo_id"):
+        await message.answer_photo(hw["photo_id"], caption=text, parse_mode="Markdown", reply_markup=kb)
+    else:
+        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
 
 # ─── УЧЕНЬ: ДОМАШНЄ ЗАВДАННЯ — ДЕТАЛІ ─────────────────────────────────────────
@@ -1367,23 +1405,23 @@ async def handle(message: types.Message):
         await message.answer("Головне меню", reply_markup=kb)
         return
 
-    if message.text == "🗓 Розклад на тиждень" and uid == ADMIN_ID:
+    if message.text == "🗓 Розклад на тиждень" and uid in ADMINS:
         await teacher_week_schedule(message)
         return
 
     # ── Журнал занять ──
     if message.text == "📒 Журнал занять":
-        if uid == ADMIN_ID:
+        if uid in ADMINS:
             await teacher_journal_choose_student(message)
         else:
             await student_journal(message)
         return
 
-    if uid == ADMIN_ID and message.text and message.text.startswith("Журнал: "):
+    if uid in ADMINS and message.text and message.text.startswith("Журнал: "):
         await teacher_journal_list(message)
         return
 
-    if uid == ADMIN_ID and message.text and message.text.startswith("Т.Журнал "):
+    if uid in ADMINS and message.text and message.text.startswith("Т.Журнал "):
         await teacher_journal_detail(message)
         return
 
@@ -1391,11 +1429,15 @@ async def handle(message: types.Message):
         await student_journal_detail(message)
         return
 
+    if message.text and message.text.startswith("ДЗ ") and ":" in message.text:
+        await student_hw_by_date(message)
+        return
+
     if message.text and message.text.startswith("ДЗ#"):
         await student_hw_detail(message)
         return
 
-    if uid == ADMIN_ID and message.text and message.text.startswith("Заняття: "):
+    if uid in ADMINS and message.text and message.text.startswith("Заняття: "):
         await mark_lesson_choose_action(message)
         return
 
@@ -1404,21 +1446,21 @@ async def handle(message: types.Message):
         await links_menu(message)
         return
 
-    if message.text == "➕ Додати посилання" and uid == ADMIN_ID:
+    if message.text == "➕ Додати посилання" and uid in ADMINS:
         await links_add_start(message)
         return
 
-    if message.text == "🗑 Видалити посилання" and uid == ADMIN_ID:
+    if message.text == "🗑 Видалити посилання" and uid in ADMINS:
         await links_delete_start(message)
         return
 
     # ── Розділи меню ──
-    if message.text == "👥 Керування учнями" and uid == ADMIN_ID:
+    if message.text == "👥 Керування учнями" and uid in ADMINS:
         await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
         return
 
     if message.text == "📖 Заняття і матеріали":
-        if uid == ADMIN_ID:
+        if uid in ADMINS:
             await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
         else:
             await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
@@ -1811,7 +1853,7 @@ async def handle(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ЖУРНАЛ ЗАНЯТЬ ────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Журнал занять" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Журнал занять" in m.text)
 async def teacher_journal_choose_student(message: types.Message):
     if not students:
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
@@ -1825,7 +1867,7 @@ async def teacher_journal_choose_student(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Журнал: "))
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text.startswith("Журнал: "))
 async def teacher_journal_list(message: types.Message):
     name = message.text.replace("Журнал: ", "").strip()
     if name not in students:
@@ -1852,7 +1894,7 @@ async def teacher_journal_list(message: types.Message):
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.startswith("Т.Журнал "))
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and m.text.startswith("Т.Журнал "))
 async def teacher_journal_detail(message: types.Message):
     # Формат: "Т.Журнал Іван #3: 05.05.2026"
     try:
@@ -1894,7 +1936,7 @@ async def links_menu(message: types.Message):
     uid = message.from_user.id
 
     # Учитель — свої глобальні посилання
-    if uid == ADMIN_ID:
+    if uid in ADMINS:
         links = students.get("__links__", {})
         if not links:
             user_state[uid] = "links_waiting_label"
@@ -1935,7 +1977,7 @@ async def links_menu(message: types.Message):
         await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Додати посилання" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Додати посилання" in m.text)
 async def links_add_start(message: types.Message):
     user_state[message.from_user.id] = "links_waiting_label"
     await message.answer(
@@ -1948,7 +1990,7 @@ async def links_add_start(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "Видалити посилання" in m.text)
+@dp.message(lambda m: m.from_user.id in ADMINS and m.text and "Видалити посилання" in m.text)
 async def links_delete_start(message: types.Message):
     links = students.get("__links__", {})
     if not links:
