@@ -1441,6 +1441,10 @@ async def handle(message: types.Message):
         await mark_lesson_choose_action(message)
         return
 
+    if message.text == "🚪 Вийти з кабінета":
+        await logout(message)
+        return
+
     # ── Корисні посилання ──
     if message.text == "🔗 Корисні посилання":
         await links_menu(message)
