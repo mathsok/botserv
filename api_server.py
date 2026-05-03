@@ -309,7 +309,7 @@ async def pay_request(request):
 
 
 async def send_materials(request):
-    """Надсилає матеріали заняття учню через Telegram"""
+    """Надсилає матеріали заняття учню через Telegram і зберігає file_id в журналі"""
     try:
         reader = await request.multipart()
         tid = None
@@ -337,7 +337,11 @@ async def send_materials(request):
         sdata = db["teachers"].get(tid, {}).get("students", {}).get(name, {})
         notify = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
 
+        # Збираємо file_id після першого надсилання
+        saved_materials = []
+
         async with aiohttp_client.ClientSession() as session:
+            first = True
             for nid in notify:
                 try:
                     await session.post(
@@ -349,12 +353,37 @@ async def send_materials(request):
                         form.add_field("chat_id", str(nid))
                         if f['is_photo']:
                             form.add_field("photo", f['data'], filename=f['name'], content_type=f['ct'])
-                            await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
+                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form) as resp:
+                                result = await resp.json()
+                                if first and result.get("ok"):
+                                    msg = result.get("result", {})
+                                    photo = msg.get("photo", [])
+                                    fid = photo[-1]["file_id"] if photo else None
+                                    if fid:
+                                        saved_materials.append({"type": "photo", "file_id": fid, "caption": ""})
                         else:
                             form.add_field("document", f['data'], filename=f['name'], content_type=f['ct'])
-                            await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
+                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form) as resp:
+                                result = await resp.json()
+                                if first and result.get("ok"):
+                                    doc = result.get("result", {}).get("document", {})
+                                    fid = doc.get("file_id")
+                                    if fid:
+                                        saved_materials.append({"type": "document", "file_id": fid, "caption": f['name']})
+                    first = False
                 except Exception as e:
                     print(f"[MATERIALS] Error sending to {nid}: {e}")
+
+        # Зберігаємо матеріали в останній запис журналу з цією темою
+        if saved_materials:
+            db2 = load_db()
+            journal = db2["teachers"].get(tid, {}).get("students", {}).get(name, {}).get("journal", [])
+            # Знаходимо останній запис з цією темою
+            for entry in reversed(journal):
+                if entry.get("topic") == topic:
+                    entry["materials"] = saved_materials
+                    break
+            save_db(db2)
 
         return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
     except Exception as e:
