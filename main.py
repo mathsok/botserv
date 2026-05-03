@@ -19,6 +19,7 @@ ADMIN_ID = int(os.environ["ADMIN_ID"])
 ADMIN_ID_2 = int(os.environ.get("ADMIN_ID_2", 0))
 ADMINS = {ADMIN_ID, ADMIN_ID_2} - {0}
 DATA_FILE = "students_db.json"
+BOT_ID = os.environ.get("BOT_ID", "main")
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://mathkyrylo.com")
 
 bot = Bot(token=TOKEN)
@@ -212,14 +213,18 @@ async def start(message: types.Message):
     uid = message.from_user.id
 
     if uid in ADMINS:
-        await message.answer("Вітаю, Вчителю! Ваша панель керування:", reply_markup=menu_teacher)
+        kb_teacher = ReplyKeyboardMarkup(keyboard=[
+            *menu_teacher.keyboard[:-1],
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=admin&bot={BOT_ID}"))]
+        ], resize_keyboard=True)
+        await message.answer("Вітаю, Вчителю! Ваша панель керування:", reply_markup=kb_teacher)
         return
 
     su_name, _ = find_by_suid(uid)
     if su_name:
         kb = ReplyKeyboardMarkup(keyboard=[
             *menu_super.keyboard,
-            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=super&name={su_name}"))]
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=super&name={su_name}&bot={BOT_ID}"))]
         ], resize_keyboard=True)
         await message.answer(f"Привіт, {su_name}! Твій кабінет:", reply_markup=kb)
         return
@@ -227,7 +232,7 @@ async def start(message: types.Message):
     if s_name:
         kb = ReplyKeyboardMarkup(keyboard=[
             *menu_student.keyboard,
-            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=user&name={s_name}"))]
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=user&name={s_name}&bot={BOT_ID}"))]
         ], resize_keyboard=True)
         await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=kb)
         return
@@ -236,7 +241,7 @@ async def start(message: types.Message):
     if p_name:
         kb = ReplyKeyboardMarkup(keyboard=[
             *menu_parent.keyboard,
-            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=parent&name={p_name}"))]
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=parent&name={p_name}&bot={BOT_ID}"))]
         ], resize_keyboard=True)
         await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=kb)
         return
