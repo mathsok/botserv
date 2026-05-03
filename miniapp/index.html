@@ -2,926 +2,1254 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MathKyrylo</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TutorApp</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0d0d1a;--bg2:#151528;--bg3:#1c1c35;
+  --card:rgba(255,255,255,0.05);--card2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0ff;--text2:rgba(240,240,255,0.55);--text3:rgba(240,240,255,0.3);
+  --accent:#7c6ff7;--accent2:#a599ff;
+  --green:#5df0a0;--red:#f07060;--yellow:#f0d060;--blue:#60c0f0;
+  --grad1:linear-gradient(135deg,#7c6ff7,#f07090);
+  --grad2:linear-gradient(135deg,#60c0f0,#5df0a0);
+  --grad3:linear-gradient(135deg,#f0d060,#f09060);
+  --r:14px;--r2:10px;--r3:20px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif}
 
-  :root {
-    --bg: #0f0f1a;
-    --bg2: #1a1a2e;
-    --bg3: #16213e;
-    --card: rgba(255,255,255,0.05);
-    --card-border: rgba(255,255,255,0.08);
-    --text: #f0f0ff;
-    --text2: rgba(240,240,255,0.6);
-    --text3: rgba(240,240,255,0.35);
-    --accent: #7c6ff7;
-    --accent2: #f7776f;
-    --accent3: #6fd9f7;
-    --green: #6ff7b0;
-    --yellow: #f7d96f;
-    --red: #f7776f;
-    --grad1: linear-gradient(135deg, #7c6ff7, #f7776f);
-    --grad2: linear-gradient(135deg, #6fd9f7, #6ff7b0);
-    --grad3: linear-gradient(135deg, #f7d96f, #f7a96f);
-    --radius: 16px;
-    --radius-sm: 10px;
-    --shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
+/* ── SCROLLABLE CONTENT ── */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s}
+.screen.active{opacity:1;pointer-events:all}
+.screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.screen-body::-webkit-scrollbar{display:none}
 
-  body {
-    font-family: 'Manrope', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* ── HEADER ── */
+.header{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.header-back{width:36px;height:36px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.header-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;flex:1}
+.header-action{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap}
 
-  /* ── HEADER ── */
-  .header {
-    position: relative;
-    padding: 20px 20px 0;
-    overflow: hidden;
-  }
-  .header-bg {
-    position: absolute;
-    inset: 0;
-    background: var(--grad1);
-    opacity: 0.12;
-    filter: blur(40px);
-    border-radius: 0 0 60px 60px;
-  }
-  .header-content {
-    position: relative;
-    z-index: 1;
-  }
-  .header-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-  .logo {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 20px;
-    background: var(--grad1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .role-badge {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-  .role-badge.teacher { background: rgba(124,111,247,0.2); color: var(--accent); border: 1px solid rgba(124,111,247,0.3); }
-  .role-badge.student { background: rgba(111,217,247,0.2); color: var(--accent3); border: 1px solid rgba(111,217,247,0.3); }
+/* ── BOTTOM NAV ── */
+.bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(13,13,26,0.95);backdrop-filter:blur(20px);flex-shrink:0}
+.nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif}
+.nav-btn.active{color:var(--accent)}
+.nav-btn svg{width:22px;height:22px}
+.nav-btn span{font-size:10px;font-weight:600;letter-spacing:.2px}
 
-  /* ── BALANCE CARD ── */
-  .balance-card {
-    background: var(--grad1);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin: 0 20px 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .balance-card::before {
-    content: '';
-    position: absolute;
-    top: -30px; right: -30px;
-    width: 120px; height: 120px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 50%;
-  }
-  .balance-card::after {
-    content: '';
-    position: absolute;
-    bottom: -20px; left: 20px;
-    width: 80px; height: 80px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 50%;
-  }
-  .balance-label { font-size: 12px; font-weight: 600; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .balance-amount { font-family: 'Nunito', sans-serif; font-size: 36px; font-weight: 800; margin-bottom: 4px; }
-  .balance-sub { font-size: 12px; opacity: 0.75; }
-  .balance-actions { display: flex; gap: 8px; margin-top: 16px; }
-  .balance-btn {
-    flex: 1; padding: 8px; border-radius: var(--radius-sm);
-    background: rgba(255,255,255,0.2); border: none; color: white;
-    font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
-  }
-  .balance-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.3); }
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;transition:background .15s}
+.card:active{background:var(--card2)}
+.card.clickable{cursor:pointer}
 
-  /* ── SECTION ── */
-  .section { padding: 0 20px; margin-bottom: 24px; }
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .section-title { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 16px; }
-  .section-action { font-size: 12px; color: var(--accent); font-weight: 600; cursor: pointer; }
+/* ── SECTIONS ── */
+.section{padding:0 14px;margin-bottom:20px}
+.section-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
 
-  /* ── CARDS ── */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 10px;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .card:active { transform: scale(0.98); background: rgba(255,255,255,0.08); }
+/* ── BALANCE HERO ── */
+.balance-hero{margin:14px;border-radius:var(--r);padding:20px;position:relative;overflow:hidden;background:var(--grad1)}
+.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(255,255,255,0.08);border-radius:50%}
+.balance-hero::after{content:'';position:absolute;bottom:-30px;left:10px;width:100px;height:100px;background:rgba(255,255,255,0.05);border-radius:50%}
+.balance-label{font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px;position:relative}
+.balance-amount{font-family:'Nunito',sans-serif;font-size:38px;font-weight:900;position:relative;line-height:1.1;margin:4px 0 2px}
+.balance-sub{font-size:12px;opacity:.75;position:relative}
+.balance-actions{display:flex;gap:8px;margin-top:14px;position:relative}
+.balance-btn{flex:1;padding:9px;border-radius:var(--r2);background:rgba(255,255,255,0.18);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);transition:background .15s}
+.balance-btn:active{background:rgba(255,255,255,0.28)}
 
-  /* ── SCHEDULE ── */
-  .schedule-day { margin-bottom: 16px; }
-  .day-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: var(--text3); margin-bottom: 8px;
-  }
-  .day-label.today { color: var(--accent); }
-  .lesson-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px; border-radius: var(--radius-sm);
-    background: var(--card); border: 1px solid var(--card-border);
-    margin-bottom: 6px;
-  }
-  .lesson-time {
-    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 14px;
-    color: var(--accent); min-width: 45px;
-  }
-  .lesson-info { flex: 1; }
-  .lesson-name { font-weight: 600; font-size: 14px; }
-  .lesson-subject { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .lesson-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--grad1); flex-shrink: 0;
-  }
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-bottom:20px}
+.stat-card{border-radius:var(--r);padding:14px;background:var(--card);border:1px solid var(--border)}
+.stat-icon{font-size:22px;margin-bottom:6px;line-height:1}
+.stat-val{font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;line-height:1}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
 
-  /* ── HW ITEMS ── */
-  .hw-item { display: flex; align-items: center; gap: 12px; }
-  .hw-status {
-    width: 28px; height: 28px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; flex-shrink: 0;
-  }
-  .hw-status.done { background: rgba(111,247,176,0.15); color: var(--green); }
-  .hw-status.pending { background: rgba(247,119,111,0.15); color: var(--red); }
-  .hw-info { flex: 1; }
-  .hw-title { font-weight: 600; font-size: 14px; }
-  .hw-date { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .hw-arrow { color: var(--text3); font-size: 16px; }
+/* ── LIST ITEMS ── */
+.list-item{display:flex;align-items:center;gap:12px}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;flex-shrink:0}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-sub{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-right{text-align:right;flex-shrink:0}
+.chevron{color:var(--text3);font-size:16px}
 
-  /* ── STATS (teacher) ── */
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat-card {
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius);
-    padding: 16px;
-  }
-  .stat-icon { font-size: 20px; margin-bottom: 8px; }
-  .stat-value { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 22px; }
-  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.badge-green{background:rgba(93,240,160,.15);color:var(--green)}
+.badge-red{background:rgba(240,112,96,.15);color:var(--red)}
+.badge-yellow{background:rgba(240,208,96,.15);color:var(--yellow)}
+.badge-blue{background:rgba(96,192,240,.15);color:var(--blue)}
+.badge-purple{background:rgba(124,111,247,.15);color:var(--accent2)}
 
-  /* ── STUDENT LIST (teacher) ── */
-  .student-item { display: flex; align-items: center; gap: 12px; }
-  .student-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px;
-    flex-shrink: 0;
-  }
-  .student-info { flex: 1; }
-  .student-name { font-weight: 600; font-size: 14px; }
-  .student-schedule { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .student-balance { text-align: right; }
-  .student-balance-amount { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; }
-  .student-balance-amount.positive { color: var(--green); }
-  .student-balance-amount.negative { color: var(--red); }
+/* ── SCHEDULE ── */
+.day-group{margin-bottom:16px}
+.day-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px}
+.day-label.today{color:var(--accent2)}
+.lesson-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:6px}
+.lesson-time{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--accent2);min-width:42px}
+.lesson-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
-  /* ── LINKS ── */
-  .link-item { display: flex; align-items: center; gap: 12px; }
-  .link-icon {
-    width: 36px; height: 36px; border-radius: var(--radius-sm);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }
-  .link-info { flex: 1; }
-  .link-name { font-weight: 600; font-size: 14px; }
-  .link-url { font-size: 11px; color: var(--text3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-  .link-arrow { color: var(--accent); font-size: 16px; }
+/* ── HW ITEMS ── */
+.hw-status{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.hw-done{background:rgba(93,240,160,.15);color:var(--green)}
+.hw-pending{background:rgba(240,112,96,.15);color:var(--red)}
 
-  /* ── NAV ── */
-  .nav {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(15,15,26,0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--card-border);
-    display: flex; padding: 8px 0 24px;
-    z-index: 100;
-  }
-  .nav-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; gap: 4px;
-    padding: 8px; cursor: pointer; transition: all 0.2s;
-    border: none; background: none; color: var(--text3);
-    font-family: 'Manrope', sans-serif;
-  }
-  .nav-item.active { color: var(--accent); }
-  .nav-icon { font-size: 22px; line-height: 1; }
-  .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+/* ── JOURNAL ── */
+.journal-date-box{flex-shrink:0;text-align:center;background:rgba(124,111,247,.15);border:1px solid rgba(124,111,247,.2);border-radius:var(--r2);padding:6px 10px}
+.journal-day{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--accent2);line-height:1}
+.journal-mon{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 
-  /* ── PAGES ── */
-  .page { display: none; padding-bottom: 90px; animation: fadeIn 0.25s ease; }
-  .page.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+/* ── FORMS ── */
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+textarea.form-input{resize:none;height:80px}
+select.form-input{appearance:none;cursor:pointer}
 
-  /* ── PILL TABS ── */
-  .tabs { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
-    font-size: 12px; font-weight: 600; cursor: pointer;
-    border: 1px solid var(--card-border);
-    background: var(--card); color: var(--text2);
-    transition: all 0.2s;
-  }
-  .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+/* ── BUTTONS ── */
+.btn{width:100%;padding:14px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--grad1);color:#fff}
+.btn-secondary{background:var(--card2);border:1px solid var(--border2);color:var(--text)}
+.btn-danger{background:rgba(240,112,96,.15);border:1px solid rgba(240,112,96,.3);color:var(--red)}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:var(--r2);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600}
+.btn-sm-primary{background:var(--accent);color:#fff}
+.btn-sm-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
 
-  /* ── JOURNAL ── */
-  .journal-item { display: flex; gap: 14px; align-items: flex-start; }
-  .journal-date {
-    flex-shrink: 0; text-align: center;
-    background: rgba(124,111,247,0.15);
-    border-radius: var(--radius-sm); padding: 6px 10px;
-    border: 1px solid rgba(124,111,247,0.2);
-  }
-  .journal-day { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); line-height: 1; }
-  .journal-month { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
-  .journal-content { flex: 1; }
-  .journal-topic { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-  .journal-meta { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
-  .journal-tag {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(111,247,176,0.1); color: var(--green);
-    font-size: 11px; padding: 2px 8px; border-radius: 20px;
-  }
+/* ── TABS ── */
+.tabs{display:flex;gap:6px;padding:0 14px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all .15s}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-  /* ── EMPTY STATE ── */
-  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:10px}
 
-  /* ── ROLE SWITCH ── */
-  #role-switch {
-    display: flex; gap: 10px; padding: 20px;
-    justify-content: center;
-  }
-  .role-btn {
-    flex: 1; max-width: 160px; padding: 14px;
-    border-radius: var(--radius); border: 1px solid var(--card-border);
-    background: var(--card); color: var(--text); cursor: pointer;
-    font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 14px;
-    transition: all 0.2s; text-align: center;
-  }
-  .role-btn .role-emoji { font-size: 28px; display: block; margin-bottom: 8px; }
-  .role-btn.selected { border-color: var(--accent); background: rgba(124,111,247,0.15); color: var(--accent); }
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;margin-bottom:16px}
 
-  .dot-divider { display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 12px; padding: 0 20px; margin: 4px 0 16px; }
-  .dot-divider::before, .dot-divider::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+/* ── LINK ITEM ── */
+.link-icon{width:36px;height:36px;border-radius:var(--r2);background:rgba(124,111,247,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+
+/* ── CODE DISPLAY ── */
+.code-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.code-val{font-family:'Nunito',sans-serif;font-weight:800;font-size:20px;letter-spacing:3px;color:var(--accent2)}
+.code-copy{font-size:12px;color:var(--accent);font-weight:600;cursor:pointer}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,50,.95);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all .25s;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload{border:2px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:border-color .15s}
+.photo-upload:hover{border-color:var(--accent)}
+.photo-upload input{display:none}
+.photo-preview{width:100%;border-radius:var(--r2);margin-top:10px;display:none}
+
+/* ── STEP INDICATOR ── */
+.steps{display:flex;gap:6px;margin-bottom:20px}
+.step{flex:1;height:3px;border-radius:2px;background:var(--border2);transition:background .3s}
+.step.done{background:var(--accent)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .25s ease both}
+
+/* ── ROLE SCREEN ── */
+.role-screen{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:30px 20px;background:var(--bg)}
+.role-logo{text-align:center;margin-bottom:40px}
+.role-logo-icon{font-size:56px;margin-bottom:12px}
+.role-logo-name{font-family:'Nunito',sans-serif;font-weight:900;font-size:28px;background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.role-logo-sub{font-size:14px;color:var(--text2);margin-top:4px}
+.role-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s}
+.role-card:active{background:var(--card2);transform:scale(.99)}
+.role-card.selected{border-color:var(--accent);background:rgba(124,111,247,.1)}
+.role-emoji{font-size:32px;line-height:1;flex-shrink:0}
+.role-card-info{flex:1}
+.role-card-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px}
+.role-card-sub{font-size:12px;color:var(--text2);margin-top:2px}
 </style>
 </head>
 <body>
 
-<div id="app">
-
-  <!-- ROLE SELECTION SCREEN -->
-  <div id="screen-role" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;">
-    <div style="text-align:center;padding:40px 20px 24px;">
-      <div style="font-size:48px;margin-bottom:12px;">📚</div>
-      <div class="logo" style="font-size:28px;margin-bottom:8px;">MathKyrylo</div>
-      <div style="font-size:14px;color:var(--text2);">Обери свою роль</div>
+<!-- ══ ROLE SELECTION ══ -->
+<div id="screen-role" class="screen active">
+  <div class="screen-body">
+    <div class="role-screen">
+      <div class="role-logo">
+        <div class="role-logo-icon">📚</div>
+        <div class="role-logo-name">TutorApp</div>
+        <div class="role-logo-sub">Оберіть свою роль</div>
+      </div>
+      <div id="role-cards">
+        <div class="role-card" onclick="setRole('teacher')">
+          <div class="role-emoji">👨‍🏫</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я вчитель</div>
+            <div class="role-card-sub">Керування учнями та заняттями</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="role-card" onclick="setRole('student')">
+          <div class="role-emoji">🎓</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я учень</div>
+            <div class="role-card-sub">Розклад, ДЗ та баланс</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="role-card" onclick="setRole('parent')">
+          <div class="role-emoji">👨‍👩‍👦</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я батько / мати</div>
+            <div class="role-card-sub">Розклад дитини та баланс</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
     </div>
-    <div id="role-switch">
-      <button class="role-btn" onclick="setRole('teacher')">
-        <span class="role-emoji">👨‍🏫</span>
-        Вчитель
-      </button>
-      <button class="role-btn" onclick="setRole('student')">
-        <span class="role-emoji">🎓</span>
-        Учень
-      </button>
-    </div>
-  </div>
-
-  <!-- MAIN APP -->
-  <div id="screen-main" style="display:none;">
-
-    <!-- TEACHER APP -->
-    <div id="app-teacher" style="display:none;">
-      <div class="header">
-        <div class="header-bg"></div>
-        <div class="header-content">
-          <div class="header-top">
-            <div class="logo">MathKyrylo</div>
-            <span class="role-badge teacher">Вчитель</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- TEACHER PAGES -->
-      <div id="t-page-home" class="page active">
-        <div style="padding:20px 20px 16px;">
-          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Доброго ранку 👋</div>
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Панель керування</div>
-        </div>
-
-        <div class="stats-grid" style="padding:0 20px;margin-bottom:24px;">
-          <div class="stat-card" style="background:linear-gradient(135deg,rgba(124,111,247,0.15),rgba(247,119,111,0.1));">
-            <div class="stat-icon">👥</div>
-            <div class="stat-value" id="t-students-count">0</div>
-            <div class="stat-label">Учнів</div>
-          </div>
-          <div class="stat-card" style="background:linear-gradient(135deg,rgba(111,217,247,0.15),rgba(111,247,176,0.1));">
-            <div class="stat-icon">📅</div>
-            <div class="stat-value" id="t-today-count">0</div>
-            <div class="stat-label">Сьогодні занять</div>
-          </div>
-          <div class="stat-card" style="background:linear-gradient(135deg,rgba(111,247,176,0.15),rgba(247,217,111,0.1));">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value" id="t-income">0₴</div>
-            <div class="stat-label">Дохід цього місяця</div>
-          </div>
-          <div class="stat-card" style="background:linear-gradient(135deg,rgba(247,119,111,0.15),rgba(247,169,111,0.1));">
-            <div class="stat-icon">⚠️</div>
-            <div class="stat-value" id="t-debt-count">0</div>
-            <div class="stat-label">Боргів</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">Сьогоднішні заняття</div>
-            <div class="section-action" onclick="switchTeacherTab('schedule')">Весь тиждень →</div>
-          </div>
-          <div id="t-today-lessons">
-            <div class="empty">Завантаження...</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="t-page-students" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Учні</div>
-        </div>
-        <div id="t-students-list" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <div id="t-page-schedule" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Розклад на тиждень</div>
-        </div>
-        <div id="t-week-schedule" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <div id="t-page-balances" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Баланси</div>
-        </div>
-        <div id="t-balances-list" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <!-- TEACHER NAV -->
-      <nav class="nav">
-        <button class="nav-item active" onclick="switchTeacherTab('home')" id="t-nav-home">
-          <span class="nav-icon">🏠</span>
-          <span class="nav-label">Головна</span>
-        </button>
-        <button class="nav-item" onclick="switchTeacherTab('students')" id="t-nav-students">
-          <span class="nav-icon">👥</span>
-          <span class="nav-label">Учні</span>
-        </button>
-        <button class="nav-item" onclick="switchTeacherTab('schedule')" id="t-nav-schedule">
-          <span class="nav-icon">📅</span>
-          <span class="nav-label">Розклад</span>
-        </button>
-        <button class="nav-item" onclick="switchTeacherTab('balances')" id="t-nav-balances">
-          <span class="nav-icon">💳</span>
-          <span class="nav-label">Баланси</span>
-        </button>
-      </nav>
-    </div>
-
-    <!-- STUDENT APP -->
-    <div id="app-student" style="display:none;">
-      <div class="header">
-        <div class="header-bg" style="background:var(--grad2);"></div>
-        <div class="header-content">
-          <div class="header-top">
-            <div class="logo">MathKyrylo</div>
-            <span class="role-badge student">Учень</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- BALANCE CARD -->
-      <div class="balance-card" id="s-balance-card" style="margin-top:16px;">
-        <div class="balance-label">Мій баланс</div>
-        <div class="balance-amount" id="s-balance-amount">—₴</div>
-        <div class="balance-sub" id="s-balance-sub">Ціна заняття: —₴</div>
-        <div class="balance-actions">
-          <button class="balance-btn" onclick="tgAlert('Поповнення доступне через бота')">💳 Поповнити</button>
-          <button class="balance-btn" onclick="switchStudentTab('hw')">📚 Домашнє завдання</button>
-        </div>
-      </div>
-
-      <!-- STUDENT PAGES -->
-      <div id="s-page-home" class="page active">
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">Найближче заняття</div>
-          </div>
-          <div id="s-next-lesson">
-            <div class="empty">Завантаження...</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">Домашнє завдання</div>
-            <div class="section-action" onclick="switchStudentTab('hw')">Всі →</div>
-          </div>
-          <div id="s-hw-preview">
-            <div class="empty">Завантаження...</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">Корисні посилання</div>
-          </div>
-          <div id="s-links-preview">
-            <div class="empty">Немає посилань</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="s-page-schedule" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Мій розклад</div>
-        </div>
-        <div id="s-schedule-list" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <div id="s-page-hw" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Домашнє завдання</div>
-        </div>
-        <div class="tabs" id="s-hw-tabs">
-          <div class="tab active" onclick="filterHw('all',this)">Всі</div>
-          <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
-          <div class="tab" onclick="filterHw('done',this)">Виконані</div>
-        </div>
-        <div id="s-hw-list" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <div id="s-page-journal" class="page">
-        <div style="padding:20px 20px 12px;">
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Журнал занять</div>
-        </div>
-        <div id="s-journal-list" style="padding:0 20px;">
-          <div class="empty">Завантаження...</div>
-        </div>
-      </div>
-
-      <!-- STUDENT NAV -->
-      <nav class="nav">
-        <button class="nav-item active" onclick="switchStudentTab('home')" id="s-nav-home">
-          <span class="nav-icon">🏠</span>
-          <span class="nav-label">Головна</span>
-        </button>
-        <button class="nav-item" onclick="switchStudentTab('schedule')" id="s-nav-schedule">
-          <span class="nav-icon">📅</span>
-          <span class="nav-label">Розклад</span>
-        </button>
-        <button class="nav-item" onclick="switchStudentTab('hw')" id="s-nav-hw">
-          <span class="nav-icon">📚</span>
-          <span class="nav-label">ДЗ</span>
-        </button>
-        <button class="nav-item" onclick="switchStudentTab('journal')" id="s-nav-journal">
-          <span class="nav-icon">📒</span>
-          <span class="nav-label">Журнал</span>
-        </button>
-      </nav>
-    </div>
-
   </div>
 </div>
 
+<!-- ══ TEACHER REGISTRATION ══ -->
+<div id="screen-teacher-reg" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
+    <div class="header-title">Реєстрація вчителя</div>
+  </div>
+  <div class="screen-body" style="padding:20px">
+    <div class="steps">
+      <div class="step done" id="reg-step-1"></div>
+      <div class="step" id="reg-step-2"></div>
+    </div>
+    <div id="reg-step-name">
+      <div class="form-group">
+        <div class="form-label">Ваше ім'я та по батькові</div>
+        <input class="form-input" id="reg-name" placeholder="Іван Петрович" type="text">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Предмет</div>
+        <input class="form-input" id="reg-subject" placeholder="Математика" type="text">
+      </div>
+      <button class="btn btn-primary" onclick="registerTeacher()">Продовжити →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH CODE ══ -->
+<div id="screen-auth" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
+    <div class="header-title">Вхід</div>
+  </div>
+  <div class="screen-body" style="padding:20px">
+    <div style="text-align:center;padding:20px 0 30px">
+      <div style="font-size:48px;margin-bottom:12px">🔑</div>
+      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Введіть код доступу</div>
+      <div style="font-size:14px;color:var(--text2)">Код надає ваш вчитель</div>
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="auth-code" placeholder="0000" type="number" style="text-align:center;font-size:28px;font-family:'Nunito',sans-serif;font-weight:800;letter-spacing:6px">
+    </div>
+    <button class="btn btn-primary" onclick="authWithCode()">Увійти</button>
+  </div>
+</div>
+
+<!-- ══ TEACHER APP ══ -->
+<div id="screen-teacher" class="screen">
+  <!-- HOME -->
+  <div id="t-home" class="screen active" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header">
+      <div class="header-title" id="t-teacher-name">Кабінет вчителя</div>
+      <div class="header-action" onclick="showAddStudent()">+ Учень</div>
+    </div>
+    <div class="screen-body">
+      <div class="stat-grid" style="margin-top:14px">
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(124,111,247,.2),rgba(240,112,144,.1))">
+          <div class="stat-icon">👥</div>
+          <div class="stat-val" id="t-stat-students">0</div>
+          <div class="stat-lbl">Учнів</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(96,192,240,.2),rgba(93,240,160,.1))">
+          <div class="stat-icon">📅</div>
+          <div class="stat-val" id="t-stat-today">0</div>
+          <div class="stat-lbl">Сьогодні занять</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(93,240,160,.2),rgba(240,208,96,.1))">
+          <div class="stat-icon">💰</div>
+          <div class="stat-val" id="t-stat-income">—</div>
+          <div class="stat-lbl">Дохід (міс.)</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(240,112,96,.2),rgba(240,169,96,.1))">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-val" id="t-stat-debts">0</div>
+          <div class="stat-lbl">Боргів</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Сьогоднішні заняття</div>
+        <div id="t-today-lessons"><div class="empty"><div class="empty-icon">🎉</div>Сьогодні занять немає</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Учні</div>
+        <div id="t-students-preview"></div>
+        <button class="btn btn-secondary" style="margin-top:6px" onclick="showTeacherTab('students')">Всі учні →</button>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="showTeacherTab('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Головна</span>
+      </button>
+      <button class="nav-btn" onclick="showTeacherTab('students')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Учні</span>
+      </button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Розклад</span>
+      </button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Заняття</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- STUDENTS TAB -->
+  <div id="t-students" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header">
+      <div class="header-title">Учні</div>
+      <div class="header-action" onclick="showAddStudent()">+ Додати</div>
+    </div>
+    <div class="screen-body" style="padding:14px">
+      <div id="t-students-list"></div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span>
+      </button>
+      <button class="nav-btn active" onclick="showTeacherTab('students')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span>
+      </button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span>
+      </button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- SCHEDULE TAB -->
+  <div id="t-schedule" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header">
+      <div class="header-title">Розклад на тиждень</div>
+    </div>
+    <div class="screen-body" style="padding:14px">
+      <div id="t-week-schedule"></div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+
+  <!-- LESSONS TAB -->
+  <div id="t-lessons" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header">
+      <div class="header-title">Заняття</div>
+    </div>
+    <div class="screen-body" style="padding:14px">
+      <div class="section">
+        <div class="section-title">Дії</div>
+        <div class="card clickable" onclick="showMarkLesson()" style="margin-bottom:10px">
+          <div class="list-item">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#5df0a0,#60c0f0);display:flex;align-items:center;justify-content:center;font-size:20px">✔️</div>
+            <div class="item-info"><div class="item-name">Відмітити заняття</div><div class="item-sub">Тема, матеріали, баланс</div></div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+        <div class="card clickable" onclick="showSendHw()">
+          <div class="list-item">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#7c6ff7,#f07090);display:flex;align-items:center;justify-content:center;font-size:20px">📝</div>
+            <div class="item-info"><div class="item-name">Надіслати ДЗ</div><div class="item-sub">Текст або фото</div></div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Журнал</div>
+        <div id="t-journal-list"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- ══ STUDENT APP ══ -->
+<div id="screen-student" class="screen">
+  <div id="s-home" class="screen active" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header">
+      <div class="header-title" id="s-student-name">Мій кабінет</div>
+    </div>
+    <div class="screen-body">
+      <div class="balance-hero" id="s-balance-hero" style="background:var(--grad2)">
+        <div class="balance-label">Мій баланс</div>
+        <div class="balance-amount" id="s-balance">—₴</div>
+        <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
+        <div class="balance-actions">
+          <button class="balance-btn" onclick="showStudentTab('hw')">📚 ДЗ</button>
+          <button class="balance-btn" onclick="showStudentTab('journal')">📒 Журнал</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Найближче заняття</div>
+        <div id="s-next-lesson"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Нові домашні завдання</div>
+        <div id="s-hw-preview"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Корисні посилання</div>
+        <div id="s-links-preview"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-schedule" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header"><div class="header-title">Мій розклад</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-schedule-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn active" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-hw" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header"><div class="header-title">Домашні завдання</div></div>
+    <div class="tabs" style="margin-top:10px">
+      <div class="tab active" onclick="filterHw('all',this)">Всі</div>
+      <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
+      <div class="tab" onclick="filterHw('done',this)">Виконані</div>
+    </div>
+    <div class="screen-body" style="padding:0 14px 14px"><div id="s-hw-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn active" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-journal" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+    <div class="header"><div class="header-title">Журнал занять</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-journal-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn active" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- ══ STUDENT CARD (teacher view) ══ -->
+<div id="screen-student-card" class="screen" style="flex-direction:column">
+  <div class="header">
+    <button class="header-back" onclick="goBack()">‹</button>
+    <div class="header-title" id="sc-name">Учень</div>
+    <div class="header-action" onclick="showDeleteStudent()">Видалити</div>
+  </div>
+  <div class="screen-body" style="padding:14px">
+    <div class="balance-hero" id="sc-balance-hero">
+      <div class="balance-label">Баланс</div>
+      <div class="balance-amount" id="sc-balance">0₴</div>
+      <div class="balance-sub" id="sc-price">Ціна: 0₴/заняття</div>
+      <div class="balance-actions">
+        <button class="balance-btn" onclick="showAddBalance()">+ Поповнити</button>
+        <button class="balance-btn" onclick="showSubBalance()">− Списати</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Розклад</div>
+      <div id="sc-sessions"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="showEditSchedule()">✏️ Змінити розклад</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Коди доступу</div>
+      <div id="sc-codes"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="resetCodes()">🔄 Оновити коди</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Корисні посилання</div>
+      <div id="sc-links"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="showAddLink()">+ Додати посилання</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Налаштування</div>
+      <div class="card clickable" onclick="showEditPrice()">
+        <div class="list-item">
+          <div class="item-info"><div class="item-name">Змінити ціну заняття</div></div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Add Student -->
+<div class="modal-overlay" id="modal-add-student">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новий учень</div>
+    <div class="form-group"><div class="form-label">Ім'я учня</div><input class="form-input" id="new-student-name" placeholder="Іван Петренко"></div>
+    <div class="form-group"><div class="form-label">Ціна заняття (₴)</div><input class="form-input" id="new-student-price" placeholder="500" type="number"></div>
+    <div class="form-group">
+      <div class="form-label">Дні занять</div>
+      <div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Час заняття</div><input class="form-input" id="new-student-time" placeholder="16:00" type="time"></div>
+    <button class="btn btn-primary" onclick="addStudent()">Додати учня</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-student')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Mark Lesson -->
+<div class="modal-overlay" id="modal-mark-lesson">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Відмітити заняття</div>
+    <div class="form-group"><div class="form-label">Учень</div>
+      <select class="form-input" id="mark-student"></select>
+    </div>
+    <div class="form-group"><div class="form-label">Тема заняття</div><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
+    <div class="form-group"><div class="form-label">Дія</div>
+      <select class="form-input" id="mark-action">
+        <option value="done">✅ Проведено (списати баланс)</option>
+        <option value="cancel">❌ Скасовано (без списання)</option>
+        <option value="reschedule">🔄 Перенесено</option>
+      </select>
+    </div>
+    <div id="mark-date-group" class="form-group" style="display:none"><div class="form-label">Нова дата (якщо перенос)</div><input class="form-input" id="mark-new-date" placeholder="10.05"></div>
+    <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-mark-lesson')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Send HW -->
+<div class="modal-overlay" id="modal-send-hw">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Домашнє завдання</div>
+    <div class="form-group"><div class="form-label">Учень</div><select class="form-input" id="hw-student"></select></div>
+    <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
+    <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Balance Add -->
+<div class="modal-overlay" id="modal-balance-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Поповнити баланс</div>
+    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="balance-add-amount" placeholder="500" type="number"></div>
+    <button class="btn btn-primary" onclick="addBalance()">Поповнити</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-add')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Balance Sub -->
+<div class="modal-overlay" id="modal-balance-sub">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Списати з балансу</div>
+    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="balance-sub-amount" placeholder="500" type="number"></div>
+    <button class="btn btn-danger" onclick="subBalance()">Списати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-sub')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Edit Price -->
+<div class="modal-overlay" id="modal-edit-price">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Змінити ціну</div>
+    <div class="form-group"><div class="form-label">Нова ціна (₴)</div><input class="form-input" id="edit-price-val" type="number"></div>
+    <button class="btn btn-primary" onclick="editPrice()">Зберегти</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-price')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Add Link -->
+<div class="modal-overlay" id="modal-add-link">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Корисне посилання</div>
+    <div class="form-group"><div class="form-label">Назва</div><input class="form-input" id="link-label" placeholder="Посилання на конференцію"></div>
+    <div class="form-group"><div class="form-label">URL</div><input class="form-input" id="link-url" placeholder="https://meet.google.com/..." type="url"></div>
+    <button class="btn btn-primary" onclick="addLink()">Додати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-link')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Edit Schedule -->
+<div class="modal-overlay" id="modal-edit-schedule">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Змінити розклад</div>
+    <div class="form-group">
+      <div class="form-label">Дні занять</div>
+      <div id="edit-days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Час</div><input class="form-input" id="edit-schedule-time" type="time"></div>
+    <button class="btn btn-primary" onclick="saveSchedule()">Зберегти</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-schedule')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 const tg = window.Telegram?.WebApp;
-if (tg) { tg.expand(); tg.setHeaderColor('#0f0f1a'); }
+if(tg){tg.expand();tg.setHeaderColor('#0d0d1a')}
 
-const days = ['Неділя','Понеділок','Вівторок','Середа','Четвер','Пятниця','Субота'];
-const daysFull = ['Понеділок','Вівторок','Середа','Четвер','Пятниця','Субота','Неділя'];
+const API = '';
+const DAYS = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
+const MONTHS = ['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+const COLORS = ['linear-gradient(135deg,#7c6ff7,#f07090)','linear-gradient(135deg,#60c0f0,#5df0a0)','linear-gradient(135deg,#f0d060,#f09060)','linear-gradient(135deg,#f07060,#f09060)','linear-gradient(135deg,#5df0a0,#60c0f0)'];
 
 let appData = null;
 let currentRole = null;
+let currentStudent = null;
+let screenStack = [];
 let hwFilter = 'all';
 
-function tgAlert(msg) {
-  if (tg) tg.showAlert(msg);
-  else alert(msg);
+// ── URL params ──
+const params = new URLSearchParams(location.search);
+const urlRole = params.get('role');
+const urlTid = params.get('tid');
+const urlName = params.get('name');
+
+// ── UTILS ──
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function avatarColor(name){let h=0;for(let c of name)h+=c.charCodeAt(0);return COLORS[h%COLORS.length]}
+function today(){const d=new Date().getDay();return DAYS[d===0?6:d-1]}
+function fmtBal(b){return(b>=0?'+':'')+b+'₴'}
+function monthShort(m){return MONTHS[parseInt(m)]||m}
+
+function toast(msg,ms=2000){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
 }
 
-function setRole(role) {
-  currentRole = role;
-  document.getElementById('screen-role').style.display = 'none';
-  document.getElementById('screen-main').style.display = 'block';
-  document.getElementById('app-' + role).style.display = 'block';
-  loadData(role);
+async function api(path,method='GET',body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  return r.json();
 }
 
-async function loadData(role) {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const resp = await fetch('/api/data?' + params.toString());
-    appData = await resp.json();
-    if (role === 'teacher') renderTeacher();
-    else renderStudent();
-  } catch(e) {
-    renderDemo(role);
+// ── SCREENS ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function pushScreen(id){
+  screenStack.push(document.querySelector('.screen.active')?.id);
+  showScreen(id);
+}
+
+function goBack(){
+  const prev=screenStack.pop();
+  if(prev)showScreen(prev);
+}
+
+// ── MODALS ──
+function openModal(id){document.getElementById(id)?.classList.add('open')}
+function closeModal(id){document.getElementById(id)?.classList.remove('open')}
+
+// ── ROLE SELECTION ──
+function setRole(role){
+  currentRole=role;
+  if(role==='teacher'){
+    // Check if registered
+    const saved=localStorage.getItem('teacher_tid');
+    if(saved||urlTid){
+      loadTeacher(urlTid||saved);
+    } else {
+      showScreen('screen-teacher-reg');
+    }
+  } else {
+    showScreen('screen-auth');
   }
 }
 
-function renderDemo(role) {
-  appData = {
-    role: role,
-    name: role === 'teacher' ? 'Вчитель' : 'Учень',
-    balance: 1500,
-    price: 500,
-    sessions: [
-      { day: 'Понеділок', time: '16:00' },
-      { day: 'Середа', time: '16:00' },
-      { day: 'Пятниця', time: '18:00' }
-    ],
-    homework: [
-      { id: '1', text: 'Виконати вправи 5.1 — 5.8 зі збірника задач', date: '02.05.2026', status: 'pending' },
-      { id: '2', text: 'Повторити тему "Корінь квадратний"', date: '28.04.2026', status: 'done' },
-      { id: '3', text: 'Підготуватись до контрольної роботи', date: '25.04.2026', status: 'done' }
-    ],
-    journal: [
-      { date: '02.05.2026', topic: 'Квадратні рівняння', materials: [] },
-      { date: '28.04.2026', topic: 'Теорема Піфагора', materials: [{ type: 'photo' }] },
-      { date: '25.04.2026', topic: 'Функції та графіки', materials: [] }
-    ],
-    links: { 'Конференція': 'https://meet.google.com', 'Підручник': 'https://example.com' },
-    students: [
-      { name: 'Іван Петренко', balance: 1500, sessions: [{ day: 'Понеділок', time: '16:00' }] },
-      { name: 'Марія Коваль', balance: -200, sessions: [{ day: 'Вівторок', time: '18:00' }] },
-      { name: 'Олег Сидоренко', balance: 3000, sessions: [{ day: 'Середа', time: '15:00' }] },
-      { name: 'Аня Мельник', balance: 500, sessions: [{ day: 'Четвер', time: '17:00' }] }
-    ]
-  };
-  if (role === 'teacher') renderTeacher();
-  else renderStudent();
+// ── AUTO LOGIN ──
+window.addEventListener('load',()=>{
+  if(urlRole==='admin'&&urlTid){loadTeacher(urlTid);return}
+  if((urlRole==='student'||urlRole==='super'||urlRole==='parent')&&urlTid&&urlName){
+    loadStudent(urlTid,urlName,urlRole);return;
+  }
+});
+
+// ── TEACHER ──
+async function registerTeacher(){
+  const name=document.getElementById('reg-name').value.trim();
+  const subject=document.getElementById('reg-subject').value.trim();
+  if(!name||!subject){toast('Заповніть всі поля');return}
+  const tid=tg?.initDataUnsafe?.user?.id||Math.floor(Math.random()*1e9);
+  const res=await api('/api/register-teacher','POST',{tid,name,subject});
+  if(res.ok){
+    localStorage.setItem('teacher_tid',tid);
+    loadTeacher(tid);
+  } else toast('Помилка реєстрації');
 }
 
-function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+async function loadTeacher(tid){
+  try{
+    const data=await api(`/api/teacher/${tid}`);
+    appData=data;appData.tid=tid;
+    renderTeacher();
+    showScreen('screen-teacher');
+    showTeacherTab('home');
+  } catch(e){renderDemoTeacher()}
 }
 
-function getAvatarColor(name) {
-  const colors = [
-    'linear-gradient(135deg,#7c6ff7,#f7776f)',
-    'linear-gradient(135deg,#6fd9f7,#6ff7b0)',
-    'linear-gradient(135deg,#f7d96f,#f7a96f)',
-    'linear-gradient(135deg,#f7776f,#f7a96f)',
-    'linear-gradient(135deg,#6ff7b0,#6fd9f7)'
-  ];
-  let hash = 0;
-  for (let c of name) hash += c.charCodeAt(0);
-  return colors[hash % colors.length];
+function renderDemoTeacher(){
+  appData={tid:'demo',name:'Іван Петрович',subject:'Математика',students:[
+    {name:'Петро Коваль',balance:1500,price:500,sessions:[{day:'Понеділок',time:'16:00'},{day:'Середа',time:'16:00'}],homework:[],journal:[{date:'02.05.2026',topic:'Функції',materials:[]}],links:{},u_code:'1234',p_code:'5678',su_code:'9012',u_id:null,p_id:null,su_id:null},
+    {name:'Марія Іванова',balance:-200,price:600,sessions:[{day:'Вівторок',time:'18:00'}],homework:[{id:'1',text:'Вправи 5.1-5.8',date:'02.05.2026',status:'pending'}],journal:[],links:{'Конференція':'https://meet.google.com'},u_code:'2345',p_code:'6789',su_code:'0123',u_id:null,p_id:null,su_id:null},
+    {name:'Олег Сидоренко',balance:3000,price:500,sessions:[{day:'Четвер',time:'17:00'},{day:'Субота',time:'11:00'}],homework:[],journal:[],links:{},u_code:'3456',p_code:'7890',su_code:'1234',u_id:null,p_id:null,su_id:null}
+  ]};
+  showScreen('screen-teacher');
+  renderTeacher();
+  showTeacherTab('home');
 }
 
-function getTodayName() {
-  const d = new Date().getDay();
-  return daysFull[d === 0 ? 6 : d - 1];
-}
-
-// ── TEACHER RENDER ──
-
-function renderTeacher() {
-  const d = appData;
-  const students = d.students || [];
-  const today = getTodayName();
-
-  document.getElementById('t-students-count').textContent = students.length;
-
-  const todayLessons = [];
-  students.forEach(s => {
-    (s.sessions || []).forEach(sess => {
-      if (sess.day === today) todayLessons.push({ ...sess, name: s.name });
-    });
-  });
-  todayLessons.sort((a,b) => a.time.localeCompare(b.time));
-  document.getElementById('t-today-count').textContent = todayLessons.length;
-
-  const totalDebt = students.filter(s => s.balance < 0).length;
-  document.getElementById('t-debt-count').textContent = totalDebt;
-  document.getElementById('t-income').textContent = '—';
+function renderTeacher(){
+  const d=appData;
+  const students=d.students||[];
+  const t=today();
+  document.getElementById('t-teacher-name').textContent=d.name||'Кабінет вчителя';
+  document.getElementById('t-stat-students').textContent=students.length;
+  const todayLessons=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===t).map(x=>({...x,name:s.name}))).sort((a,b)=>a.time.localeCompare(b.time));
+  document.getElementById('t-stat-today').textContent=todayLessons.length;
+  document.getElementById('t-stat-debts').textContent=students.filter(s=>s.balance<0).length;
 
   // Today lessons
-  const tlEl = document.getElementById('t-today-lessons');
-  if (todayLessons.length === 0) {
-    tlEl.innerHTML = '<div class="empty">Сьогодні занять немає 🎉</div>';
-  } else {
-    tlEl.innerHTML = todayLessons.map(l => `
-      <div class="lesson-item">
-        <div class="lesson-time">${l.time}</div>
-        <div class="lesson-info">
-          <div class="lesson-name">${l.name}</div>
-        </div>
-        <div class="lesson-dot"></div>
-      </div>
-    `).join('');
-  }
+  const tlEl=document.getElementById('t-today-lessons');
+  tlEl.innerHTML=todayLessons.length?todayLessons.map(l=>`
+    <div class="lesson-row">
+      <div class="lesson-time">${l.time}</div>
+      <div class="lesson-dot"></div>
+      <div class="item-info"><div class="item-name">${l.name}</div></div>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Сьогодні занять немає</div>';
 
-  // Students list
-  document.getElementById('t-students-list').innerHTML = students.map(s => {
-    const balClass = s.balance >= 0 ? 'positive' : 'negative';
-    const balStr = s.balance >= 0 ? `+${s.balance}₴` : `${s.balance}₴`;
-    const sched = (s.sessions||[]).map(x => `${x.day.slice(0,2)} ${x.time}`).join(', ');
-    return `
-      <div class="card" onclick="tgAlert('${s.name}\\nБаланс: ${balStr}')">
-        <div class="student-item">
-          <div class="student-avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</div>
-          <div class="student-info">
-            <div class="student-name">${s.name}</div>
-            <div class="student-schedule">${sched || 'Розклад не встановлено'}</div>
-          </div>
-          <div class="student-balance">
-            <div class="student-balance-amount ${balClass}">${balStr}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('') || '<div class="empty">Учнів немає</div>';
+  // Students preview (3)
+  const spEl=document.getElementById('t-students-preview');
+  spEl.innerHTML=students.slice(0,3).map(s=>studentCardHTML(s)).join('');
+
+  // Full students list
+  const slEl=document.getElementById('t-students-list');
+  slEl.innerHTML=students.length?students.map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає.<br>Додайте першого!</div>';
 
   // Week schedule
-  const weekEl = document.getElementById('t-week-schedule');
-  const byDay = {};
-  daysFull.forEach(d => byDay[d] = []);
-  students.forEach(s => {
-    (s.sessions||[]).forEach(sess => {
-      if (byDay[sess.day]) byDay[sess.day].push({ ...sess, name: s.name });
-    });
+  renderWeekSchedule(students);
+
+  // Journal (all students)
+  const jEl=document.getElementById('t-journal-list');
+  const allJournal=students.flatMap(s=>(s.journal||[]).map(e=>({...e,studentName:s.name}))).sort((a,b)=>b.date.localeCompare(a.date));
+  jEl.innerHTML=allJournal.slice(0,10).map(e=>{
+    const parts=e.date.split('.');
+    return`<div class="card clickable fade-up">
+      <div class="list-item">
+        <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
+        <div class="item-info">
+          <div class="item-name">${e.topic}</div>
+          <div class="item-sub">${e.studentName}${e.materials?.length?' · 📎'+e.materials.length:''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty">Журнал порожній</div>';
+
+  // Populate selects
+  ['mark-student','hw-student'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(sel)sel.innerHTML=students.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
   });
-  daysFull.forEach(d => byDay[d].sort((a,b) => a.time.localeCompare(b.time)));
-
-  weekEl.innerHTML = daysFull.map(day => {
-    const isToday = day === today;
-    const lessons = byDay[day];
-    return `
-      <div class="schedule-day">
-        <div class="day-label ${isToday ? 'today' : ''}">${day}${isToday ? ' · сьогодні' : ''}</div>
-        ${lessons.length === 0
-          ? `<div style="font-size:13px;color:var(--text3);padding:8px 0;">Немає занять</div>`
-          : lessons.map(l => `
-            <div class="lesson-item">
-              <div class="lesson-time">${l.time}</div>
-              <div class="lesson-info"><div class="lesson-name">${l.name}</div></div>
-              <div class="lesson-dot"></div>
-            </div>
-          `).join('')
-        }
-      </div>
-    `;
-  }).join('');
-
-  // Balances
-  document.getElementById('t-balances-list').innerHTML = students.map(s => {
-    const balClass = s.balance >= 0 ? 'positive' : 'negative';
-    const balStr = s.balance >= 0 ? `+${s.balance}₴` : `${s.balance}₴`;
-    return `
-      <div class="card">
-        <div class="student-item">
-          <div class="student-avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</div>
-          <div class="student-info">
-            <div class="student-name">${s.name}</div>
-            <div class="student-schedule">${s.balance < 0 ? '⚠️ Борг' : '✅ В нормі'}</div>
-          </div>
-          <div class="student-balance">
-            <div class="student-balance-amount ${balClass}" style="font-size:18px;">${balStr}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('') || '<div class="empty">Учнів немає</div>';
 }
 
-function switchTeacherTab(tab) {
-  document.querySelectorAll('#app-teacher .page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('#app-teacher .nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('t-page-' + tab)?.classList.add('active');
-  document.getElementById('t-nav-' + tab)?.classList.add('active');
-}
-
-// ── STUDENT RENDER ──
-
-function renderStudent() {
-  const d = appData;
-  const bal = d.balance ?? 0;
-  const balEl = document.getElementById('s-balance-amount');
-  const cardEl = document.getElementById('s-balance-card');
-  balEl.textContent = (bal >= 0 ? '+' : '') + bal + '₴';
-  document.getElementById('s-balance-sub').textContent = `Ціна заняття: ${d.price ?? '—'}₴`;
-  if (bal < 0) cardEl.style.background = 'linear-gradient(135deg,#f7776f,#f7a96f)';
-
-  // Next lesson
-  const today = getTodayName();
-  const todayIdx = daysFull.indexOf(today);
-  let nextLesson = null;
-  const sessions = d.sessions || [];
-  for (let i = 0; i < 7; i++) {
-    const dayName = daysFull[(todayIdx + i) % 7];
-    const found = sessions.find(s => s.day === dayName);
-    if (found) { nextLesson = { ...found, isToday: i === 0 }; break; }
-  }
-
-  const nlEl = document.getElementById('s-next-lesson');
-  if (nextLesson) {
-    nlEl.innerHTML = `
-      <div class="card" style="background:linear-gradient(135deg,rgba(124,111,247,0.15),rgba(111,217,247,0.1));">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="font-size:32px;">📅</div>
-          <div>
-            <div style="font-weight:700;font-size:16px;">${nextLesson.time}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:2px;">${nextLesson.isToday ? 'Сьогодні' : nextLesson.day}</div>
-          </div>
-        </div>
+function studentCardHTML(s){
+  const bal=s.balance;
+  const balStr=fmtBal(bal);
+  const balCls=bal>=0?'badge-green':'badge-red';
+  const sched=(s.sessions||[]).map(x=>x.day.slice(0,2)+' '+x.time).join(', ');
+  return`<div class="card clickable fade-up" onclick="openStudentCard('${s.name}')">
+    <div class="list-item">
+      <div class="avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>
+      <div class="item-info">
+        <div class="item-name">${s.name}</div>
+        <div class="item-sub">${sched||'Розклад не встановлено'}</div>
       </div>
-    `;
-  } else {
-    nlEl.innerHTML = '<div class="empty">Розклад не встановлено</div>';
-  }
-
-  // HW preview (2 items)
-  const hw = (d.homework || []).slice().reverse().slice(0, 2);
-  const hwPrevEl = document.getElementById('s-hw-preview');
-  if (hw.length === 0) {
-    hwPrevEl.innerHTML = '<div class="empty">ДЗ немає 🎉</div>';
-  } else {
-    hwPrevEl.innerHTML = hw.map(h => renderHwItem(h)).join('');
-  }
-
-  // Links
-  const links = d.links || {};
-  const linksEl = document.getElementById('s-links-preview');
-  const linkKeys = Object.keys(links);
-  if (linkKeys.length === 0) {
-    linksEl.innerHTML = '<div class="empty">Посилань немає</div>';
-  } else {
-    linksEl.innerHTML = linkKeys.map(k => `
-      <div class="card" onclick="window.open('${links[k]}','_blank')">
-        <div class="link-item">
-          <div class="link-icon" style="background:rgba(124,111,247,0.15);">🔗</div>
-          <div class="link-info">
-            <div class="link-name">${k}</div>
-            <div class="link-url">${links[k]}</div>
-          </div>
-          <div class="link-arrow">↗</div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // Full schedule
-  const schedEl = document.getElementById('s-schedule-list');
-  if (sessions.length === 0) {
-    schedEl.innerHTML = '<div class="empty">Розклад не встановлено</div>';
-  } else {
-    schedEl.innerHTML = daysFull.map(day => {
-      const found = sessions.filter(s => s.day === day);
-      if (found.length === 0) return '';
-      return `
-        <div class="schedule-day">
-          <div class="day-label ${day === today ? 'today' : ''}">${day}${day === today ? ' · сьогодні' : ''}</div>
-          ${found.map(s => `
-            <div class="lesson-item">
-              <div class="lesson-time">${s.time}</div>
-              <div class="lesson-info"><div class="lesson-name">Заняття</div></div>
-              <div class="lesson-dot" style="background:var(--grad2);"></div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }).join('');
-  }
-
-  renderHwList();
-  renderJournal();
-}
-
-function renderHwItem(h) {
-  const isDone = h.status === 'done';
-  return `
-    <div class="card">
-      <div class="hw-item">
-        <div class="hw-status ${isDone ? 'done' : 'pending'}">${isDone ? '✓' : '!'}</div>
-        <div class="hw-info">
-          <div class="hw-title">${h.text.slice(0,50)}${h.text.length>50?'…':''}</div>
-          <div class="hw-date">${h.date}</div>
-        </div>
-        <div class="hw-arrow">›</div>
+      <div class="item-right">
+        <span class="badge ${balCls}">${balStr}</span>
       </div>
     </div>
-  `;
+  </div>`;
 }
 
-function filterHw(filter, el) {
-  hwFilter = filter;
-  document.querySelectorAll('#s-hw-tabs .tab').forEach(t => t.classList.remove('active'));
+function renderWeekSchedule(students){
+  const t=today();
+  const wsEl=document.getElementById('t-week-schedule');
+  wsEl.innerHTML=DAYS.map(day=>{
+    const lessons=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,name:s.name}))).sort((a,b)=>a.time.localeCompare(b.time));
+    return`<div class="day-group">
+      <div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>
+      ${lessons.length?lessons.map(l=>`<div class="lesson-row"><div class="lesson-time">${l.time}</div><div class="lesson-dot"></div><div class="item-info"><div class="item-name">${l.name}</div></div></div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:6px 0">Немає занять</div>'}
+    </div>`;
+  }).join('');
+}
+
+function showTeacherTab(tab){
+  const tabs=['home','students','schedule','lessons'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('t-'+t);
+    if(el)el.classList.toggle('active',t===tab);
+  });
+}
+
+// ── STUDENT CARD ──
+function openStudentCard(name){
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(!s)return;
+  currentStudent=s;
+  document.getElementById('sc-name').textContent=s.name;
+  const bal=s.balance;
+  document.getElementById('sc-balance').textContent=fmtBal(bal);
+  document.getElementById('sc-price').textContent=`Ціна: ${s.price}₴/заняття`;
+  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#f07060,#f09060)':'linear-gradient(135deg,#7c6ff7,#f07090)';
+
+  // Sessions
+  const sessEl=document.getElementById('sc-sessions');
+  sessEl.innerHTML=(s.sessions||[]).length?(s.sessions||[]).map(x=>`<div class="card"><div class="list-item"><div class="lesson-time">${x.time}</div><div class="item-info"><div class="item-name">${x.day}</div></div></div></div>`).join(''):'<div style="color:var(--text3);font-size:14px">Розклад не встановлено</div>';
+
+  // Codes
+  const codesEl=document.getElementById('sc-codes');
+  codesEl.innerHTML=`
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">📱 Код учня</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">👨‍👩‍👦 Код батьків</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">⭐ Код супер-учня</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
+
+  // Links
+  renderStudentCardLinks();
+  pushScreen('screen-student-card');
+}
+
+function renderStudentCardLinks(){
+  const s=currentStudent;
+  const links=s.links||{};
+  const linksEl=document.getElementById('sc-links');
+  linksEl.innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
+    <div class="card">
+      <div class="list-item">
+        <div class="link-icon">🔗</div>
+        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div>
+        <span style="color:var(--red);cursor:pointer;font-size:18px" onclick="deleteLink('${k}')">×</span>
+      </div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:14px">Посилань немає</div>';
+}
+
+function copyCode(code){
+  navigator.clipboard?.writeText(code);
+  toast('Код скопійовано: '+code);
+}
+
+// ── ADD STUDENT ──
+function showAddStudent(){
+  // Init days picker
+  const dp=document.getElementById('days-picker');
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this,'days-picker')" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  openModal('modal-add-student');
+}
+
+function toggleDay(btn,pickerId){
+  btn.classList.toggle('btn-sm-primary');
+  btn.classList.toggle('btn-sm-ghost');
+}
+
+async function addStudent(){
+  const name=document.getElementById('new-student-name').value.trim();
+  const price=parseInt(document.getElementById('new-student-price').value)||0;
+  const time=document.getElementById('new-student-time').value;
+  if(!name){toast('Введіть ім\'я');return}
+
+  const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  const sessions=selectedDays.map(day=>({day,time:time||'00:00'}));
+
+  const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
+  if(res.ok||res.student){
+    // Update local data
+    if(!appData.students)appData.students=[];
+    appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
+    renderTeacher();
+    closeModal('modal-add-student');
+    toast('✅ '+name+' доданий!');
+  } else toast('Помилка: '+( res.error||'невідома'));
+}
+
+// ── MARK LESSON ──
+function showMarkLesson(){openModal('modal-mark-lesson')}
+document.getElementById('mark-action')?.addEventListener('change',function(){
+  document.getElementById('mark-date-group').style.display=this.value==='reschedule'?'block':'none';
+});
+
+async function markLesson(){
+  const name=document.getElementById('mark-student').value;
+  const topic=document.getElementById('mark-topic').value.trim();
+  const action=document.getElementById('mark-action').value;
+  const newDate=document.getElementById('mark-new-date').value;
+  if(!topic){toast('Введіть тему');return}
+
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action,new_date:newDate});
+  if(res.ok){
+    // Update local balance
+    const s=(appData.students||[]).find(x=>x.name===name);
+    if(s&&action==='done')s.balance-=s.price;
+    if(s&&action==='done'&&s.journal){s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
+    renderTeacher();
+    closeModal('modal-mark-lesson');
+    document.getElementById('mark-topic').value='';
+    toast('✅ Заняття відмічено!');
+  } else toast('Помилка');
+}
+
+// ── SEND HW ──
+function showSendHw(){openModal('modal-send-hw')}
+
+async function sendHw(){
+  const name=document.getElementById('hw-student').value;
+  const text=document.getElementById('hw-text').value.trim();
+  if(!text){toast('Введіть текст ДЗ');return}
+  const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
+  if(res.ok){
+    closeModal('modal-send-hw');
+    document.getElementById('hw-text').value='';
+    toast('✅ ДЗ надіслано '+name+'!');
+  } else toast('Помилка');
+}
+
+// ── BALANCE ──
+function showAddBalance(){document.getElementById('balance-add-amount').value='';openModal('modal-balance-add')}
+function showSubBalance(){document.getElementById('balance-sub-amount').value='';openModal('modal-balance-sub')}
+
+async function addBalance(){
+  const amount=parseInt(document.getElementById('balance-add-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount});
+  if(res.ok){
+    currentStudent.balance+=amount;
+    openStudentCard(currentStudent.name);
+    renderTeacher();
+    closeModal('modal-balance-add');
+    toast('✅ Поповнено на +'+amount+'₴');
+  } else toast('Помилка');
+}
+
+async function subBalance(){
+  const amount=parseInt(document.getElementById('balance-sub-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount:-amount});
+  if(res.ok){
+    currentStudent.balance-=amount;
+    openStudentCard(currentStudent.name);
+    renderTeacher();
+    closeModal('modal-balance-sub');
+    toast('✅ Списано -'+amount+'₴');
+  } else toast('Помилка');
+}
+
+// ── EDIT PRICE ──
+function showEditPrice(){document.getElementById('edit-price-val').value=currentStudent.price;openModal('modal-edit-price')}
+async function editPrice(){
+  const price=parseInt(document.getElementById('edit-price-val').value)||0;
+  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,price});
+  if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
+  else toast('Помилка');
+}
+
+// ── LINKS ──
+function showAddLink(){openModal('modal-add-link')}
+async function addLink(){
+  const label=document.getElementById('link-label').value.trim();
+  const url=document.getElementById('link-url').value.trim();
+  if(!label||!url){toast('Заповніть всі поля');return}
+  const res=await api('/api/add-student-link','POST',{tid:appData.tid,name:currentStudent.name,label,url});
+  if(res.ok){
+    if(!currentStudent.links)currentStudent.links={};
+    currentStudent.links[label]=url;
+    renderStudentCardLinks();
+    closeModal('modal-add-link');
+    document.getElementById('link-label').value='';
+    document.getElementById('link-url').value='';
+    toast('✅ Посилання додано');
+  } else toast('Помилка');
+}
+
+async function deleteLink(label){
+  const res=await api('/api/delete-student-link','POST',{tid:appData.tid,name:currentStudent.name,label});
+  if(res.ok){delete currentStudent.links[label];renderStudentCardLinks();toast('🗑 Видалено')}
+}
+
+// ── SCHEDULE EDIT ──
+function showEditSchedule(){
+  const dp=document.getElementById('edit-days-picker');
+  const selectedDays=(currentStudent.sessions||[]).map(s=>s.day);
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this,'edit-days-picker')" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  const time=(currentStudent.sessions||[])[0]?.time||'16:00';
+  document.getElementById('edit-schedule-time').value=time;
+  openModal('modal-edit-schedule');
+}
+
+async function saveSchedule(){
+  const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  const time=document.getElementById('edit-schedule-time').value;
+  const sessions=days.map(day=>({day,time}));
+  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,sessions});
+  if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
+  else toast('Помилка');
+}
+
+// ── RESET CODES ──
+async function resetCodes(){
+  const res=await api('/api/reset-codes','POST',{tid:appData.tid,name:currentStudent.name});
+  if(res.ok){Object.assign(currentStudent,{u_code:res.u_code,p_code:res.p_code,su_code:res.su_code,u_id:null,p_id:null,su_id:null});openStudentCard(currentStudent.name);toast('🔄 Коди оновлено')}
+}
+
+// ── DELETE STUDENT ──
+function showDeleteStudent(){
+  if(tg){tg.showConfirm(`Видалити ${currentStudent.name}?`,async(ok)=>{if(ok)await doDeleteStudent()})}
+  else if(confirm(`Видалити ${currentStudent.name}?`))doDeleteStudent();
+}
+
+async function doDeleteStudent(){
+  const res=await api('/api/delete-student','POST',{tid:appData.tid,name:currentStudent.name});
+  if(res.ok){
+    appData.students=(appData.students||[]).filter(s=>s.name!==currentStudent.name);
+    renderTeacher();goBack();toast('🗑 '+currentStudent.name+' видалений');
+  }
+}
+
+// ── STUDENT VIEW ──
+async function loadStudent(tid,name,role){
+  try{
+    const data=await api(`/api/student/${tid}/${encodeURIComponent(name)}`);
+    appData={...data,tid,name,role};
+    renderStudent();
+    showScreen('screen-student');
+    showStudentTab('home');
+  } catch(e){renderDemoStudent()}
+}
+
+async function authWithCode(){
+  const code=document.getElementById('auth-code').value.trim();
+  if(!code){toast('Введіть код');return}
+  try{
+    const res=await api('/api/auth','POST',{code,uid:tg?.initDataUnsafe?.user?.id||0});
+    if(res.ok){
+      appData={...res.student,tid:res.tid,name:res.name,role:res.role};
+      renderStudent();showScreen('screen-student');showStudentTab('home');
+    } else toast('❌ Код не знайдено');
+  } catch(e){
+    // Demo
+    renderDemoStudent();
+  }
+}
+
+function renderDemoStudent(){
+  appData={tid:'demo',name:'Петро Коваль',role:'student',balance:1500,price:500,
+    sessions:[{day:'Понеділок',time:'16:00'},{day:'Середа',time:'16:00'}],
+    homework:[{id:'1',text:'Виконати вправи 5.1 — 5.8 зі збірника задач',date:'02.05.2026',status:'pending'},{id:'2',text:'Повторити тему "Функції та графіки"',date:'28.04.2026',status:'done'}],
+    journal:[{date:'02.05.2026',topic:'Квадратні рівняння',materials:[]},{date:'28.04.2026',topic:'Функції та графіки',materials:[{type:'photo'}]}],
+    links:{'Конференція':'https://meet.google.com','Підручник':'https://example.com'}};
+  showScreen('screen-student');renderStudent();showStudentTab('home');
+}
+
+function renderStudent(){
+  const d=appData;
+  document.getElementById('s-student-name').textContent=d.name||'Мій кабінет';
+
+  const bal=d.balance??0;
+  document.getElementById('s-balance').textContent=fmtBal(bal);
+  document.getElementById('s-price-sub').textContent=`Ціна заняття: ${d.price||'—'}₴`;
+  if(bal<0)document.getElementById('s-balance-hero').style.background='linear-gradient(135deg,#f07060,#f09060)';
+
+  // Next lesson
+  const t=today();
+  const tIdx=DAYS.indexOf(t);
+  let next=null;
+  for(let i=0;i<7;i++){
+    const day=DAYS[(tIdx+i)%7];
+    const found=(d.sessions||[]).find(s=>s.day===day);
+    if(found){next={...found,isToday:i===0};break}
+  }
+  document.getElementById('s-next-lesson').innerHTML=next?`
+    <div class="card" style="background:linear-gradient(135deg,rgba(124,111,247,.2),rgba(96,192,240,.1))">
+      <div class="list-item">
+        <div style="font-size:36px">📅</div>
+        <div class="item-info">
+          <div class="item-name" style="font-size:22px;font-family:'Nunito',sans-serif;font-weight:800">${next.time}</div>
+          <div class="item-sub">${next.isToday?'Сьогодні':next.day}</div>
+        </div>
+      </div>
+    </div>`:'<div class="empty">Розклад не встановлено</div>';
+
+  // HW preview (pending)
+  const pending=(d.homework||[]).filter(h=>h.status!=='done').slice().reverse().slice(0,3);
+  document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
+
+  // Links
+  const links=d.links||{};
+  document.getElementById('s-links-preview').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
+    <div class="card clickable" onclick="window.open('${v}','_blank')">
+      <div class="list-item">
+        <div class="link-icon">🔗</div>
+        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</div></div>
+        <div style="color:var(--accent);font-size:18px">↗</div>
+      </div>
+    </div>`).join(''):'<div class="empty">Посилань немає</div>';
+
+  // Schedule
+  renderStudentSchedule();
+  renderHwList();
+  renderStudentJournal();
+}
+
+function renderStudentSchedule(){
+  const d=appData;const t=today();
+  document.getElementById('s-schedule-list').innerHTML=DAYS.map(day=>{
+    const found=(d.sessions||[]).filter(s=>s.day===day);
+    if(!found.length)return'';
+    return`<div class="day-group">
+      <div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>
+      ${found.map(s=>`<div class="lesson-row"><div class="lesson-time">${s.time}</div><div class="lesson-dot" style="background:var(--green)"></div><div class="item-info"><div class="item-name">Заняття</div></div></div>`).join('')}
+    </div>`;
+  }).join('')||'<div class="empty">Розклад не встановлено</div>';
+}
+
+function hwItemHTML(h){
+  const done=h.status==='done';
+  return`<div class="card clickable fade-up" onclick="showHwDetail('${h.id}')">
+    <div class="list-item">
+      <div class="hw-status ${done?'hw-done':'hw-pending'}">${done?'✓':'!'}</div>
+      <div class="item-info">
+        <div class="item-name">${h.text.slice(0,50)}${h.text.length>50?'…':''}</div>
+        <div class="item-sub">${h.date}</div>
+      </div>
+      <div class="chevron">›</div>
+    </div>
+  </div>`;
+}
+
+function filterHw(f,el){
+  hwFilter=f;
+  document.querySelectorAll('#s-hw .tabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderHwList();
 }
 
-function renderHwList() {
-  const hw = (appData.homework || []).slice().reverse();
-  const filtered = hwFilter === 'all' ? hw
-    : hwFilter === 'done' ? hw.filter(h => h.status === 'done')
-    : hw.filter(h => h.status !== 'done');
-  const hwEl = document.getElementById('s-hw-list');
-  if (filtered.length === 0) {
-    hwEl.innerHTML = '<div class="empty">Немає завдань</div>';
-  } else {
-    hwEl.innerHTML = filtered.map(h => renderHwItem(h)).join('');
-  }
+function renderHwList(){
+  const hw=(appData.homework||[]).slice().reverse();
+  const filtered=hwFilter==='all'?hw:hwFilter==='done'?hw.filter(h=>h.status==='done'):hw.filter(h=>h.status!=='done');
+  document.getElementById('s-hw-list').innerHTML=filtered.length?filtered.map(h=>hwItemHTML(h)).join(''):'<div class="empty">Немає завдань</div>';
 }
 
-function renderJournal() {
-  const journal = (appData.journal || []).slice().reverse();
-  const jEl = document.getElementById('s-journal-list');
-  if (journal.length === 0) {
-    jEl.innerHTML = '<div class="empty">Журнал порожній</div>';
-    return;
-  }
-  jEl.innerHTML = journal.map(e => {
-    const parts = e.date.split('.');
-    const hasMat = (e.materials || []).length > 0;
-    return `
-      <div class="card">
-        <div class="journal-item">
-          <div class="journal-date">
-            <div class="journal-day">${parts[0]}</div>
-            <div class="journal-month">${getMonthShort(parts[1])}</div>
-          </div>
-          <div class="journal-content">
-            <div class="journal-topic">${e.topic}</div>
-            <div class="journal-meta">
-              ${hasMat ? `<span class="journal-tag">📎 ${e.materials.length} файл(ів)</span>` : '<span style="color:var(--text3)">Без матеріалів</span>'}
-            </div>
-          </div>
+function renderStudentJournal(){
+  const journal=(appData.journal||[]).slice().reverse();
+  document.getElementById('s-journal-list').innerHTML=journal.length?journal.map(e=>{
+    const parts=e.date.split('.');
+    const hasMat=(e.materials||[]).length>0;
+    return`<div class="card clickable fade-up">
+      <div class="list-item">
+        <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
+        <div class="item-info">
+          <div class="item-name">${e.topic}</div>
+          <div class="item-sub">${hasMat?`📎 ${e.materials.length} файл(ів)`:'Без матеріалів'}</div>
         </div>
       </div>
-    `;
-  }).join('');
+    </div>`;
+  }).join(''):'<div class="empty"><div class="empty-icon">📒</div>Журнал порожній</div>';
 }
 
-function getMonthShort(m) {
-  const months = ['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-  return months[parseInt(m)] || m;
+function showHwDetail(hwId){
+  const hw=(appData.homework||[]).find(h=>h.id===hwId);
+  if(!hw)return;
+  const done=hw.status==='done';
+  const btns=done?'':`<button class="btn btn-primary" style="margin-bottom:8px" onclick="markHwDone('${hwId}')">✅ Відмітити як виконане</button>`;
+  if(tg){
+    tg.showPopup({title:`ДЗ від ${hw.date}`,message:hw.text+(done?'\n\n✅ Виконано':''),buttons:done?[{type:'close'}]:[{id:'done',text:'✅ Виконано'},{type:'cancel'}]},
+      (btn)=>{if(btn==='done')markHwDone(hwId)});
+  } else {
+    alert(`ДЗ від ${hw.date}\n\n${hw.text}\n\nСтатус: ${done?'✅ Виконано':'🔴 Не виконано'}`);
+    if(!done&&confirm('Відмітити як виконане?'))markHwDone(hwId);
+  }
 }
 
-function switchStudentTab(tab) {
-  document.querySelectorAll('#app-student .page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('#app-student .nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('s-page-' + tab)?.classList.add('active');
-  document.getElementById('s-nav-' + tab)?.classList.add('active');
+async function markHwDone(hwId){
+  try{
+    await api('/api/mark-hw','POST',{tid:appData.tid,name:appData.name,hw_id:hwId});
+  } catch(e){}
+  const hw=(appData.homework||[]).find(h=>h.id===hwId);
+  if(hw)hw.status='done';
+  renderStudent();
+  toast('✅ ДЗ виконано!');
 }
 
-// Auto-detect role from URL params
-window.addEventListener('load', () => {
-  const params = new URLSearchParams(window.location.search);
-  const role = params.get('role');
-  if (role === 'teacher' || role === 'admin') setRole('teacher');
-  else if (role === 'student' || role === 'user' || role === 'super') setRole('student');
-  else if (role === 'parent') setRole('student');
+function showStudentTab(tab){
+  const tabs=['home','schedule','hw','journal'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('s-'+t);
+    if(el)el.classList.toggle('active',t===tab);
+  });
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
 </script>
 </body>
