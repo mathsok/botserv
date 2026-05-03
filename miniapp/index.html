@@ -566,10 +566,25 @@ select.form-input{appearance:none;cursor:pointer}
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Поповнити баланс</div>
-    <div style="text-align:center;padding:10px 0 16px;color:var(--text2);font-size:14px">Введіть суму та надішліть фото чеку вчителю через бота</div>
-    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="pay-amount" placeholder="500" type="number"></div>
-    <button class="btn btn-primary" onclick="submitPay()">Надіслати запит</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
+    <div id="pay-step-1">
+      <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="pay-amount" placeholder="500" type="number"></div>
+      <button class="btn btn-primary" onclick="payNextStep()">Далі →</button>
+      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
+    </div>
+    <div id="pay-step-2" style="display:none">
+      <div style="text-align:center;padding:10px 0 16px">
+        <div style="font-size:40px;margin-bottom:8px">🧾</div>
+        <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
+        <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
+      </div>
+      <div class="photo-upload" onclick="document.getElementById('pay-file-input').click()">
+        <input type="file" id="pay-file-input" accept="image/*,application/pdf" style="display:none" onchange="handlePayFile(this)">
+        <div id="pay-file-label" style="color:var(--text2);font-size:14px">📎 Натисніть щоб вибрати файл</div>
+        <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="submitPay()">Надіслати запит</button>
+      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
+    </div>
   </div>
 </div>
 
@@ -1166,12 +1181,47 @@ function showStudentTab(tab){
   });
 }
 
-function showPayModal(){openModal('modal-pay')}
+function showPayModal(){
+  document.getElementById('pay-amount').value='';
+  document.getElementById('pay-step-1').style.display='';
+  document.getElementById('pay-step-2').style.display='none';
+  document.getElementById('pay-file-label').textContent='📎 Натисніть щоб вибрати файл';
+  document.getElementById('pay-preview').style.display='none';
+  document.getElementById('pay-file-input').value='';
+  window._payFile=null;
+  openModal('modal-pay');
+}
+
+function payNextStep(){
+  const amount=parseInt(document.getElementById('pay-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  document.getElementById('pay-step-1').style.display='none';
+  document.getElementById('pay-step-2').style.display='';
+}
+
+function handlePayFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  window._payFile=file;
+  document.getElementById('pay-file-label').textContent='✅ '+file.name;
+  if(file.type.startsWith('image/')){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=document.getElementById('pay-preview');
+      img.src=e.target.result;
+      img.style.display='block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 async function submitPay(){
   const amount=parseInt(document.getElementById('pay-amount').value)||0;
   if(!amount){toast('Введіть суму');return}
+  if(!window._payFile){toast('Прикріпіть чек');return}
   closeModal('modal-pay');
-  toast('✅ Надішліть фото чеку вчителю в боті');
+  toast('✅ Запит надіслано! Вчитель підтвердить оплату.');
+  // Надсилаємо через бота
   if(tg)tg.sendData(JSON.stringify({action:'pay_request',amount,name:appData.name,tid:appData.tid}));
 }
 
