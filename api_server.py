@@ -2,9 +2,11 @@ from aiohttp import web
 import json
 import os
 import random
+import aiohttp as aiohttp_client
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "miniapp")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "database.json")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 def load_db():
     if os.path.exists(DATA_FILE):
@@ -234,6 +236,77 @@ async def delete_student_link(request):
         save_db(db)
     return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
 
+# ── НОВИЙ ЕНДПОІНТ: поповнення балансу з Mini App ──
+async def pay_request(request):
+    try:
+        reader = await request.multipart()
+        amount = None
+        tid = None
+        name = None
+        file_data = None
+        file_name = "check"
+        file_content_type = "image/jpeg"
+        is_photo = True
+
+        async for part in reader:
+            if part.name == "amount":
+                amount = int(await part.read())
+            elif part.name == "tid":
+                tid = (await part.read()).decode()
+            elif part.name == "name":
+                name = (await part.read()).decode()
+            elif part.name == "file":
+                file_name = part.filename or "check"
+                ct = part.headers.get("Content-Type", "image/jpeg")
+                file_content_type = ct
+                is_photo = ct.startswith("image/")
+                file_data = await part.read()
+
+        if not all([amount, tid, name, file_data]):
+            return web.Response(
+                text=json.dumps({"ok": False, "error": "missing fields"}),
+                content_type="application/json", headers=cors
+            )
+
+        caption = f"💰 Заявка на поповнення!\nВід: {name}\nСума: {amount}₴"
+        kb = json.dumps({"inline_keyboard": [[
+            {"text": "✅ Підтвердити", "callback_data": f"confirm_webapp_{amount}_{tid}_{name}"},
+            {"text": "❌ Відхилити", "callback_data": f"reject_webapp_{name}_{tid}"}
+        ]]})
+
+        async with aiohttp_client.ClientSession() as session:
+            if is_photo:
+                form = aiohttp_client.FormData()
+                form.add_field("chat_id", tid)
+                form.add_field("caption", caption)
+                form.add_field("reply_markup", kb)
+                form.add_field("photo", file_data, filename=file_name, content_type=file_content_type)
+                async with session.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form
+                ) as resp:
+                    result = await resp.json()
+            else:
+                form = aiohttp_client.FormData()
+                form.add_field("chat_id", tid)
+                form.add_field("caption", caption)
+                form.add_field("reply_markup", kb)
+                form.add_field("document", file_data, filename=file_name, content_type=file_content_type)
+                async with session.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form
+                ) as resp:
+                    result = await resp.json()
+
+        if result.get("ok"):
+            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+        else:
+            print(f"[PAY REQUEST] Telegram error: {result}")
+            return web.Response(text=json.dumps({"ok": False, "error": result.get("description","telegram error")}), content_type="application/json", headers=cors)
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
+
+
 # ── APP ──
 app = web.Application()
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
@@ -252,6 +325,7 @@ app.router.add_post("/api/mark-hw", mark_hw)
 app.router.add_post("/api/reset-codes", reset_codes)
 app.router.add_post("/api/add-student-link", add_student_link)
 app.router.add_post("/api/delete-student-link", delete_student_link)
+app.router.add_post("/api/pay-request", pay_request)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
