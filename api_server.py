@@ -407,10 +407,7 @@ async def send_hw_file(request):
             u_id = s.get("u_id") or s.get("su_id")
             if u_id:
                 async with aiohttp_client.ClientSession() as session:
-                    caption = f"📝 Нове ДЗ!
-📅 {date_str}
-
-{text or ''}"
+                    caption = f"📝 Нове ДЗ!\n📅 {date_str}\n\n{text or ''}"
                     form = aiohttp_client.FormData()
                     form.add_field("chat_id", str(u_id))
                     form.add_field("caption", caption)
