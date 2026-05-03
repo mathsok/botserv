@@ -2,23 +2,30 @@ from aiohttp import web
 import json
 import os
 
-DATA_FILE = os.environ.get("DATA_FILE", "students_db.json")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "miniapp")
 
-def load_students():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
+BOTS_DIR = {
+    "main": "/root/my_bot/botserv/students_db.json",
+}
+# Автоматично додаємо всі tutor1-11
+for i in range(1, 12):
+    BOTS_DIR[f"tutor{i}"] = f"/root/my_bots/tutor{i}/students_db.json"
+
+def load_students(bot_id="main"):
+    db_path = BOTS_DIR.get(bot_id, BOTS_DIR["main"])
+    if os.path.exists(db_path):
+        with open(db_path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 async def handle_data(request):
-    students = load_students()
     params = request.rel_url.query
-
     role = params.get("role", "")
     name = params.get("name", "")
+    bot_id = params.get("bot", "main")
 
-    # Знаходимо учня по імені
+    students = load_students(bot_id)
+
     student_data = None
     for sname, sdata in students.items():
         if sname.startswith("__"):
@@ -28,7 +35,6 @@ async def handle_data(request):
             break
 
     if role in ("admin", "teacher"):
-        # Дані для вчителя
         students_list = []
         for sname, sdata in students.items():
             if sname.startswith("__"):
@@ -39,14 +45,9 @@ async def handle_data(request):
                 "price": sdata.get("price", 0),
                 "sessions": sdata.get("sessions", [])
             })
-
-        result = {
-            "role": "teacher",
-            "students": students_list
-        }
+        result = {"role": "teacher", "students": students_list}
 
     elif student_data:
-        # Дані для учня
         result = {
             "role": role,
             "name": name,
