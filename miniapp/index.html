@@ -494,7 +494,7 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div class="form-group">
       <div class="form-label">Матеріали (необов'язково)</div>
-      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple onchange="handleLessonFiles(this)"
+      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple
         style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
       <div id="lesson-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <div id="lesson-files-preview" style="margin-top:8px;font-size:13px;color:var(--green)"></div>
@@ -512,7 +512,7 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
     <div class="form-group">
       <div class="form-label">Фото або документ (необов'язково)</div>
-      <input type="file" id="hw-file-input" accept="image/*,application/pdf" onchange="handleHwFile(this)"
+      <input type="file" id="hw-file-input" accept="image/*,application/pdf"
         style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
       <div id="hw-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <img id="hw-file-preview" style="max-width:100%;border-radius:8px;margin-top:8px;display:none">
@@ -595,7 +595,7 @@ select.form-input{appearance:none;cursor:pointer}
         <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
         <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
       </div>
-      <input type="file" id="pay-file-input" accept="image/*,application/pdf" onchange="handlePayFile(this)"
+      <input type="file" id="pay-file-input" accept="image/*,application/pdf"
         style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
       <div id="pay-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
@@ -1388,6 +1388,18 @@ async function submitPay(){
 
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
+});
+
+// File input listeners
+document.addEventListener('DOMContentLoaded',()=>{
+  const li=document.getElementById('lesson-file-input');
+  if(li)li.addEventListener('change',function(){handleLessonFiles(this);});
+
+  const hi=document.getElementById('hw-file-input');
+  if(hi)hi.addEventListener('change',function(){handleHwFile(this);});
+
+  const pi=document.getElementById('pay-file-input');
+  if(pi)pi.addEventListener('change',function(){handlePayFile(this);});
 });
 </script>
 </body>
