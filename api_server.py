@@ -452,6 +452,19 @@ async def send_hw_file(request):
         import traceback; traceback.print_exc()
         return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
+
+async def delete_journal_entry(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    name = body["name"]
+    idx = body["idx"]
+    s = db["teachers"].get(tid, {}).get("students", {}).get(name)
+    if s and 0 <= idx < len(s.get("journal", [])):
+        s["journal"].pop(idx)
+        save_db(db)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+
 # ── APP ──
 app = web.Application()
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
@@ -473,6 +486,7 @@ app.router.add_post("/api/delete-student-link", delete_student_link)
 app.router.add_post("/api/pay-request", pay_request)
 app.router.add_post("/api/send-materials", send_materials)
 app.router.add_post("/api/send-hw-file", send_hw_file)
+app.router.add_post("/api/delete-journal-entry", delete_journal_entry)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
