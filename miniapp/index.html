@@ -470,9 +470,9 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Ціна заняття (₴)</div><input class="form-input" id="new-student-price" placeholder="500" type="number"></div>
     <div class="form-group">
       <div class="form-label">Дні занять</div>
-      <div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+      <div id="day-times"></div>
     </div>
-    <div class="form-group"><div class="form-label">Час заняття</div><input class="form-input" id="new-student-time" placeholder="16:00" type="time"></div>
     <button class="btn btn-primary" onclick="addStudent()">Додати учня</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-student')">Скасувати</button>
   </div>
@@ -795,27 +795,51 @@ function copyCode(code){
 
 // ── ADD STUDENT ──
 function showAddStudent(){
-  const dp=document.getElementById('days-picker');
-  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
   document.getElementById('new-student-name').value='';
   document.getElementById('new-student-price').value='';
-  document.getElementById('new-student-time').value='';
+  document.getElementById('days-picker').innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  document.getElementById('day-times').innerHTML='';
   openModal('modal-add-student');
 }
 
 function toggleDay(btn){
   btn.classList.toggle('btn-sm-primary');
   btn.classList.toggle('btn-sm-ghost');
+  const day=btn.dataset.day;
+  const timesEl=document.getElementById('day-times');
+  const existing=document.getElementById('time-row-'+day);
+  if(btn.classList.contains('btn-sm-primary')){
+    const row=document.createElement('div');
+    row.id='time-row-'+day;
+    row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:90px">${day.slice(0,3)}</div><input class="form-input" id="time-input-${day}" type="text" placeholder="16:00" maxlength="5" style="flex:1;padding:10px 12px" oninput="formatTimeInput(this)">`;
+    timesEl.appendChild(row);
+    document.getElementById('time-input-'+day).focus();
+  } else {
+    if(existing)existing.remove();
+  }
+}
+
+function formatTimeInput(input){
+  let v=input.value.replace(/\D/g,'');
+  if(v.length>2)v=v.slice(0,2)+':'+v.slice(2,4);
+  input.value=v;
 }
 
 async function addStudent(){
   const name=document.getElementById('new-student-name').value.trim();
   const price=parseInt(document.getElementById('new-student-price').value)||0;
-  const time=document.getElementById('new-student-time').value;
   if(!name){toast('Введіть ім\'я');return}
 
   const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
-  const sessions=selectedDays.map(day=>({day,time:time||'00:00'}));
+  if(!selectedDays.length){toast('Оберіть хоча б один день');return}
+
+  const sessions=[];
+  for(const day of selectedDays){
+    const timeVal=(document.getElementById('time-input-'+day)?.value||'').trim();
+    if(!timeVal||!/^\d{1,2}:\d{2}$/.test(timeVal)){toast(`Введіть час для ${day}`);return}
+    sessions.push({day,time:timeVal});
+  }
 
   try{
     const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
@@ -824,7 +848,7 @@ async function addStudent(){
       appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
       renderTeacherDashboard();
       closeModal('modal-add-student');
-      toast('✅ '+name+' доданий!');
+      toast('\u2705 '+name+' доданий!');
     } else toast('Помилка: '+(res.error||'невідома'));
   } catch(e){toast('Помилка з\'єднання')}
 }
