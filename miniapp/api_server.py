@@ -3,60 +3,50 @@ import json
 import os
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "miniapp")
+DATA_FILE = os.path.join(os.path.dirname(__file__), "database.json")
 
-BOTS_DIR = {
-    "main": "/root/my_bot/botserv/students_db.json",
-}
-# Автоматично додаємо всі tutor1-11
-for i in range(1, 12):
-    BOTS_DIR[f"tutor{i}"] = f"/root/my_bots/tutor{i}/students_db.json"
-
-def load_students(bot_id="main"):
-    db_path = BOTS_DIR.get(bot_id, BOTS_DIR["main"])
-    if os.path.exists(db_path):
-        with open(db_path, "r", encoding="utf-8") as f:
+def load_db():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {}
+    return {"teachers": {}}
 
 async def handle_data(request):
     params = request.rel_url.query
     role = params.get("role", "")
     name = params.get("name", "")
-    bot_id = params.get("bot", "main")
+    tid = params.get("tid", "")
 
-    students = load_students(bot_id)
-
-    student_data = None
-    for sname, sdata in students.items():
-        if sname.startswith("__"):
-            continue
-        if sname == name:
-            student_data = sdata
-            break
+    db = load_db()
+    teacher = db["teachers"].get(tid, {})
 
     if role in ("admin", "teacher"):
         students_list = []
-        for sname, sdata in students.items():
-            if sname.startswith("__"):
-                continue
+        for sname, sdata in teacher.get("students", {}).items():
             students_list.append({
                 "name": sname,
                 "balance": sdata.get("balance", 0),
                 "price": sdata.get("price", 0),
                 "sessions": sdata.get("sessions", [])
             })
-        result = {"role": "teacher", "students": students_list}
+        result = {
+            "role": "teacher",
+            "name": teacher.get("name", ""),
+            "subject": teacher.get("subject", ""),
+            "students": students_list
+        }
 
-    elif student_data:
+    elif name and name in teacher.get("students", {}):
+        sdata = teacher["students"][name]
         result = {
             "role": role,
             "name": name,
-            "balance": student_data.get("balance", 0),
-            "price": student_data.get("price", 0),
-            "sessions": student_data.get("sessions", []),
-            "homework": student_data.get("homework", []),
-            "journal": student_data.get("journal", []),
-            "links": student_data.get("links", {})
+            "balance": sdata.get("balance", 0),
+            "price": sdata.get("price", 0),
+            "sessions": sdata.get("sessions", []),
+            "homework": sdata.get("homework", []),
+            "journal": sdata.get("journal", []),
+            "links": sdata.get("links", {})
         }
     else:
         result = {"role": "unknown"}
@@ -68,8 +58,7 @@ async def handle_data(request):
     )
 
 async def handle_index(request):
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    with open(index_path, "r", encoding="utf-8") as f:
+    with open(os.path.join(STATIC_DIR, "index.html"), "r", encoding="utf-8") as f:
         content = f.read()
     return web.Response(text=content, content_type="text/html")
 
