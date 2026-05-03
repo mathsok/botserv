@@ -494,10 +494,10 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div class="form-group">
       <div class="form-label">Матеріали (необов'язково)</div>
-      <div class="photo-upload" onclick="document.getElementById('lesson-file-input').click()" style="cursor:pointer">
+      <label for="lesson-file-input" style="display:block;border:2px dashed var(--border2);border-radius:var(--r2);cursor:pointer;text-align:center">
         <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple style="display:none" onchange="handleLessonFiles(this)">
-        <div id="lesson-file-label" style="color:var(--text2);font-size:14px;padding:14px;text-align:center">📎 Додати фото або документ</div>
-      </div>
+        <div id="lesson-file-label" style="color:var(--text2);font-size:14px;padding:14px">📎 Додати фото або документ</div>
+      </label>
       <div id="lesson-files-preview" style="margin-top:8px;font-size:13px;color:var(--green)"></div>
     </div>
     <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
@@ -513,11 +513,11 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
     <div class="form-group">
       <div class="form-label">Фото або документ (необов'язково)</div>
-      <div class="photo-upload" onclick="document.getElementById('hw-file-input').click()" style="cursor:pointer">
+      <label for="hw-file-input" style="display:block;border:2px dashed var(--border2);border-radius:var(--r2);cursor:pointer;text-align:center">
         <input type="file" id="hw-file-input" accept="image/*,application/pdf" style="display:none" onchange="handleHwFile(this)">
-        <div id="hw-file-label" style="color:var(--text2);font-size:14px;padding:14px;text-align:center">📎 Додати файл</div>
+        <div id="hw-file-label" style="color:var(--text2);font-size:14px;padding:14px">📎 Додати файл</div>
         <img id="hw-file-preview" style="max-width:100%;border-radius:8px;margin-top:8px;display:none">
-      </div>
+      </label>
     </div>
     <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
@@ -597,11 +597,11 @@ select.form-input{appearance:none;cursor:pointer}
         <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
         <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
       </div>
-      <div class="photo-upload" onclick="document.getElementById('pay-file-input').click()" style="cursor:pointer">
+      <label for="pay-file-input" style="display:block;border:2px dashed var(--border2);border-radius:var(--r2);cursor:pointer;text-align:center">
         <input type="file" id="pay-file-input" accept="image/*,application/pdf" style="display:none" onchange="handlePayFile(this)">
-        <div id="pay-file-label" style="color:var(--text2);font-size:14px;padding:20px;text-align:center">📎 Натисніть щоб вибрати файл</div>
+        <div id="pay-file-label" style="color:var(--text2);font-size:14px;padding:20px">📎 Натисніть щоб вибрати файл</div>
         <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
-      </div>
+      </label>
       <button class="btn btn-primary" style="margin-top:14px" onclick="submitPay()">Надіслати запит</button>
       <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
     </div>
@@ -745,13 +745,15 @@ function renderTeacherDashboard(){
 
   renderWeekSchedule(students);
 
-  const allJournal=students.flatMap(s=>(s.journal||[]).map(e=>({...e,studentName:s.name}))).sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('t-journal-list').innerHTML=allJournal.slice(0,10).map(e=>{
+  // Будуємо журнал з індексами для видалення
+  const allJournal=students.flatMap(s=>(s.journal||[]).map((e,i)=>({...e,studentName:s.name,sIdx:i}))).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('t-journal-list').innerHTML=allJournal.slice(0,20).map(e=>{
     const parts=e.date.split('.');
     return`<div class="card fade-up">
       <div class="list-item">
         <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
         <div class="item-info"><div class="item-name">${e.topic}</div><div class="item-sub">${e.studentName}${e.materials?.length?' · 📎'+e.materials.length:''}</div></div>
+        <span onclick="deleteJournalEntry('${e.studentName}',${e.sIdx})" style="color:var(--red);font-size:20px;cursor:pointer;padding:4px 8px">🗑</span>
       </div>
     </div>`;
   }).join('')||'<div class="empty">Журнал порожній</div>';
@@ -892,6 +894,17 @@ async function addStudent(){
 }
 
 // ── MARK LESSON ──
+async function deleteJournalEntry(studentName, idx){
+  if(!confirm(`Видалити запис із журналу?`)) return;
+  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
+  if(res.ok){
+    const s=(appData.students||[]).find(x=>x.name===studentName);
+    if(s&&s.journal)s.journal.splice(idx,1);
+    renderTeacherDashboard();
+    toast('🗑 Запис видалено');
+  } else toast('Помилка');
+}
+
 function showMarkLesson(){
   document.getElementById('mark-topic').value='';
   document.getElementById('mark-action').value='done';
