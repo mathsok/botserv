@@ -566,24 +566,15 @@ select.form-input{appearance:none;cursor:pointer}
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Поповнити баланс</div>
-    <div id="pay-step-1">
-      <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="pay-amount" placeholder="500" type="number"></div>
-      <button class="btn btn-primary" onclick="payNextStep()">Далі →</button>
-      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
-    </div>
-    <div id="pay-step-2" style="display:none">
-      <div style="text-align:center;padding:10px 0 16px">
-        <div style="font-size:40px;margin-bottom:8px">🧾</div>
-        <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
-        <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:48px;margin-bottom:12px">💰</div>
+      <div style="font-size:15px;color:var(--text2);line-height:1.5;margin-bottom:20px">
+        Для поповнення балансу перейдіть до бота, натисніть<br>
+        <b style="color:var(--text)">💰 Поповнити баланс</b><br>
+        та відправте суму і фото чеку
       </div>
-      <div class="photo-upload" onclick="document.getElementById('pay-file-input').click()">
-        <input type="file" id="pay-file-input" accept="image/*,application/pdf" style="display:none" onchange="handlePayFile(this)">
-        <div id="pay-file-label" style="color:var(--text2);font-size:14px">📎 Натисніть щоб вибрати файл</div>
-        <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
-      </div>
-      <button class="btn btn-primary" style="margin-top:14px" onclick="submitPay()">Надіслати запит</button>
-      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
+      <button class="btn btn-primary" onclick="openBot()">Відкрити бота →</button>
+      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Закрити</button>
     </div>
   </div>
 </div>
@@ -1215,14 +1206,13 @@ function handlePayFile(input){
   }
 }
 
-async function submitPay(){
-  const amount=parseInt(document.getElementById('pay-amount').value)||0;
-  if(!amount){toast('Введіть суму');return}
-  if(!window._payFile){toast('Прикріпіть чек');return}
-  closeModal('modal-pay');
-  toast('✅ Запит надіслано! Вчитель підтвердить оплату.');
-  // Надсилаємо через бота
-  if(tg)tg.sendData(JSON.stringify({action:'pay_request',amount,name:appData.name,tid:appData.tid}));
+
+
+function showPayModal(){openModal('modal-pay')}
+function openBot(){
+  if(tg){tg.close();}
+  // Відкриваємо бота
+  window.open('https://t.me/'+window._botUsername,'_blank');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
