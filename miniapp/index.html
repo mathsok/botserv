@@ -494,9 +494,9 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div class="form-group">
       <div class="form-label">Матеріали (необов'язково)</div>
-      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple style="display:none" onchange="handleLessonFiles(this)">
-      <button class="btn btn-secondary" type="button" onclick="document.getElementById('lesson-file-input').click()" style="margin-bottom:8px">📎 Додати фото або документ</button>
-      <div id="lesson-file-label" style="color:var(--green);font-size:13px;min-height:20px"></div>
+      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple onchange="handleLessonFiles(this)"
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
+      <div id="lesson-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <div id="lesson-files-preview" style="margin-top:8px;font-size:13px;color:var(--green)"></div>
     </div>
     <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
@@ -512,9 +512,9 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
     <div class="form-group">
       <div class="form-label">Фото або документ (необов'язково)</div>
-      <input type="file" id="hw-file-input" accept="image/*,application/pdf" style="display:none" onchange="handleHwFile(this)">
-      <button class="btn btn-secondary" type="button" onclick="document.getElementById('hw-file-input').click()" style="margin-bottom:8px">📎 Додати файл</button>
-      <div id="hw-file-label" style="color:var(--green);font-size:13px;min-height:20px"></div>
+      <input type="file" id="hw-file-input" accept="image/*,application/pdf" onchange="handleHwFile(this)"
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
+      <div id="hw-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <img id="hw-file-preview" style="max-width:100%;border-radius:8px;margin-top:8px;display:none">
     </div>
     <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
@@ -595,9 +595,9 @@ select.form-input{appearance:none;cursor:pointer}
         <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
         <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
       </div>
-      <input type="file" id="pay-file-input" accept="image/*,application/pdf" style="display:none" onchange="handlePayFile(this)">
-      <button class="btn btn-secondary" type="button" onclick="document.getElementById('pay-file-input').click()" style="margin-bottom:8px">📎 Вибрати файл</button>
-      <div id="pay-file-label" style="color:var(--green);font-size:13px;min-height:20px"></div>
+      <input type="file" id="pay-file-input" accept="image/*,application/pdf" onchange="handlePayFile(this)"
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
+      <div id="pay-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
       <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
       <button class="btn btn-primary" style="margin-top:14px" onclick="submitPay()">Надіслати запит</button>
       <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
