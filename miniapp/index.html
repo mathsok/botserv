@@ -687,16 +687,26 @@ async function api(path,method='GET',body=null){
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
+  screenStack=[];
 }
 
 function pushScreen(id){
-  screenStack.push(document.querySelector('.screen.active')?.id);
-  showScreen(id);
+  const current=document.querySelector('.screen.active');
+  if(current)screenStack.push(current.id);
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
 }
 
 function goBack(){
   const prev=screenStack.pop();
-  if(prev)showScreen(prev);
+  if(prev){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(prev)?.classList.add('active');
+  } else {
+    // Fallback — повертаємось на головну вчителя
+    showScreen('screen-teacher');
+    showTeacherTab('home');
+  }
 }
 
 // ── MODALS ──
