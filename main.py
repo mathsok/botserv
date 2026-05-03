@@ -833,26 +833,69 @@ async def pay_check(message: types.Message):
 @dp.callback_query(F.data.startswith("confirm_"))
 async def confirm_pay(callback: types.CallbackQuery):
     parts = callback.data.split("_")
-    payer_id = int(parts[1])
-    amount = int(parts[2])
-    tid = parts[3]
-    sname = "_".join(parts[4:])
+    # confirm_webapp_AMOUNT_TID_SNAME або confirm_PAYER_ID_AMOUNT_TID_SNAME
+    if parts[1] == "webapp":
+        amount = int(parts[2])
+        tid = parts[3]
+        sname = "_".join(parts[4:])
+        payer_id = None
+    else:
+        payer_id = int(parts[1])
+        amount = int(parts[2])
+        tid = parts[3]
+        sname = "_".join(parts[4:])
 
     db = load_db()
     if tid in db["teachers"] and sname in db["teachers"][tid]["students"]:
         db["teachers"][tid]["students"][sname]["balance"] += amount
         save_db(db)
         sdata = db["teachers"][tid]["students"][sname]
-        await bot.send_message(payer_id, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {sdata['balance']}₴")
-        await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n✅ ПІДТВЕРДЖЕНО")
-    await callback.answer()
+        new_balance = sdata["balance"]
+        # Повідомляємо батьків/супер-учня
+        notify = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
+        for nid in notify:
+            try:
+                await bot.send_message(nid, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {new_balance}₴")
+            except Exception:
+                pass
+        if payer_id:
+            try:
+                await bot.send_message(payer_id, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {new_balance}₴")
+            except Exception:
+                pass
+        try:
+            await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n✅ ПІДТВЕРДЖЕНО")
+        except Exception:
+            pass
+    await callback.answer("✅ Баланс поповнено!")
 
 @dp.callback_query(F.data.startswith("reject_"))
 async def reject_pay(callback: types.CallbackQuery):
-    payer_id = int(callback.data.split("_")[1])
-    await bot.send_message(payer_id, "❌ Поповнення відхилено. Зверніться до вчителя.")
-    await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n❌ ВІДХИЛЕНО")
-    await callback.answer()
+    parts = callback.data.split("_")
+    # reject_webapp_SNAME_TID або reject_PAYER_ID
+    if parts[1] == "webapp":
+        sname = parts[2]
+        tid = parts[3] if len(parts) > 3 else None
+        db = load_db()
+        if tid:
+            sdata = db["teachers"].get(tid, {}).get("students", {}).get(sname, {})
+            notify = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
+            for nid in notify:
+                try:
+                    await bot.send_message(nid, "❌ Поповнення відхилено. Зверніться до вчителя.")
+                except Exception:
+                    pass
+    else:
+        payer_id = int(parts[1])
+        try:
+            await bot.send_message(payer_id, "❌ Поповнення відхилено. Зверніться до вчителя.")
+        except Exception:
+            pass
+    try:
+        await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n❌ ВІДХИЛЕНО")
+    except Exception:
+        pass
+    await callback.answer("❌ Відхилено")
 
 
 # ─── ОБРОБНИК ПОМИЛОК ─────────────────────────────────────────────────────────
