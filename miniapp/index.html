@@ -99,7 +99,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 textarea.form-input{resize:none;height:80px}
 select.form-input{appearance:none;cursor:pointer}
 
-.btn{width:100%;padding:14px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn{width:100%;padding:14px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+.btn *,.nav-btn *,.card.clickable *,.balance-btn *,.btn-sm *{pointer-events:none}
 .btn:active{transform:scale(.98)}
 .btn-primary{background:var(--grad1);color:#fff}
 .btn-secondary{background:var(--card2);border:1px solid var(--border2);color:var(--text)}
@@ -491,6 +492,14 @@ select.form-input{appearance:none;cursor:pointer}
         <option value="reschedule">🔄 Перенесено</option>
       </select>
     </div>
+    <div class="form-group">
+      <div class="form-label">Матеріали (необов'язково)</div>
+      <div class="photo-upload" onclick="document.getElementById('lesson-file-input').click()" style="cursor:pointer">
+        <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple style="display:none" onchange="handleLessonFiles(this)">
+        <div id="lesson-file-label" style="color:var(--text2);font-size:14px;padding:14px;text-align:center">📎 Додати фото або документ</div>
+      </div>
+      <div id="lesson-files-preview" style="margin-top:8px;font-size:13px;color:var(--green)"></div>
+    </div>
     <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-mark-lesson')">Скасувати</button>
   </div>
@@ -502,6 +511,14 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="modal-title">Домашнє завдання</div>
     <div class="form-group"><div class="form-label">Учень</div><select class="form-input" id="hw-student"></select></div>
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
+    <div class="form-group">
+      <div class="form-label">Фото або документ (необов'язково)</div>
+      <div class="photo-upload" onclick="document.getElementById('hw-file-input').click()" style="cursor:pointer">
+        <input type="file" id="hw-file-input" accept="image/*,application/pdf" style="display:none" onchange="handleHwFile(this)">
+        <div id="hw-file-label" style="color:var(--text2);font-size:14px;padding:14px;text-align:center">📎 Додати файл</div>
+        <img id="hw-file-preview" style="max-width:100%;border-radius:8px;margin-top:8px;display:none">
+      </div>
+    </div>
     <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
   </div>
@@ -875,34 +892,123 @@ async function addStudent(){
 }
 
 // ── MARK LESSON ──
-function showMarkLesson(){openModal('modal-mark-lesson')}
+function showMarkLesson(){
+  document.getElementById('mark-topic').value='';
+  document.getElementById('mark-action').value='done';
+  document.getElementById('lesson-file-label').textContent='📎 Додати фото або документ';
+  document.getElementById('lesson-files-preview').innerHTML='';
+  document.getElementById('lesson-file-input').value='';
+  window._lessonFiles=[];
+  openModal('modal-mark-lesson');
+}
+
+function handleLessonFiles(input){
+  const files=Array.from(input.files);
+  window._lessonFiles=files;
+  document.getElementById('lesson-file-label').textContent=`✅ ${files.length} файл(ів) вибрано`;
+  document.getElementById('lesson-files-preview').innerHTML=files.map(f=>`<div>📎 ${f.name}</div>`).join('');
+}
 
 async function markLesson(){
   const name=document.getElementById('mark-student').value;
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
   if(!topic){toast('Введіть тему');return}
+
+  // Спочатку відмічаємо заняття
   const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
-  if(res.ok){
-    const s=(appData.students||[]).find(x=>x.name===name);
-    if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
-    renderTeacherDashboard();
-    closeModal('modal-mark-lesson');
-    document.getElementById('mark-topic').value='';
-    toast('✅ Заняття відмічено!');
-  } else toast('Помилка');
+  if(!res.ok){toast('Помилка');return}
+
+  // Якщо є файли — надсилаємо їх учню
+  const files=window._lessonFiles||[];
+  if(files.length>0){
+    const sdata=(appData.students||[]).find(x=>x.name===name);
+    const studentId=sdata?.u_id||sdata?.su_id;
+    if(studentId){
+      for(const file of files){
+        const formData=new FormData();
+        formData.append('chat_id',String(studentId));
+        formData.append('caption',`📚 Матеріали до заняття: ${topic}`);
+        const isPhoto=file.type.startsWith('image/');
+        try{
+          await fetch(`https://api.telegram.org/bot${window._botToken||''}/${isPhoto?'sendPhoto':'sendDocument'}`,{method:'POST',body:formData});
+        }catch(e){}
+      }
+    }
+    // Надсилаємо через наш API
+    const formData=new FormData();
+    formData.append('tid',appData.tid);
+    formData.append('name',name);
+    formData.append('topic',topic);
+    for(const file of files) formData.append('files',file,file.name);
+    await fetch('/api/send-materials',{method:'POST',body:formData}).catch(()=>{});
+  }
+
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
+  renderTeacherDashboard();
+  closeModal('modal-mark-lesson');
+  document.getElementById('mark-topic').value='';
+  window._lessonFiles=[];
+  toast('✅ Заняття відмічено!');
 }
 
 // ── SEND HW ──
-function showSendHw(){openModal('modal-send-hw')}
+function showSendHw(){
+  document.getElementById('hw-text').value='';
+  document.getElementById('hw-file-label').textContent='📎 Додати файл';
+  document.getElementById('hw-file-preview').style.display='none';
+  document.getElementById('hw-file-input').value='';
+  window._hwFile=null;
+  openModal('modal-send-hw');
+}
+
+function handleHwFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  window._hwFile=file;
+  document.getElementById('hw-file-label').textContent='✅ '+file.name;
+  if(file.type.startsWith('image/')){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=document.getElementById('hw-file-preview');
+      img.src=e.target.result;
+      img.style.display='block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
 
 async function sendHw(){
   const name=document.getElementById('hw-student').value;
   const text=document.getElementById('hw-text').value.trim();
-  if(!text){toast('Введіть текст ДЗ');return}
-  const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
-  if(res.ok){closeModal('modal-send-hw');document.getElementById('hw-text').value='';toast('✅ ДЗ надіслано '+name+'!');}
-  else toast('Помилка');
+  if(!text&&!window._hwFile){toast('Введіть текст або додайте файл');return}
+
+  if(window._hwFile){
+    // Надсилаємо з файлом через API
+    const formData=new FormData();
+    formData.append('tid',appData.tid);
+    formData.append('name',name);
+    formData.append('text',text||'Дивись файл');
+    formData.append('file',window._hwFile,window._hwFile.name);
+    try{
+      const res=await fetch('/api/send-hw-file',{method:'POST',body:formData});
+      const data=await res.json();
+      if(data.ok){
+        closeModal('modal-send-hw');
+        window._hwFile=null;
+        toast('✅ ДЗ надіслано '+name+'!');
+      } else toast('Помилка: '+(data.error||'невідома'));
+    }catch(e){toast('Помилка зʼєднання');}
+  } else {
+    // Тільки текст
+    const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
+    if(res.ok){
+      closeModal('modal-send-hw');
+      document.getElementById('hw-text').value='';
+      toast('✅ ДЗ надіслано '+name+'!');
+    } else toast('Помилка');
+  }
 }
 
 // ── BALANCE ──
