@@ -173,6 +173,7 @@ def get_webapp_menu(base_menu, url):
 
 async def send_reminders():
     while True:
+        await asyncio.sleep(60)  # спочатку чекаємо, потім виконуємо
         try:
             now = datetime.now()
             target = now + timedelta(hours=4)
@@ -181,7 +182,7 @@ async def send_reminders():
 
             print(f"[{now.strftime('%H:%M')}] Нагадування: шукаю заняття на {target_day} {target_time}")
 
-            db = load_db()  # читаємо свіжі дані кожну хвилину
+            db = load_db()
             for tid, tdata in db["teachers"].items():
                 for sname, sdata in tdata.get("students", {}).items():
                     for session in sdata.get("sessions", []):
@@ -197,8 +198,6 @@ async def send_reminders():
                                     pass
         except Exception as e:
             print(f"Помилка в нагадуваннях: {e}")
-
-        await asyncio.sleep(60)
 
 
 # ─── СТАРТ ─────────────────────────────────────────────────────────────────────
