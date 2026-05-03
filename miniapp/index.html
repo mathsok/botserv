@@ -20,19 +20,19 @@
   --grad3:linear-gradient(135deg,#f0d060,#f09060);
   --r:14px;--r2:10px;--r3:20px;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;overflow:hidden;touch-action:pan-y}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;margin:0;padding:0}
 
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s}
-.screen.active{opacity:1;pointer-events:all}
-.screen-body{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;min-height:0;touch-action:pan-y}
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex}
+.screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .screen-body::-webkit-scrollbar{display:none}
 
-.header{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.header{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;background:var(--bg);backdrop-filter:blur(10px)}
 .header-back{width:36px;height:36px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .header-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;flex:1}
 .header-action{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap}
 
-.bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(13,13,26,0.95);backdrop-filter:blur(20px);flex-shrink:0}
+.bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(13,13,26,0.95);backdrop-filter:blur(20px);position:sticky;bottom:0;z-index:10}
 .nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif}
 .nav-btn.active{color:var(--accent)}
 .nav-btn svg{width:22px;height:22px}
