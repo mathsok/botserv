@@ -795,9 +795,8 @@ async def pay_check(message: types.Message):
     uid = message.from_user.id
     state = user_state[uid]
     amount = state["sum"]
-    tid = state["tid"]
+    tid = state["tid"]   # це ID вчителя (знайдений через find_student_by_uid)
     sname = state["sname"]
-    tid_int = int(tid)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Підтвердити", callback_data=f"confirm_{uid}_{amount}_{tid}_{sname}")],
@@ -805,10 +804,13 @@ async def pay_check(message: types.Message):
     ])
     caption = f"💰 Заявка на поповнення!\nВід: {sname}\nСума: {amount}₴"
 
-    if message.photo:
-        await bot.send_photo(tid_int, message.photo[-1].file_id, caption=caption, reply_markup=kb)
-    elif message.document:
-        await bot.send_document(tid_int, message.document.file_id, caption=caption, reply_markup=kb)
+    try:
+        if message.photo:
+            await bot.send_photo(int(tid), message.photo[-1].file_id, caption=caption, reply_markup=kb)
+        elif message.document:
+            await bot.send_document(int(tid), message.document.file_id, caption=caption, reply_markup=kb)
+    except Exception as e:
+        print(f"[PAY] Помилка відправки вчителю {tid}: {e}")
 
     user_state[uid] = None
     db = load_db()
@@ -818,7 +820,12 @@ async def pay_check(message: types.Message):
             if s == sname and sdata.get("su_id") == uid:
                 role = "super"
     menu = get_student_menu(role)
-    await message.answer("✅ Дякуємо! Чек надіслано вчителю. Очікуйте підтвердження.", reply_markup=menu)
+    await message.answer(
+        "✅ Запит успішно надіслано!
+
+Баланс буде поповнений, щойно його підтвердить вчитель.",
+        reply_markup=menu
+    )
 
 
 # ─── CALLBACKS ─────────────────────────────────────────────────────────────────
