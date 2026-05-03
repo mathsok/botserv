@@ -167,7 +167,11 @@ select.form-input{appearance:none;cursor:pointer}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .25s ease both}
 
-/* ── ROLE SCREEN ── */
+/* ── TABS DISPLAY ── */
+#t-students,#t-schedule,#t-lessons,#s-schedule,#s-hw,#s-journal{display:none}
+#t-home,#s-home{display:flex}
+
+
 .role-screen{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:30px 20px;background:var(--bg)}
 .role-logo{text-align:center;margin-bottom:40px}
 .role-logo-icon{font-size:56px;margin-bottom:12px}
@@ -867,16 +871,7 @@ function renderWeekSchedule(students){
   }).join('');
 }
 
-function showTeacherTab(tab){
-  const tabs=['home','students','schedule','lessons'];
-  tabs.forEach(t=>{
-    const el=document.getElementById('t-'+t);
-    if(el)el.classList.toggle('active',t===tab);
-  });
-}
-
-// ── STUDENT CARD ──
-function openStudentCard(name){
+function renderTeacher(){
   const s=(appData.students||[]).find(x=>x.name===name);
   if(!s)return;
   currentStudent=s;
@@ -1291,7 +1286,21 @@ function showStudentTab(tab){
   const tabs=['home','schedule','hw','journal'];
   tabs.forEach(t=>{
     const el=document.getElementById('s-'+t);
-    if(el)el.classList.toggle('active',t===tab);
+    if(el){
+      el.style.display=t===tab?'flex':'none';
+      el.classList.toggle('active',t===tab);
+    }
+  });
+}
+
+function showTeacherTab(tab){
+  const tabs=['home','students','schedule','lessons'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('t-'+t);
+    if(el){
+      el.style.display=t===tab?'flex':'none';
+      el.classList.toggle('active',t===tab);
+    }
   });
 }
 
