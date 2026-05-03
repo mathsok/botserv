@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.filters import CommandStart
 from aiogram.exceptions import TelegramAPIError
 
@@ -19,6 +19,7 @@ ADMIN_ID = int(os.environ["ADMIN_ID"])
 ADMIN_ID_2 = int(os.environ.get("ADMIN_ID_2", 0))
 ADMINS = {ADMIN_ID, ADMIN_ID_2} - {0}
 DATA_FILE = "students_db.json"
+WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://mathkyrylo.com")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -52,6 +53,7 @@ menu_teacher = ReplyKeyboardMarkup(
         [KeyboardButton(text="📖 Заняття і матеріали")],
         [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="🗓 Розклад на тиждень")],
         [KeyboardButton(text="🔗 Корисні посилання")],
+        [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=admin"))],
     ], resize_keyboard=True
 )
 
@@ -215,16 +217,28 @@ async def start(message: types.Message):
 
     su_name, _ = find_by_suid(uid)
     if su_name:
-        await message.answer(f"Привіт, {su_name}! Твій кабінет:", reply_markup=menu_super)
+        kb = ReplyKeyboardMarkup(keyboard=[
+            *menu_super.keyboard,
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=super&name={su_name}"))]
+        ], resize_keyboard=True)
+        await message.answer(f"Привіт, {su_name}! Твій кабінет:", reply_markup=kb)
         return
     s_name, _ = find_by_uid(uid)
     if s_name:
-        await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=menu_student)
+        kb = ReplyKeyboardMarkup(keyboard=[
+            *menu_student.keyboard,
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=user&name={s_name}"))]
+        ], resize_keyboard=True)
+        await message.answer(f"Привіт, {s_name}! Твій кабінет:", reply_markup=kb)
         return
 
     p_name, _ = find_by_pid(uid)
     if p_name:
-        await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=menu_parent)
+        kb = ReplyKeyboardMarkup(keyboard=[
+            *menu_parent.keyboard,
+            [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=f"{WEBAPP_URL}?role=parent&name={p_name}"))]
+        ], resize_keyboard=True)
+        await message.answer(f"Привіт! Кабінет учня {p_name}:", reply_markup=kb)
         return
 
     user_state[uid] = "waiting_auth_code"
