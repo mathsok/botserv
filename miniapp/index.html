@@ -919,29 +919,19 @@ async function markLesson(){
   const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
   if(!res.ok){toast('Помилка');return}
 
-  // Якщо є файли — надсилаємо їх учню
+  // Якщо є файли — надсилаємо через API
   const files=window._lessonFiles||[];
   if(files.length>0){
-    const sdata=(appData.students||[]).find(x=>x.name===name);
-    const studentId=sdata?.u_id||sdata?.su_id;
-    if(studentId){
-      for(const file of files){
-        const formData=new FormData();
-        formData.append('chat_id',String(studentId));
-        formData.append('caption',`📚 Матеріали до заняття: ${topic}`);
-        const isPhoto=file.type.startsWith('image/');
-        try{
-          await fetch(`https://api.telegram.org/bot${window._botToken||''}/${isPhoto?'sendPhoto':'sendDocument'}`,{method:'POST',body:formData});
-        }catch(e){}
-      }
-    }
-    // Надсилаємо через наш API
     const formData=new FormData();
-    formData.append('tid',appData.tid);
+    formData.append('tid',String(appData.tid));
     formData.append('name',name);
     formData.append('topic',topic);
     for(const file of files) formData.append('files',file,file.name);
-    await fetch('/api/send-materials',{method:'POST',body:formData}).catch(()=>{});
+    try{
+      const matRes=await fetch('/api/send-materials',{method:'POST',body:formData});
+      const matData=await matRes.json();
+      if(!matData.ok) console.error('send-materials error:',matData.error);
+    }catch(e){console.error('send-materials fetch error:',e);}
   }
 
   const s=(appData.students||[]).find(x=>x.name===name);
