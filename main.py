@@ -780,14 +780,18 @@ async def pay_sum(message: types.Message):
     state = user_state[uid]
     state["sum"] = int(message.text)
     state["state"] = "pay_check"
-    await message.answer(f"Сума: {message.text}₴. Надішліть фото чеку:")
+    await message.answer(
+        f"💰 Сума: *{message.text}₴*\n\nТепер надішліть фото або документ чеку:",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
+    )
 
 @dp.message(
     lambda m: isinstance(user_state.get(m.from_user.id), dict)
     and user_state[m.from_user.id].get("state") == "pay_check"
-    and m.photo is not None
+    and (m.photo is not None or m.document is not None)
 )
-async def pay_photo(message: types.Message):
+async def pay_check(message: types.Message):
     uid = message.from_user.id
     state = user_state[uid]
     amount = state["sum"]
@@ -799,15 +803,22 @@ async def pay_photo(message: types.Message):
         [InlineKeyboardButton(text="✅ Підтвердити", callback_data=f"confirm_{uid}_{amount}_{tid}_{sname}")],
         [InlineKeyboardButton(text="❌ Відхилити", callback_data=f"reject_{uid}")]
     ])
+    caption = f"💰 Заявка на поповнення!\nВід: {sname}\nСума: {amount}₴"
 
-    await bot.send_photo(
-        tid_int,
-        message.photo[-1].file_id,
-        caption=f"💰 Заявка на поповнення!\nВід: {sname}\nСума: {amount}₴",
-        reply_markup=kb
-    )
+    if message.photo:
+        await bot.send_photo(tid_int, message.photo[-1].file_id, caption=caption, reply_markup=kb)
+    elif message.document:
+        await bot.send_document(tid_int, message.document.file_id, caption=caption, reply_markup=kb)
+
     user_state[uid] = None
-    await message.answer("Дякуємо! Чек надіслано вчителю.")
+    db = load_db()
+    role = "parent"
+    for t, tdata in db["teachers"].items():
+        for s, sdata in tdata.get("students", {}).items():
+            if s == sname and sdata.get("su_id") == uid:
+                role = "super"
+    menu = get_student_menu(role)
+    await message.answer("✅ Дякуємо! Чек надіслано вчителю. Очікуйте підтвердження.", reply_markup=menu)
 
 
 # ─── CALLBACKS ─────────────────────────────────────────────────────────────────
