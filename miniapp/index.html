@@ -1,1 +1,928 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MathKyrylo</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg: #0f0f1a;
+    --bg2: #1a1a2e;
+    --bg3: #16213e;
+    --card: rgba(255,255,255,0.05);
+    --card-border: rgba(255,255,255,0.08);
+    --text: #f0f0ff;
+    --text2: rgba(240,240,255,0.6);
+    --text3: rgba(240,240,255,0.35);
+    --accent: #7c6ff7;
+    --accent2: #f7776f;
+    --accent3: #6fd9f7;
+    --green: #6ff7b0;
+    --yellow: #f7d96f;
+    --red: #f7776f;
+    --grad1: linear-gradient(135deg, #7c6ff7, #f7776f);
+    --grad2: linear-gradient(135deg, #6fd9f7, #6ff7b0);
+    --grad3: linear-gradient(135deg, #f7d96f, #f7a96f);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    position: relative;
+    padding: 20px 20px 0;
+    overflow: hidden;
+  }
+  .header-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--grad1);
+    opacity: 0.12;
+    filter: blur(40px);
+    border-radius: 0 0 60px 60px;
+  }
+  .header-content {
+    position: relative;
+    z-index: 1;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .logo {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    background: var(--grad1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .role-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .role-badge.teacher { background: rgba(124,111,247,0.2); color: var(--accent); border: 1px solid rgba(124,111,247,0.3); }
+  .role-badge.student { background: rgba(111,217,247,0.2); color: var(--accent3); border: 1px solid rgba(111,217,247,0.3); }
+
+  /* ── BALANCE CARD ── */
+  .balance-card {
+    background: var(--grad1);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 0 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  .balance-card::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 20px;
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  .balance-label { font-size: 12px; font-weight: 600; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .balance-amount { font-family: 'Nunito', sans-serif; font-size: 36px; font-weight: 800; margin-bottom: 4px; }
+  .balance-sub { font-size: 12px; opacity: 0.75; }
+  .balance-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .balance-btn {
+    flex: 1; padding: 8px; border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
+  }
+  .balance-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.3); }
+
+  /* ── SECTION ── */
+  .section { padding: 0 20px; margin-bottom: 24px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 16px; }
+  .section-action { font-size: 12px; color: var(--accent); font-weight: 600; cursor: pointer; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .card:active { transform: scale(0.98); background: rgba(255,255,255,0.08); }
+
+  /* ── SCHEDULE ── */
+  .schedule-day { margin-bottom: 16px; }
+  .day-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text3); margin-bottom: 8px;
+  }
+  .day-label.today { color: var(--accent); }
+  .lesson-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; border-radius: var(--radius-sm);
+    background: var(--card); border: 1px solid var(--card-border);
+    margin-bottom: 6px;
+  }
+  .lesson-time {
+    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 14px;
+    color: var(--accent); min-width: 45px;
+  }
+  .lesson-info { flex: 1; }
+  .lesson-name { font-weight: 600; font-size: 14px; }
+  .lesson-subject { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .lesson-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--grad1); flex-shrink: 0;
+  }
+
+  /* ── HW ITEMS ── */
+  .hw-item { display: flex; align-items: center; gap: 12px; }
+  .hw-status {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .hw-status.done { background: rgba(111,247,176,0.15); color: var(--green); }
+  .hw-status.pending { background: rgba(247,119,111,0.15); color: var(--red); }
+  .hw-info { flex: 1; }
+  .hw-title { font-weight: 600; font-size: 14px; }
+  .hw-date { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .hw-arrow { color: var(--text3); font-size: 16px; }
+
+  /* ── STATS (teacher) ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .stat-icon { font-size: 20px; margin-bottom: 8px; }
+  .stat-value { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 22px; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* ── STUDENT LIST (teacher) ── */
+  .student-item { display: flex; align-items: center; gap: 12px; }
+  .student-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px;
+    flex-shrink: 0;
+  }
+  .student-info { flex: 1; }
+  .student-name { font-weight: 600; font-size: 14px; }
+  .student-schedule { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .student-balance { text-align: right; }
+  .student-balance-amount { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; }
+  .student-balance-amount.positive { color: var(--green); }
+  .student-balance-amount.negative { color: var(--red); }
+
+  /* ── LINKS ── */
+  .link-item { display: flex; align-items: center; gap: 12px; }
+  .link-icon {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .link-info { flex: 1; }
+  .link-name { font-weight: 600; font-size: 14px; }
+  .link-url { font-size: 11px; color: var(--text3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+  .link-arrow { color: var(--accent); font-size: 16px; }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(15,15,26,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--card-border);
+    display: flex; padding: 8px 0 24px;
+    z-index: 100;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    padding: 8px; cursor: pointer; transition: all 0.2s;
+    border: none; background: none; color: var(--text3);
+    font-family: 'Manrope', sans-serif;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
+  /* ── PAGES ── */
+  .page { display: none; padding-bottom: 90px; animation: fadeIn 0.25s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── PILL TABS ── */
+  .tabs { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--card-border);
+    background: var(--card); color: var(--text2);
+    transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* ── JOURNAL ── */
+  .journal-item { display: flex; gap: 14px; align-items: flex-start; }
+  .journal-date {
+    flex-shrink: 0; text-align: center;
+    background: rgba(124,111,247,0.15);
+    border-radius: var(--radius-sm); padding: 6px 10px;
+    border: 1px solid rgba(124,111,247,0.2);
+  }
+  .journal-day { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); line-height: 1; }
+  .journal-month { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .journal-content { flex: 1; }
+  .journal-topic { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .journal-meta { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+  .journal-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(111,247,176,0.1); color: var(--green);
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+
+  /* ── ROLE SWITCH ── */
+  #role-switch {
+    display: flex; gap: 10px; padding: 20px;
+    justify-content: center;
+  }
+  .role-btn {
+    flex: 1; max-width: 160px; padding: 14px;
+    border-radius: var(--radius); border: 1px solid var(--card-border);
+    background: var(--card); color: var(--text); cursor: pointer;
+    font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 14px;
+    transition: all 0.2s; text-align: center;
+  }
+  .role-btn .role-emoji { font-size: 28px; display: block; margin-bottom: 8px; }
+  .role-btn.selected { border-color: var(--accent); background: rgba(124,111,247,0.15); color: var(--accent); }
+
+  .dot-divider { display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 12px; padding: 0 20px; margin: 4px 0 16px; }
+  .dot-divider::before, .dot-divider::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ROLE SELECTION SCREEN -->
+  <div id="screen-role" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;">
+    <div style="text-align:center;padding:40px 20px 24px;">
+      <div style="font-size:48px;margin-bottom:12px;">📚</div>
+      <div class="logo" style="font-size:28px;margin-bottom:8px;">MathKyrylo</div>
+      <div style="font-size:14px;color:var(--text2);">Обери свою роль</div>
+    </div>
+    <div id="role-switch">
+      <button class="role-btn" onclick="setRole('teacher')">
+        <span class="role-emoji">👨‍🏫</span>
+        Вчитель
+      </button>
+      <button class="role-btn" onclick="setRole('student')">
+        <span class="role-emoji">🎓</span>
+        Учень
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="screen-main" style="display:none;">
+
+    <!-- TEACHER APP -->
+    <div id="app-teacher" style="display:none;">
+      <div class="header">
+        <div class="header-bg"></div>
+        <div class="header-content">
+          <div class="header-top">
+            <div class="logo">MathKyrylo</div>
+            <span class="role-badge teacher">Вчитель</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEACHER PAGES -->
+      <div id="t-page-home" class="page active">
+        <div style="padding:20px 20px 16px;">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Доброго ранку 👋</div>
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Панель керування</div>
+        </div>
+
+        <div class="stats-grid" style="padding:0 20px;margin-bottom:24px;">
+          <div class="stat-card" style="background:linear-gradient(135deg,rgba(124,111,247,0.15),rgba(247,119,111,0.1));">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="t-students-count">0</div>
+            <div class="stat-label">Учнів</div>
+          </div>
+          <div class="stat-card" style="background:linear-gradient(135deg,rgba(111,217,247,0.15),rgba(111,247,176,0.1));">
+            <div class="stat-icon">📅</div>
+            <div class="stat-value" id="t-today-count">0</div>
+            <div class="stat-label">Сьогодні занять</div>
+          </div>
+          <div class="stat-card" style="background:linear-gradient(135deg,rgba(111,247,176,0.15),rgba(247,217,111,0.1));">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value" id="t-income">0₴</div>
+            <div class="stat-label">Дохід цього місяця</div>
+          </div>
+          <div class="stat-card" style="background:linear-gradient(135deg,rgba(247,119,111,0.15),rgba(247,169,111,0.1));">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value" id="t-debt-count">0</div>
+            <div class="stat-label">Боргів</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Сьогоднішні заняття</div>
+            <div class="section-action" onclick="switchTeacherTab('schedule')">Весь тиждень →</div>
+          </div>
+          <div id="t-today-lessons">
+            <div class="empty">Завантаження...</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="t-page-students" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Учні</div>
+        </div>
+        <div id="t-students-list" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <div id="t-page-schedule" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Розклад на тиждень</div>
+        </div>
+        <div id="t-week-schedule" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <div id="t-page-balances" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Баланси</div>
+        </div>
+        <div id="t-balances-list" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <!-- TEACHER NAV -->
+      <nav class="nav">
+        <button class="nav-item active" onclick="switchTeacherTab('home')" id="t-nav-home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Головна</span>
+        </button>
+        <button class="nav-item" onclick="switchTeacherTab('students')" id="t-nav-students">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Учні</span>
+        </button>
+        <button class="nav-item" onclick="switchTeacherTab('schedule')" id="t-nav-schedule">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Розклад</span>
+        </button>
+        <button class="nav-item" onclick="switchTeacherTab('balances')" id="t-nav-balances">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Баланси</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- STUDENT APP -->
+    <div id="app-student" style="display:none;">
+      <div class="header">
+        <div class="header-bg" style="background:var(--grad2);"></div>
+        <div class="header-content">
+          <div class="header-top">
+            <div class="logo">MathKyrylo</div>
+            <span class="role-badge student">Учень</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BALANCE CARD -->
+      <div class="balance-card" id="s-balance-card" style="margin-top:16px;">
+        <div class="balance-label">Мій баланс</div>
+        <div class="balance-amount" id="s-balance-amount">—₴</div>
+        <div class="balance-sub" id="s-balance-sub">Ціна заняття: —₴</div>
+        <div class="balance-actions">
+          <button class="balance-btn" onclick="tgAlert('Поповнення доступне через бота')">💳 Поповнити</button>
+          <button class="balance-btn" onclick="switchStudentTab('hw')">📚 Домашнє завдання</button>
+        </div>
+      </div>
+
+      <!-- STUDENT PAGES -->
+      <div id="s-page-home" class="page active">
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Найближче заняття</div>
+          </div>
+          <div id="s-next-lesson">
+            <div class="empty">Завантаження...</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Домашнє завдання</div>
+            <div class="section-action" onclick="switchStudentTab('hw')">Всі →</div>
+          </div>
+          <div id="s-hw-preview">
+            <div class="empty">Завантаження...</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Корисні посилання</div>
+          </div>
+          <div id="s-links-preview">
+            <div class="empty">Немає посилань</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="s-page-schedule" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Мій розклад</div>
+        </div>
+        <div id="s-schedule-list" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <div id="s-page-hw" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Домашнє завдання</div>
+        </div>
+        <div class="tabs" id="s-hw-tabs">
+          <div class="tab active" onclick="filterHw('all',this)">Всі</div>
+          <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
+          <div class="tab" onclick="filterHw('done',this)">Виконані</div>
+        </div>
+        <div id="s-hw-list" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <div id="s-page-journal" class="page">
+        <div style="padding:20px 20px 12px;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;">Журнал занять</div>
+        </div>
+        <div id="s-journal-list" style="padding:0 20px;">
+          <div class="empty">Завантаження...</div>
+        </div>
+      </div>
+
+      <!-- STUDENT NAV -->
+      <nav class="nav">
+        <button class="nav-item active" onclick="switchStudentTab('home')" id="s-nav-home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Головна</span>
+        </button>
+        <button class="nav-item" onclick="switchStudentTab('schedule')" id="s-nav-schedule">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Розклад</span>
+        </button>
+        <button class="nav-item" onclick="switchStudentTab('hw')" id="s-nav-hw">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">ДЗ</span>
+        </button>
+        <button class="nav-item" onclick="switchStudentTab('journal')" id="s-nav-journal">
+          <span class="nav-icon">📒</span>
+          <span class="nav-label">Журнал</span>
+        </button>
+      </nav>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.expand(); tg.setHeaderColor('#0f0f1a'); }
+
+const days = ['Неділя','Понеділок','Вівторок','Середа','Четвер','Пятниця','Субота'];
+const daysFull = ['Понеділок','Вівторок','Середа','Четвер','Пятниця','Субота','Неділя'];
+
+let appData = null;
+let currentRole = null;
+let hwFilter = 'all';
+
+function tgAlert(msg) {
+  if (tg) tg.showAlert(msg);
+  else alert(msg);
+}
+
+function setRole(role) {
+  currentRole = role;
+  document.getElementById('screen-role').style.display = 'none';
+  document.getElementById('screen-main').style.display = 'block';
+  document.getElementById('app-' + role).style.display = 'block';
+  loadData(role);
+}
+
+async function loadData(role) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const resp = await fetch('/api/data?' + params.toString());
+    appData = await resp.json();
+    if (role === 'teacher') renderTeacher();
+    else renderStudent();
+  } catch(e) {
+    renderDemo(role);
+  }
+}
+
+function renderDemo(role) {
+  appData = {
+    role: role,
+    name: role === 'teacher' ? 'Вчитель' : 'Учень',
+    balance: 1500,
+    price: 500,
+    sessions: [
+      { day: 'Понеділок', time: '16:00' },
+      { day: 'Середа', time: '16:00' },
+      { day: 'Пятниця', time: '18:00' }
+    ],
+    homework: [
+      { id: '1', text: 'Виконати вправи 5.1 — 5.8 зі збірника задач', date: '02.05.2026', status: 'pending' },
+      { id: '2', text: 'Повторити тему "Корінь квадратний"', date: '28.04.2026', status: 'done' },
+      { id: '3', text: 'Підготуватись до контрольної роботи', date: '25.04.2026', status: 'done' }
+    ],
+    journal: [
+      { date: '02.05.2026', topic: 'Квадратні рівняння', materials: [] },
+      { date: '28.04.2026', topic: 'Теорема Піфагора', materials: [{ type: 'photo' }] },
+      { date: '25.04.2026', topic: 'Функції та графіки', materials: [] }
+    ],
+    links: { 'Конференція': 'https://meet.google.com', 'Підручник': 'https://example.com' },
+    students: [
+      { name: 'Іван Петренко', balance: 1500, sessions: [{ day: 'Понеділок', time: '16:00' }] },
+      { name: 'Марія Коваль', balance: -200, sessions: [{ day: 'Вівторок', time: '18:00' }] },
+      { name: 'Олег Сидоренко', balance: 3000, sessions: [{ day: 'Середа', time: '15:00' }] },
+      { name: 'Аня Мельник', balance: 500, sessions: [{ day: 'Четвер', time: '17:00' }] }
+    ]
+  };
+  if (role === 'teacher') renderTeacher();
+  else renderStudent();
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function getAvatarColor(name) {
+  const colors = [
+    'linear-gradient(135deg,#7c6ff7,#f7776f)',
+    'linear-gradient(135deg,#6fd9f7,#6ff7b0)',
+    'linear-gradient(135deg,#f7d96f,#f7a96f)',
+    'linear-gradient(135deg,#f7776f,#f7a96f)',
+    'linear-gradient(135deg,#6ff7b0,#6fd9f7)'
+  ];
+  let hash = 0;
+  for (let c of name) hash += c.charCodeAt(0);
+  return colors[hash % colors.length];
+}
+
+function getTodayName() {
+  const d = new Date().getDay();
+  return daysFull[d === 0 ? 6 : d - 1];
+}
+
+// ── TEACHER RENDER ──
+
+function renderTeacher() {
+  const d = appData;
+  const students = d.students || [];
+  const today = getTodayName();
+
+  document.getElementById('t-students-count').textContent = students.length;
+
+  const todayLessons = [];
+  students.forEach(s => {
+    (s.sessions || []).forEach(sess => {
+      if (sess.day === today) todayLessons.push({ ...sess, name: s.name });
+    });
+  });
+  todayLessons.sort((a,b) => a.time.localeCompare(b.time));
+  document.getElementById('t-today-count').textContent = todayLessons.length;
+
+  const totalDebt = students.filter(s => s.balance < 0).length;
+  document.getElementById('t-debt-count').textContent = totalDebt;
+  document.getElementById('t-income').textContent = '—';
+
+  // Today lessons
+  const tlEl = document.getElementById('t-today-lessons');
+  if (todayLessons.length === 0) {
+    tlEl.innerHTML = '<div class="empty">Сьогодні занять немає 🎉</div>';
+  } else {
+    tlEl.innerHTML = todayLessons.map(l => `
+      <div class="lesson-item">
+        <div class="lesson-time">${l.time}</div>
+        <div class="lesson-info">
+          <div class="lesson-name">${l.name}</div>
+        </div>
+        <div class="lesson-dot"></div>
+      </div>
+    `).join('');
+  }
+
+  // Students list
+  document.getElementById('t-students-list').innerHTML = students.map(s => {
+    const balClass = s.balance >= 0 ? 'positive' : 'negative';
+    const balStr = s.balance >= 0 ? `+${s.balance}₴` : `${s.balance}₴`;
+    const sched = (s.sessions||[]).map(x => `${x.day.slice(0,2)} ${x.time}`).join(', ');
+    return `
+      <div class="card" onclick="tgAlert('${s.name}\\nБаланс: ${balStr}')">
+        <div class="student-item">
+          <div class="student-avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</div>
+          <div class="student-info">
+            <div class="student-name">${s.name}</div>
+            <div class="student-schedule">${sched || 'Розклад не встановлено'}</div>
+          </div>
+          <div class="student-balance">
+            <div class="student-balance-amount ${balClass}">${balStr}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="empty">Учнів немає</div>';
+
+  // Week schedule
+  const weekEl = document.getElementById('t-week-schedule');
+  const byDay = {};
+  daysFull.forEach(d => byDay[d] = []);
+  students.forEach(s => {
+    (s.sessions||[]).forEach(sess => {
+      if (byDay[sess.day]) byDay[sess.day].push({ ...sess, name: s.name });
+    });
+  });
+  daysFull.forEach(d => byDay[d].sort((a,b) => a.time.localeCompare(b.time)));
+
+  weekEl.innerHTML = daysFull.map(day => {
+    const isToday = day === today;
+    const lessons = byDay[day];
+    return `
+      <div class="schedule-day">
+        <div class="day-label ${isToday ? 'today' : ''}">${day}${isToday ? ' · сьогодні' : ''}</div>
+        ${lessons.length === 0
+          ? `<div style="font-size:13px;color:var(--text3);padding:8px 0;">Немає занять</div>`
+          : lessons.map(l => `
+            <div class="lesson-item">
+              <div class="lesson-time">${l.time}</div>
+              <div class="lesson-info"><div class="lesson-name">${l.name}</div></div>
+              <div class="lesson-dot"></div>
+            </div>
+          `).join('')
+        }
+      </div>
+    `;
+  }).join('');
+
+  // Balances
+  document.getElementById('t-balances-list').innerHTML = students.map(s => {
+    const balClass = s.balance >= 0 ? 'positive' : 'negative';
+    const balStr = s.balance >= 0 ? `+${s.balance}₴` : `${s.balance}₴`;
+    return `
+      <div class="card">
+        <div class="student-item">
+          <div class="student-avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</div>
+          <div class="student-info">
+            <div class="student-name">${s.name}</div>
+            <div class="student-schedule">${s.balance < 0 ? '⚠️ Борг' : '✅ В нормі'}</div>
+          </div>
+          <div class="student-balance">
+            <div class="student-balance-amount ${balClass}" style="font-size:18px;">${balStr}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="empty">Учнів немає</div>';
+}
+
+function switchTeacherTab(tab) {
+  document.querySelectorAll('#app-teacher .page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#app-teacher .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('t-page-' + tab)?.classList.add('active');
+  document.getElementById('t-nav-' + tab)?.classList.add('active');
+}
+
+// ── STUDENT RENDER ──
+
+function renderStudent() {
+  const d = appData;
+  const bal = d.balance ?? 0;
+  const balEl = document.getElementById('s-balance-amount');
+  const cardEl = document.getElementById('s-balance-card');
+  balEl.textContent = (bal >= 0 ? '+' : '') + bal + '₴';
+  document.getElementById('s-balance-sub').textContent = `Ціна заняття: ${d.price ?? '—'}₴`;
+  if (bal < 0) cardEl.style.background = 'linear-gradient(135deg,#f7776f,#f7a96f)';
+
+  // Next lesson
+  const today = getTodayName();
+  const todayIdx = daysFull.indexOf(today);
+  let nextLesson = null;
+  const sessions = d.sessions || [];
+  for (let i = 0; i < 7; i++) {
+    const dayName = daysFull[(todayIdx + i) % 7];
+    const found = sessions.find(s => s.day === dayName);
+    if (found) { nextLesson = { ...found, isToday: i === 0 }; break; }
+  }
+
+  const nlEl = document.getElementById('s-next-lesson');
+  if (nextLesson) {
+    nlEl.innerHTML = `
+      <div class="card" style="background:linear-gradient(135deg,rgba(124,111,247,0.15),rgba(111,217,247,0.1));">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:32px;">📅</div>
+          <div>
+            <div style="font-weight:700;font-size:16px;">${nextLesson.time}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:2px;">${nextLesson.isToday ? 'Сьогодні' : nextLesson.day}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    nlEl.innerHTML = '<div class="empty">Розклад не встановлено</div>';
+  }
+
+  // HW preview (2 items)
+  const hw = (d.homework || []).slice().reverse().slice(0, 2);
+  const hwPrevEl = document.getElementById('s-hw-preview');
+  if (hw.length === 0) {
+    hwPrevEl.innerHTML = '<div class="empty">ДЗ немає 🎉</div>';
+  } else {
+    hwPrevEl.innerHTML = hw.map(h => renderHwItem(h)).join('');
+  }
+
+  // Links
+  const links = d.links || {};
+  const linksEl = document.getElementById('s-links-preview');
+  const linkKeys = Object.keys(links);
+  if (linkKeys.length === 0) {
+    linksEl.innerHTML = '<div class="empty">Посилань немає</div>';
+  } else {
+    linksEl.innerHTML = linkKeys.map(k => `
+      <div class="card" onclick="window.open('${links[k]}','_blank')">
+        <div class="link-item">
+          <div class="link-icon" style="background:rgba(124,111,247,0.15);">🔗</div>
+          <div class="link-info">
+            <div class="link-name">${k}</div>
+            <div class="link-url">${links[k]}</div>
+          </div>
+          <div class="link-arrow">↗</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Full schedule
+  const schedEl = document.getElementById('s-schedule-list');
+  if (sessions.length === 0) {
+    schedEl.innerHTML = '<div class="empty">Розклад не встановлено</div>';
+  } else {
+    schedEl.innerHTML = daysFull.map(day => {
+      const found = sessions.filter(s => s.day === day);
+      if (found.length === 0) return '';
+      return `
+        <div class="schedule-day">
+          <div class="day-label ${day === today ? 'today' : ''}">${day}${day === today ? ' · сьогодні' : ''}</div>
+          ${found.map(s => `
+            <div class="lesson-item">
+              <div class="lesson-time">${s.time}</div>
+              <div class="lesson-info"><div class="lesson-name">Заняття</div></div>
+              <div class="lesson-dot" style="background:var(--grad2);"></div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+  }
+
+  renderHwList();
+  renderJournal();
+}
+
+function renderHwItem(h) {
+  const isDone = h.status === 'done';
+  return `
+    <div class="card">
+      <div class="hw-item">
+        <div class="hw-status ${isDone ? 'done' : 'pending'}">${isDone ? '✓' : '!'}</div>
+        <div class="hw-info">
+          <div class="hw-title">${h.text.slice(0,50)}${h.text.length>50?'…':''}</div>
+          <div class="hw-date">${h.date}</div>
+        </div>
+        <div class="hw-arrow">›</div>
+      </div>
+    </div>
+  `;
+}
+
+function filterHw(filter, el) {
+  hwFilter = filter;
+  document.querySelectorAll('#s-hw-tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderHwList();
+}
+
+function renderHwList() {
+  const hw = (appData.homework || []).slice().reverse();
+  const filtered = hwFilter === 'all' ? hw
+    : hwFilter === 'done' ? hw.filter(h => h.status === 'done')
+    : hw.filter(h => h.status !== 'done');
+  const hwEl = document.getElementById('s-hw-list');
+  if (filtered.length === 0) {
+    hwEl.innerHTML = '<div class="empty">Немає завдань</div>';
+  } else {
+    hwEl.innerHTML = filtered.map(h => renderHwItem(h)).join('');
+  }
+}
+
+function renderJournal() {
+  const journal = (appData.journal || []).slice().reverse();
+  const jEl = document.getElementById('s-journal-list');
+  if (journal.length === 0) {
+    jEl.innerHTML = '<div class="empty">Журнал порожній</div>';
+    return;
+  }
+  jEl.innerHTML = journal.map(e => {
+    const parts = e.date.split('.');
+    const hasMat = (e.materials || []).length > 0;
+    return `
+      <div class="card">
+        <div class="journal-item">
+          <div class="journal-date">
+            <div class="journal-day">${parts[0]}</div>
+            <div class="journal-month">${getMonthShort(parts[1])}</div>
+          </div>
+          <div class="journal-content">
+            <div class="journal-topic">${e.topic}</div>
+            <div class="journal-meta">
+              ${hasMat ? `<span class="journal-tag">📎 ${e.materials.length} файл(ів)</span>` : '<span style="color:var(--text3)">Без матеріалів</span>'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getMonthShort(m) {
+  const months = ['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  return months[parseInt(m)] || m;
+}
+
+function switchStudentTab(tab) {
+  document.querySelectorAll('#app-student .page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#app-student .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('s-page-' + tab)?.classList.add('active');
+  document.getElementById('s-nav-' + tab)?.classList.add('active');
+}
+
+// Auto-detect role from URL params
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(window.location.search);
+  const role = params.get('role');
+  if (role === 'teacher' || role === 'admin') setRole('teacher');
+  else if (role === 'student' || role === 'user' || role === 'super') setRole('student');
+  else if (role === 'parent') setRole('student');
+});
+</script>
+</body>
+</html>
