@@ -581,6 +581,7 @@ if(tg){tg.expand();}
 
 const API = '';
 const DAYS = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
+const DAY_SHORT = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
 const MONTHS = ['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
 const COLORS = ['linear-gradient(135deg,#7c6ff7,#f07090)','linear-gradient(135deg,#60c0f0,#5df0a0)','linear-gradient(135deg,#f0d060,#f09060)','linear-gradient(135deg,#f07060,#f09060)','linear-gradient(135deg,#5df0a0,#60c0f0)'];
 
@@ -728,7 +729,7 @@ function studentCardHTML(s){
   const bal=s.balance;
   const balStr=fmtBal(bal);
   const balCls=bal>=0?'badge-green':'badge-red';
-  const sched=(s.sessions||[]).map(x=>x.day.slice(0,2)+' '+x.time).join(', ');
+  const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(', ');
   return`<div class="card clickable fade-up" onclick="openStudentCard('${s.name}')">
     <div class="list-item">
       <div class="avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>
@@ -797,7 +798,7 @@ function copyCode(code){
 function showAddStudent(){
   document.getElementById('new-student-name').value='';
   document.getElementById('new-student-price').value='';
-  document.getElementById('days-picker').innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  document.getElementById('days-picker').innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[DAYS.indexOf(d)]}</button>`).join('');
   document.getElementById('day-times').innerHTML='';
   openModal('modal-add-student');
 }
@@ -812,7 +813,7 @@ function toggleDay(btn){
     const row=document.createElement('div');
     row.id='time-row-'+day;
     row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:8px';
-    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:90px">${day.slice(0,3)}</div><input class="form-input" id="time-input-${day}" type="text" placeholder="16:00" maxlength="5" style="flex:1;padding:10px 12px" oninput="formatTimeInput(this)">`;
+    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:90px">${DAY_SHORT[DAYS.indexOf(day)]}</div><input class="form-input" id="time-input-${day}" type="text" placeholder="16:00" maxlength="5" style="flex:1;padding:10px 12px" oninput="formatTimeInput(this)">`;
     timesEl.appendChild(row);
     document.getElementById('time-input-'+day).focus();
   } else {
@@ -950,7 +951,7 @@ async function deleteLink(label){
 function showEditSchedule(){
   const dp=document.getElementById('edit-days-picker');
   const selectedDays=(currentStudent.sessions||[]).map(s=>s.day);
-  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[DAYS.indexOf(d)]}</button>`).join('');
   const time=(currentStudent.sessions||[])[0]?.time||'16:00';
   document.getElementById('edit-schedule-time').value=time;
   openModal('modal-edit-schedule');
