@@ -821,9 +821,7 @@ async def pay_check(message: types.Message):
                 role = "super"
     menu = get_student_menu(role)
     await message.answer(
-        "✅ Запит успішно надіслано!
-
-Баланс буде поповнений, щойно його підтвердить вчитель.",
+        "✅ Запит успішно надіслано!\n\nБаланс буде поповнений, щойно його підтвердить вчитель.",
         reply_markup=menu
     )
 
