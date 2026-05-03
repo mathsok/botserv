@@ -870,6 +870,18 @@ async def error_handler(event: types.ErrorEvent):
 async def handle(message: types.Message):
     uid = message.from_user.id
     state = user_state.get(uid)
+
+    # Ігноруємо повідомлення без тексту, фото чи документа (стікери, голосові, тощо)
+    # крім стану pay_check де чекаємо файл
+    is_pay_check = isinstance(state, dict) and state.get("state") == "pay_check"
+    is_lesson_materials = isinstance(state, dict) and state.get("state") == "lesson_send_materials"
+    is_hw_done_photo = isinstance(state, dict) and state.get("state") == "hw_done_photo"
+    is_hw_waiting = isinstance(state, dict) and state.get("state") == "hw_waiting_text"
+
+    if not message.text and not message.photo and not message.document:
+        if not (is_pay_check or is_lesson_materials or is_hw_done_photo or is_hw_waiting):
+            return  # ігноруємо стікери, голосові, геолокацію тощо
+
     db = load_db()  # завжди свіжі дані
     tid_str = str(uid)
     is_teacher = tid_str in db["teachers"]
