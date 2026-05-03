@@ -22,35 +22,29 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;position:fixed;width:100%}
 
-/* ── SCROLLABLE CONTENT ── */
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s}
 .screen.active{opacity:1;pointer-events:all}
 .screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;height:0}
 .screen-body::-webkit-scrollbar{display:none}
 
-/* ── HEADER ── */
 .header{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border)}
 .header-back{width:36px;height:36px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .header-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;flex:1}
 .header-action{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap}
 
-/* ── BOTTOM NAV ── */
 .bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(13,13,26,0.95);backdrop-filter:blur(20px);flex-shrink:0}
 .nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif}
 .nav-btn.active{color:var(--accent)}
 .nav-btn svg{width:22px;height:22px}
 .nav-btn span{font-size:10px;font-weight:600;letter-spacing:.2px}
 
-/* ── CARDS ── */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;transition:background .15s}
 .card:active{background:var(--card2)}
 .card.clickable{cursor:pointer}
 
-/* ── SECTIONS ── */
 .section{padding:0 14px;margin-bottom:20px}
 .section-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
 
-/* ── BALANCE HERO ── */
 .balance-hero{margin:14px;border-radius:var(--r);padding:20px;position:relative;overflow:hidden;background:var(--grad1)}
 .balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(255,255,255,0.08);border-radius:50%}
 .balance-hero::after{content:'';position:absolute;bottom:-30px;left:10px;width:100px;height:100px;background:rgba(255,255,255,0.05);border-radius:50%}
@@ -61,14 +55,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .balance-btn{flex:1;padding:9px;border-radius:var(--r2);background:rgba(255,255,255,0.18);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);transition:background .15s}
 .balance-btn:active{background:rgba(255,255,255,0.28)}
 
-/* ── STAT GRID ── */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-bottom:20px}
 .stat-card{border-radius:var(--r);padding:14px;background:var(--card);border:1px solid var(--border)}
 .stat-icon{font-size:22px;margin-bottom:6px;line-height:1}
 .stat-val{font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;line-height:1}
 .stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
 
-/* ── LIST ITEMS ── */
 .list-item{display:flex;align-items:center;gap:12px}
 .avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;flex-shrink:0}
 .item-info{flex:1;min-width:0}
@@ -77,7 +69,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .item-right{text-align:right;flex-shrink:0}
 .chevron{color:var(--text3);font-size:16px}
 
-/* ── BADGE ── */
 .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
 .badge-green{background:rgba(93,240,160,.15);color:var(--green)}
 .badge-red{background:rgba(240,112,96,.15);color:var(--red)}
@@ -85,7 +76,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .badge-blue{background:rgba(96,192,240,.15);color:var(--blue)}
 .badge-purple{background:rgba(124,111,247,.15);color:var(--accent2)}
 
-/* ── SCHEDULE ── */
 .day-group{margin-bottom:16px}
 .day-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px}
 .day-label.today{color:var(--accent2)}
@@ -93,17 +83,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .lesson-time{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--accent2);min-width:42px}
 .lesson-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
-/* ── HW ITEMS ── */
 .hw-status{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .hw-done{background:rgba(93,240,160,.15);color:var(--green)}
 .hw-pending{background:rgba(240,112,96,.15);color:var(--red)}
 
-/* ── JOURNAL ── */
 .journal-date-box{flex-shrink:0;text-align:center;background:rgba(124,111,247,.15);border:1px solid rgba(124,111,247,.2);border-radius:var(--r2);padding:6px 10px}
 .journal-day{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--accent2);line-height:1}
 .journal-mon{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 
-/* ── FORMS ── */
 .form-group{margin-bottom:14px}
 .form-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
 .form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color .15s}
@@ -112,7 +99,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 textarea.form-input{resize:none;height:80px}
 select.form-input{appearance:none;cursor:pointer}
 
-/* ── BUTTONS ── */
 .btn{width:100%;padding:14px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn:active{transform:scale(.98)}
 .btn-primary{background:var(--grad1);color:#fff}
@@ -122,17 +108,14 @@ select.form-input{appearance:none;cursor:pointer}
 .btn-sm-primary{background:var(--accent);color:#fff}
 .btn-sm-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
 
-/* ── TABS ── */
 .tabs{display:flex;gap:6px;padding:0 14px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all .15s}
 .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-/* ── EMPTY ── */
 .empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
 .empty-icon{font-size:40px;margin-bottom:10px}
 
-/* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
@@ -140,37 +123,21 @@ select.form-input{appearance:none;cursor:pointer}
 .modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
 .modal-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;margin-bottom:16px}
 
-/* ── LINK ITEM ── */
 .link-icon{width:36px;height:36px;border-radius:var(--r2);background:rgba(124,111,247,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 
-/* ── CODE DISPLAY ── */
 .code-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .code-val{font-family:'Nunito',sans-serif;font-weight:800;font-size:20px;letter-spacing:3px;color:var(--accent2)}
 .code-copy{font-size:12px;color:var(--accent);font-weight:600;cursor:pointer}
 
-/* ── TOAST ── */
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,50,.95);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all .25s;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── PHOTO UPLOAD ── */
-.photo-upload{border:2px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:border-color .15s}
-.photo-upload:hover{border-color:var(--accent)}
-.photo-upload input{display:none}
-.photo-preview{width:100%;border-radius:var(--r2);margin-top:10px;display:none}
-
-/* ── STEP INDICATOR ── */
 .steps{display:flex;gap:6px;margin-bottom:20px}
 .step{flex:1;height:3px;border-radius:2px;background:var(--border2);transition:background .3s}
 .step.done{background:var(--accent)}
 
-/* ── ANIMATIONS ── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .25s ease both}
-
-/* ── TABS DISPLAY ── */
-#t-students,#t-schedule,#t-lessons,#s-schedule,#s-hw,#s-journal{display:none}
-#t-home,#s-home{display:flex}
-
 
 .role-screen{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:30px 20px;background:var(--bg)}
 .role-logo{text-align:center;margin-bottom:40px}
@@ -179,7 +146,6 @@ select.form-input{appearance:none;cursor:pointer}
 .role-logo-sub{font-size:14px;color:var(--text2);margin-top:4px}
 .role-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s}
 .role-card:active{background:var(--card2);transform:scale(.99)}
-.role-card.selected{border-color:var(--accent);background:rgba(124,111,247,.1)}
 .role-emoji{font-size:32px;line-height:1;flex-shrink:0}
 .role-card-info{flex:1}
 .role-card-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px}
@@ -188,7 +154,7 @@ select.form-input{appearance:none;cursor:pointer}
 </head>
 <body>
 
-<!-- ══ ROLE SELECTION ══ -->
+<!-- ROLE SELECTION -->
 <div id="screen-role" class="screen active">
   <div class="screen-body">
     <div class="role-screen">
@@ -227,32 +193,26 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- ══ TEACHER REGISTRATION ══ -->
+<!-- TEACHER REGISTRATION -->
 <div id="screen-teacher-reg" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('screen-role')">‹</button>
     <div class="header-title">Реєстрація вчителя</div>
   </div>
   <div class="screen-body" style="padding:20px">
-    <div class="steps">
-      <div class="step done" id="reg-step-1"></div>
-      <div class="step" id="reg-step-2"></div>
+    <div class="form-group">
+      <div class="form-label">Ваше ім'я та по батькові</div>
+      <input class="form-input" id="reg-name" placeholder="Іван Петрович" type="text">
     </div>
-    <div id="reg-step-name">
-      <div class="form-group">
-        <div class="form-label">Ваше ім'я та по батькові</div>
-        <input class="form-input" id="reg-name" placeholder="Іван Петрович" type="text">
-      </div>
-      <div class="form-group">
-        <div class="form-label">Предмет</div>
-        <input class="form-input" id="reg-subject" placeholder="Математика" type="text">
-      </div>
-      <button class="btn btn-primary" onclick="registerTeacher()">Продовжити →</button>
+    <div class="form-group">
+      <div class="form-label">Предмет</div>
+      <input class="form-input" id="reg-subject" placeholder="Математика" type="text">
     </div>
+    <button class="btn btn-primary" onclick="registerTeacher()">Зареєструватись</button>
   </div>
 </div>
 
-<!-- ══ AUTH CODE ══ -->
+<!-- AUTH CODE -->
 <div id="screen-auth" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('screen-role')">‹</button>
@@ -271,10 +231,10 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- ══ TEACHER APP ══ -->
+<!-- TEACHER APP -->
 <div id="screen-teacher" class="screen">
-  <!-- HOME -->
-  <div id="t-home" class="screen active" style="position:relative;flex:1;display:flex;flex-direction:column">
+  <!-- HOME TAB -->
+  <div id="t-home" style="display:flex;flex-direction:column;flex:1;position:relative">
     <div class="header">
       <div class="header-title" id="t-teacher-name">Кабінет вчителя</div>
       <div class="header-action" onclick="showAddStudent()">+ Учень</div>
@@ -313,27 +273,15 @@ select.form-input{appearance:none;cursor:pointer}
       </div>
     </div>
     <nav class="bottom-nav">
-      <button class="nav-btn active" onclick="showTeacherTab('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span>Головна</span>
-      </button>
-      <button class="nav-btn" onclick="showTeacherTab('students')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        <span>Учні</span>
-      </button>
-      <button class="nav-btn" onclick="showTeacherTab('schedule')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>Розклад</span>
-      </button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        <span>Заняття</span>
-      </button>
+      <button class="nav-btn active" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
     </nav>
   </div>
 
   <!-- STUDENTS TAB -->
-  <div id="t-students" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
+  <div id="t-students" style="display:none;flex-direction:column;flex:1;position:relative">
     <div class="header">
       <div class="header-title">Учні</div>
       <div class="header-action" onclick="showAddStudent()">+ Додати</div>
@@ -342,42 +290,28 @@ select.form-input{appearance:none;cursor:pointer}
       <div id="t-students-list"></div>
     </div>
     <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showTeacherTab('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span>
-      </button>
-      <button class="nav-btn active" onclick="showTeacherTab('students')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span>
-      </button>
-      <button class="nav-btn" onclick="showTeacherTab('schedule')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span>
-      </button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span>
-      </button>
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
     </nav>
   </div>
 
   <!-- SCHEDULE TAB -->
-  <div id="t-schedule" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header">
-      <div class="header-title">Розклад на тиждень</div>
-    </div>
-    <div class="screen-body" style="padding:14px">
-      <div id="t-week-schedule"></div>
-    </div>
+  <div id="t-schedule" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Розклад на тиждень</div></div>
+    <div class="screen-body" style="padding:14px"><div id="t-week-schedule"></div></div>
     <nav class="bottom-nav">
       <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
       <button class="nav-btn active" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
     </nav>
   </div>
 
   <!-- LESSONS TAB -->
-  <div id="t-lessons" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header">
-      <div class="header-title">Заняття</div>
-    </div>
+  <div id="t-lessons" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Заняття</div></div>
     <div class="screen-body" style="padding:14px">
       <div class="section">
         <div class="section-title">Дії</div>
@@ -405,88 +339,12 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
       <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>Заняття</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
     </nav>
   </div>
 </div>
 
-<!-- ══ STUDENT APP ══ -->
-<div id="screen-student" class="screen">
-  <div id="s-home" class="screen active" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header">
-      <div class="header-title" id="s-student-name">Мій кабінет</div>
-    </div>
-    <div class="screen-body">
-      <div class="balance-hero" id="s-balance-hero" style="background:var(--grad2)">
-        <div class="balance-label">Баланс</div>
-        <div class="balance-amount" id="s-balance">—₴</div>
-        <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
-        <div class="balance-actions" id="s-balance-actions">
-          <button class="balance-btn" onclick="showStudentTab('hw')">📚 ДЗ</button>
-          <button class="balance-btn" onclick="showStudentTab('journal')">📒 Журнал</button>
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-title">Найближче заняття</div>
-        <div id="s-next-lesson"></div>
-      </div>
-      <div class="section" id="s-hw-preview-section">
-        <div class="section-title">Нові домашні завдання</div>
-        <div id="s-hw-preview"></div>
-      </div>
-      <div class="section">
-        <div class="section-title">Корисні посилання</div>
-        <div id="s-links-preview"></div>
-      </div>
-    </div>
-    <nav class="bottom-nav">
-      <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-    </nav>
-  </div>
-
-  <div id="s-schedule" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header"><div class="header-title">Мій розклад</div></div>
-    <div class="screen-body" style="padding:14px"><div id="s-schedule-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn active" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-    </nav>
-  </div>
-
-  <div id="s-hw" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header"><div class="header-title">Домашні завдання</div></div>
-    <div class="tabs" style="margin-top:10px">
-      <div class="tab active" onclick="filterHw('all',this)">Всі</div>
-      <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
-      <div class="tab" onclick="filterHw('done',this)">Виконані</div>
-    </div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="s-hw-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn active" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-    </nav>
-  </div>
-
-  <div id="s-journal" class="screen" style="position:relative;flex:1;display:flex;flex-direction:column">
-    <div class="header"><div class="header-title">Журнал занять</div></div>
-    <div class="screen-body" style="padding:14px"><div id="s-journal-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn active" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-    </nav>
-  </div>
-</div>
-
-<!-- ══ STUDENT CARD (teacher view) ══ -->
+<!-- STUDENT CARD (teacher view) -->
 <div id="screen-student-card" class="screen" style="flex-direction:column">
   <div class="header">
     <button class="header-back" onclick="goBack()">‹</button>
@@ -530,9 +388,80 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- ══ MODALS ══ -->
+<!-- STUDENT APP -->
+<div id="screen-student" class="screen">
+  <div id="s-home" style="display:flex;flex-direction:column;flex:1;position:relative">
+    <div class="header">
+      <div class="header-title" id="s-student-name">Мій кабінет</div>
+    </div>
+    <div class="screen-body">
+      <div class="balance-hero" id="s-balance-hero" style="background:var(--grad2)">
+        <div class="balance-label">Баланс</div>
+        <div class="balance-amount" id="s-balance">—₴</div>
+        <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
+        <div class="balance-actions" id="s-balance-actions"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Найближче заняття</div>
+        <div id="s-next-lesson"></div>
+      </div>
+      <div class="section" id="s-hw-preview-section">
+        <div class="section-title">Нові домашні завдання</div>
+        <div id="s-hw-preview"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Корисні посилання</div>
+        <div id="s-links-preview"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
 
-<!-- Add Student -->
+  <div id="s-schedule" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Мій розклад</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-schedule-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-hw" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Домашні завдання</div></div>
+    <div class="tabs" style="margin-top:10px">
+      <div class="tab active" onclick="filterHw('all',this)">Всі</div>
+      <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
+      <div class="tab" onclick="filterHw('done',this)">Виконані</div>
+    </div>
+    <div class="screen-body" style="padding:0 14px 14px"><div id="s-hw-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn active s-nav-hw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-journal" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Журнал занять</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-journal-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn active s-nav-journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- MODALS -->
 <div class="modal-overlay" id="modal-add-student">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -549,14 +478,11 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Mark Lesson -->
 <div class="modal-overlay" id="modal-mark-lesson">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Відмітити заняття</div>
-    <div class="form-group"><div class="form-label">Учень</div>
-      <select class="form-input" id="mark-student"></select>
-    </div>
+    <div class="form-group"><div class="form-label">Учень</div><select class="form-input" id="mark-student"></select></div>
     <div class="form-group"><div class="form-label">Тема заняття</div><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
     <div class="form-group"><div class="form-label">Дія</div>
       <select class="form-input" id="mark-action">
@@ -565,13 +491,11 @@ select.form-input{appearance:none;cursor:pointer}
         <option value="reschedule">🔄 Перенесено</option>
       </select>
     </div>
-    <div id="mark-date-group" class="form-group" style="display:none"><div class="form-label">Нова дата (якщо перенос)</div><input class="form-input" id="mark-new-date" placeholder="10.05"></div>
     <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-mark-lesson')">Скасувати</button>
   </div>
 </div>
 
-<!-- Send HW -->
 <div class="modal-overlay" id="modal-send-hw">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -583,7 +507,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Balance Add -->
 <div class="modal-overlay" id="modal-balance-add">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -594,7 +517,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Balance Sub -->
 <div class="modal-overlay" id="modal-balance-sub">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -605,7 +527,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Edit Price -->
 <div class="modal-overlay" id="modal-edit-price">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -616,7 +537,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Add Link -->
 <div class="modal-overlay" id="modal-add-link">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -628,7 +548,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Edit Schedule -->
 <div class="modal-overlay" id="modal-edit-schedule">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -643,7 +562,6 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Pay Modal (parent/super) -->
 <div class="modal-overlay" id="modal-pay">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -655,12 +573,11 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 const tg = window.Telegram?.WebApp;
-if(tg){tg.expand();tg.setHeaderColor('#0d0d1a')}
+if(tg){tg.expand();}
 
 const API = '';
 const DAYS = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
@@ -673,7 +590,6 @@ let currentStudent = null;
 let screenStack = [];
 let hwFilter = 'all';
 
-// ── URL params ──
 const params = new URLSearchParams(location.search);
 const urlRole = params.get('role');
 const urlTid = params.get('tid');
@@ -719,13 +635,11 @@ function goBack(){
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById(prev)?.classList.add('active');
   } else {
-    // Fallback — повертаємось на головну вчителя
     showScreen('screen-teacher');
     showTeacherTab('home');
   }
 }
 
-// ── MODALS ──
 function openModal(id){document.getElementById(id)?.classList.add('open')}
 function closeModal(id){document.getElementById(id)?.classList.remove('open')}
 
@@ -733,13 +647,8 @@ function closeModal(id){document.getElementById(id)?.classList.remove('open')}
 function setRole(role){
   currentRole=role;
   if(role==='teacher'){
-    // Check if registered
-    const saved=localStorage.getItem('teacher_tid');
-    if(saved||urlTid){
-      loadTeacher(urlTid||saved);
-    } else {
-      showScreen('screen-teacher-reg');
-    }
+    if(urlTid){loadTeacher(urlTid);}
+    else{showScreen('screen-teacher-reg');}
   } else {
     showScreen('screen-auth');
   }
@@ -760,34 +669,22 @@ async function registerTeacher(){
   if(!name||!subject){toast('Заповніть всі поля');return}
   const tid=tg?.initDataUnsafe?.user?.id||Math.floor(Math.random()*1e9);
   const res=await api('/api/register-teacher','POST',{tid,name,subject});
-  if(res.ok){
-    localStorage.setItem('teacher_tid',tid);
-    loadTeacher(tid);
-  } else toast('Помилка реєстрації');
+  if(res.ok){loadTeacher(tid);}
+  else toast('Помилка реєстрації');
 }
 
 async function loadTeacher(tid){
   try{
     const data=await api(`/api/teacher/${tid}`);
-    appData=data;appData.tid=tid;
-    renderTeacher();
+    appData=data;appData.tid=String(tid);
+    renderTeacherDashboard();
     showScreen('screen-teacher');
     showTeacherTab('home');
-  } catch(e){renderDemoTeacher()}
+  } catch(e){console.error(e);toast('Помилка завантаження')}
 }
 
-function renderDemoTeacher(){
-  appData={tid:'demo',name:'Іван Петрович',subject:'Математика',students:[
-    {name:'Петро Коваль',balance:1500,price:500,sessions:[{day:'Понеділок',time:'16:00'},{day:'Середа',time:'16:00'}],homework:[],journal:[{date:'02.05.2026',topic:'Функції',materials:[]}],links:{},u_code:'1234',p_code:'5678',su_code:'9012',u_id:null,p_id:null,su_id:null},
-    {name:'Марія Іванова',balance:-200,price:600,sessions:[{day:'Вівторок',time:'18:00'}],homework:[{id:'1',text:'Вправи 5.1-5.8',date:'02.05.2026',status:'pending'}],journal:[],links:{'Конференція':'https://meet.google.com'},u_code:'2345',p_code:'6789',su_code:'0123',u_id:null,p_id:null,su_id:null},
-    {name:'Олег Сидоренко',balance:3000,price:500,sessions:[{day:'Четвер',time:'17:00'},{day:'Субота',time:'11:00'}],homework:[],journal:[],links:{},u_code:'3456',p_code:'7890',su_code:'1234',u_id:null,p_id:null,su_id:null}
-  ]};
-  showScreen('screen-teacher');
-  renderTeacher();
-  showTeacherTab('home');
-}
-
-function renderTeacher(){
+// ── ГОЛОВНА ФУНКЦІЯ РЕНДЕРУ ВЧИТЕЛЯ ──
+function renderTeacherDashboard(){
   const d=appData;
   const students=d.students||[];
   const t=today();
@@ -797,7 +694,6 @@ function renderTeacher(){
   document.getElementById('t-stat-today').textContent=todayLessons.length;
   document.getElementById('t-stat-debts').textContent=students.filter(s=>s.balance<0).length;
 
-  // Today lessons
   const tlEl=document.getElementById('t-today-lessons');
   tlEl.innerHTML=todayLessons.length?todayLessons.map(l=>`
     <div class="lesson-row">
@@ -806,34 +702,22 @@ function renderTeacher(){
       <div class="item-info"><div class="item-name">${l.name}</div></div>
     </div>`).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Сьогодні занять немає</div>';
 
-  // Students preview (3)
-  const spEl=document.getElementById('t-students-preview');
-  spEl.innerHTML=students.slice(0,3).map(s=>studentCardHTML(s)).join('');
+  document.getElementById('t-students-preview').innerHTML=students.slice(0,3).map(s=>studentCardHTML(s)).join('');
+  document.getElementById('t-students-list').innerHTML=students.length?students.map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає.<br>Додайте першого!</div>';
 
-  // Full students list
-  const slEl=document.getElementById('t-students-list');
-  slEl.innerHTML=students.length?students.map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає.<br>Додайте першого!</div>';
-
-  // Week schedule
   renderWeekSchedule(students);
 
-  // Journal (all students)
-  const jEl=document.getElementById('t-journal-list');
   const allJournal=students.flatMap(s=>(s.journal||[]).map(e=>({...e,studentName:s.name}))).sort((a,b)=>b.date.localeCompare(a.date));
-  jEl.innerHTML=allJournal.slice(0,10).map(e=>{
+  document.getElementById('t-journal-list').innerHTML=allJournal.slice(0,10).map(e=>{
     const parts=e.date.split('.');
-    return`<div class="card clickable fade-up">
+    return`<div class="card fade-up">
       <div class="list-item">
         <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
-        <div class="item-info">
-          <div class="item-name">${e.topic}</div>
-          <div class="item-sub">${e.studentName}${e.materials?.length?' · 📎'+e.materials.length:''}</div>
-        </div>
+        <div class="item-info"><div class="item-name">${e.topic}</div><div class="item-sub">${e.studentName}${e.materials?.length?' · 📎'+e.materials.length:''}</div></div>
       </div>
     </div>`;
   }).join('')||'<div class="empty">Журнал порожній</div>';
 
-  // Populate selects
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
     if(sel)sel.innerHTML=students.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
@@ -852,17 +736,14 @@ function studentCardHTML(s){
         <div class="item-name">${s.name}</div>
         <div class="item-sub">${sched||'Розклад не встановлено'}</div>
       </div>
-      <div class="item-right">
-        <span class="badge ${balCls}">${balStr}</span>
-      </div>
+      <div class="item-right"><span class="badge ${balCls}">${balStr}</span></div>
     </div>
   </div>`;
 }
 
 function renderWeekSchedule(students){
   const t=today();
-  const wsEl=document.getElementById('t-week-schedule');
-  wsEl.innerHTML=DAYS.map(day=>{
+  document.getElementById('t-week-schedule').innerHTML=DAYS.map(day=>{
     const lessons=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,name:s.name}))).sort((a,b)=>a.time.localeCompare(b.time));
     return`<div class="day-group">
       <div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>
@@ -871,7 +752,8 @@ function renderWeekSchedule(students){
   }).join('');
 }
 
-function renderTeacher(){
+// ── STUDENT CARD (teacher view) — окрема функція ──
+function openStudentCard(name){
   const s=(appData.students||[]).find(x=>x.name===name);
   if(!s)return;
   currentStudent=s;
@@ -881,18 +763,14 @@ function renderTeacher(){
   document.getElementById('sc-price').textContent=`Ціна: ${s.price}₴/заняття`;
   document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#f07060,#f09060)':'linear-gradient(135deg,#7c6ff7,#f07090)';
 
-  // Sessions
   const sessEl=document.getElementById('sc-sessions');
   sessEl.innerHTML=(s.sessions||[]).length?(s.sessions||[]).map(x=>`<div class="card"><div class="list-item"><div class="lesson-time">${x.time}</div><div class="item-info"><div class="item-name">${x.day}</div></div></div></div>`).join(''):'<div style="color:var(--text3);font-size:14px">Розклад не встановлено</div>';
 
-  // Codes
-  const codesEl=document.getElementById('sc-codes');
-  codesEl.innerHTML=`
+  document.getElementById('sc-codes').innerHTML=`
     <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">📱 Код учня</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
     <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">👨‍👩‍👦 Код батьків</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
     <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">⭐ Код супер-учня</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
 
-  // Links
   renderStudentCardLinks();
   pushScreen('screen-student-card');
 }
@@ -900,8 +778,7 @@ function renderTeacher(){
 function renderStudentCardLinks(){
   const s=currentStudent;
   const links=s.links||{};
-  const linksEl=document.getElementById('sc-links');
-  linksEl.innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
+  document.getElementById('sc-links').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
     <div class="card">
       <div class="list-item">
         <div class="link-icon">🔗</div>
@@ -918,13 +795,15 @@ function copyCode(code){
 
 // ── ADD STUDENT ──
 function showAddStudent(){
-  // Init days picker
   const dp=document.getElementById('days-picker');
-  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this,'days-picker')" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  document.getElementById('new-student-name').value='';
+  document.getElementById('new-student-price').value='';
+  document.getElementById('new-student-time').value='';
   openModal('modal-add-student');
 }
 
-function toggleDay(btn,pickerId){
+function toggleDay(btn){
   btn.classList.toggle('btn-sm-primary');
   btn.classList.toggle('btn-sm-ghost');
 }
@@ -938,37 +817,31 @@ async function addStudent(){
   const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
   const sessions=selectedDays.map(day=>({day,time:time||'00:00'}));
 
-  const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
-  if(res.ok||res.student){
-    // Update local data
-    if(!appData.students)appData.students=[];
-    appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
-    renderTeacher();
-    closeModal('modal-add-student');
-    toast('✅ '+name+' доданий!');
-  } else toast('Помилка: '+( res.error||'невідома'));
+  try{
+    const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
+    if(res.ok||res.student){
+      if(!appData.students)appData.students=[];
+      appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
+      renderTeacherDashboard();
+      closeModal('modal-add-student');
+      toast('✅ '+name+' доданий!');
+    } else toast('Помилка: '+(res.error||'невідома'));
+  } catch(e){toast('Помилка з\'єднання')}
 }
 
 // ── MARK LESSON ──
 function showMarkLesson(){openModal('modal-mark-lesson')}
-document.getElementById('mark-action')?.addEventListener('change',function(){
-  document.getElementById('mark-date-group').style.display=this.value==='reschedule'?'block':'none';
-});
 
 async function markLesson(){
   const name=document.getElementById('mark-student').value;
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
-  const newDate=document.getElementById('mark-new-date').value;
   if(!topic){toast('Введіть тему');return}
-
-  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action,new_date:newDate});
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
   if(res.ok){
-    // Update local balance
     const s=(appData.students||[]).find(x=>x.name===name);
-    if(s&&action==='done')s.balance-=s.price;
-    if(s&&action==='done'&&s.journal){s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
-    renderTeacher();
+    if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
+    renderTeacherDashboard();
     closeModal('modal-mark-lesson');
     document.getElementById('mark-topic').value='';
     toast('✅ Заняття відмічено!');
@@ -983,11 +856,8 @@ async function sendHw(){
   const text=document.getElementById('hw-text').value.trim();
   if(!text){toast('Введіть текст ДЗ');return}
   const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
-  if(res.ok){
-    closeModal('modal-send-hw');
-    document.getElementById('hw-text').value='';
-    toast('✅ ДЗ надіслано '+name+'!');
-  } else toast('Помилка');
+  if(res.ok){closeModal('modal-send-hw');document.getElementById('hw-text').value='';toast('✅ ДЗ надіслано '+name+'!');}
+  else toast('Помилка');
 }
 
 // ── BALANCE ──
@@ -1001,7 +871,7 @@ async function addBalance(){
   if(res.ok){
     currentStudent.balance+=amount;
     openStudentCard(currentStudent.name);
-    renderTeacher();
+    renderTeacherDashboard();
     closeModal('modal-balance-add');
     toast('✅ Поповнено на +'+amount+'₴');
   } else toast('Помилка');
@@ -1014,7 +884,7 @@ async function subBalance(){
   if(res.ok){
     currentStudent.balance-=amount;
     openStudentCard(currentStudent.name);
-    renderTeacher();
+    renderTeacherDashboard();
     closeModal('modal-balance-sub');
     toast('✅ Списано -'+amount+'₴');
   } else toast('Помилка');
@@ -1025,7 +895,7 @@ function showEditPrice(){document.getElementById('edit-price-val').value=current
 async function editPrice(){
   const price=parseInt(document.getElementById('edit-price-val').value)||0;
   const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,price});
-  if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
+  if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacherDashboard();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
   else toast('Помилка');
 }
 
@@ -1056,7 +926,7 @@ async function deleteLink(label){
 function showEditSchedule(){
   const dp=document.getElementById('edit-days-picker');
   const selectedDays=(currentStudent.sessions||[]).map(s=>s.day);
-  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this,'edit-days-picker')" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${d.slice(0,2)}</button>`).join('');
   const time=(currentStudent.sessions||[])[0]?.time||'16:00';
   document.getElementById('edit-schedule-time').value=time;
   openModal('modal-edit-schedule');
@@ -1067,7 +937,7 @@ async function saveSchedule(){
   const time=document.getElementById('edit-schedule-time').value;
   const sessions=days.map(day=>({day,time}));
   const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,sessions});
-  if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
+  if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacherDashboard();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
   else toast('Помилка');
 }
 
@@ -1079,16 +949,24 @@ async function resetCodes(){
 
 // ── DELETE STUDENT ──
 function showDeleteStudent(){
-  if(tg){tg.showConfirm(`Видалити ${currentStudent.name}?`,async(ok)=>{if(ok)await doDeleteStudent()})}
-  else if(confirm(`Видалити ${currentStudent.name}?`))doDeleteStudent();
+  if(confirm(`Видалити ${currentStudent.name}?`))doDeleteStudent();
 }
 
 async function doDeleteStudent(){
   const res=await api('/api/delete-student','POST',{tid:appData.tid,name:currentStudent.name});
   if(res.ok){
     appData.students=(appData.students||[]).filter(s=>s.name!==currentStudent.name);
-    renderTeacher();goBack();toast('🗑 '+currentStudent.name+' видалений');
+    renderTeacherDashboard();goBack();toast('🗑 '+currentStudent.name+' видалений');
   }
+}
+
+// ── TEACHER TABS ──
+function showTeacherTab(tab){
+  const tabs=['home','students','schedule','lessons'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('t-'+t);
+    if(el){el.style.display=t===tab?'flex':'none';}
+  });
 }
 
 // ── STUDENT VIEW ──
@@ -1099,7 +977,7 @@ async function loadStudent(tid,name,role){
     renderStudent();
     showScreen('screen-student');
     showStudentTab('home');
-  } catch(e){renderDemoStudent()}
+  } catch(e){console.error(e)}
 }
 
 async function authWithCode(){
@@ -1111,48 +989,30 @@ async function authWithCode(){
       appData={...res.student,tid:res.tid,name:res.name,role:res.role};
       renderStudent();showScreen('screen-student');showStudentTab('home');
     } else toast('❌ Код не знайдено');
-  } catch(e){
-    // Demo
-    renderDemoStudent();
-  }
-}
-
-function renderDemoStudent(){
-  appData={tid:'demo',name:'Петро Коваль',role:'student',balance:1500,price:500,
-    sessions:[{day:'Понеділок',time:'16:00'},{day:'Середа',time:'16:00'}],
-    homework:[{id:'1',text:'Виконати вправи 5.1 — 5.8 зі збірника задач',date:'02.05.2026',status:'pending'},{id:'2',text:'Повторити тему "Функції та графіки"',date:'28.04.2026',status:'done'}],
-    journal:[{date:'02.05.2026',topic:'Квадратні рівняння',materials:[]},{date:'28.04.2026',topic:'Функції та графіки',materials:[{type:'photo'}]}],
-    links:{'Конференція':'https://meet.google.com','Підручник':'https://example.com'}};
-  showScreen('screen-student');renderStudent();showStudentTab('home');
+  } catch(e){toast('Помилка з\'єднання')}
 }
 
 function renderStudent(){
   const d=appData;
   const role=d.role||'student';
-  const canSeeBalance=(role==='parent'||role==='super');
-
   document.getElementById('s-student-name').textContent=d.name||'Мій кабінет';
 
-  // Баланс — тільки для батьків та супер-учня
   const heroEl=document.getElementById('s-balance-hero');
+  const canSeeBalance=(role==='parent'||role==='super');
   if(canSeeBalance){
     heroEl.style.display='';
     const bal=d.balance??0;
     document.getElementById('s-balance').textContent=fmtBal(bal);
     document.getElementById('s-price-sub').textContent=`Ціна заняття: ${d.price||'—'}₴`;
     if(bal<0)heroEl.style.background='linear-gradient(135deg,#f07060,#f09060)';
-
-    // Кнопки в балансі — для батьків поповнення, для всіх ДЗ і журнал
     document.getElementById('s-balance-actions').innerHTML=`
       ${role==='parent'||role==='super'?'<button class="balance-btn" onclick="showPayModal()">💳 Поповнити</button>':''}
-      <button class="balance-btn" onclick="showStudentTab(\'hw\')">📚 ДЗ</button>
-      <button class="balance-btn" onclick="showStudentTab(\'journal\')">📒 Журнал</button>
-    `;
+      <button class="balance-btn" onclick="showStudentTab('hw')">📚 ДЗ</button>
+      <button class="balance-btn" onclick="showStudentTab('journal')">📒 Журнал</button>`;
   } else {
     heroEl.style.display='none';
   }
 
-  // Наступне заняття
   const t=today();
   const tIdx=DAYS.indexOf(t);
   let next=null;
@@ -1172,7 +1032,6 @@ function renderStudent(){
       </div>
     </div>`:'<div class="empty">Розклад не встановлено</div>';
 
-  // ДЗ превью — тільки для учня та супер-учня
   const hwPreviewEl=document.getElementById('s-hw-preview-section');
   if(role==='parent'){
     if(hwPreviewEl)hwPreviewEl.style.display='none';
@@ -1182,18 +1041,16 @@ function renderStudent(){
     document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
   }
 
-  // Посилання
   const links=d.links||{};
   document.getElementById('s-links-preview').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
     <div class="card clickable" onclick="window.open('${v}','_blank')">
       <div class="list-item">
         <div class="link-icon">🔗</div>
-        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</div></div>
+        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div>
         <div style="color:var(--accent);font-size:18px">↗</div>
       </div>
     </div>`).join(''):'<div class="empty">Посилань немає</div>';
 
-  // Навігація — ховаємо ДЗ і журнал для батьків
   document.querySelectorAll('.s-nav-hw').forEach(el=>el.style.display=role==='parent'?'none':'');
   document.querySelectorAll('.s-nav-journal').forEach(el=>el.style.display=role==='parent'?'none':'');
 
@@ -1245,13 +1102,12 @@ function renderStudentJournal(){
   const journal=(appData.journal||[]).slice().reverse();
   document.getElementById('s-journal-list').innerHTML=journal.length?journal.map(e=>{
     const parts=e.date.split('.');
-    const hasMat=(e.materials||[]).length>0;
-    return`<div class="card clickable fade-up">
+    return`<div class="card fade-up">
       <div class="list-item">
         <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
         <div class="item-info">
           <div class="item-name">${e.topic}</div>
-          <div class="item-sub">${hasMat?`📎 ${e.materials.length} файл(ів)`:'Без матеріалів'}</div>
+          <div class="item-sub">${(e.materials||[]).length?`📎 ${e.materials.length} файл(ів)`:'Без матеріалів'}</div>
         </div>
       </div>
     </div>`;
@@ -1262,20 +1118,13 @@ function showHwDetail(hwId){
   const hw=(appData.homework||[]).find(h=>h.id===hwId);
   if(!hw)return;
   const done=hw.status==='done';
-  const btns=done?'':`<button class="btn btn-primary" style="margin-bottom:8px" onclick="markHwDone('${hwId}')">✅ Відмітити як виконане</button>`;
-  if(tg){
-    tg.showPopup({title:`ДЗ від ${hw.date}`,message:hw.text+(done?'\n\n✅ Виконано':''),buttons:done?[{type:'close'}]:[{id:'done',text:'✅ Виконано'},{type:'cancel'}]},
-      (btn)=>{if(btn==='done')markHwDone(hwId)});
-  } else {
-    alert(`ДЗ від ${hw.date}\n\n${hw.text}\n\nСтатус: ${done?'✅ Виконано':'🔴 Не виконано'}`);
-    if(!done&&confirm('Відмітити як виконане?'))markHwDone(hwId);
+  if(confirm(`ДЗ від ${hw.date}\n\n${hw.text}\n\nСтатус: ${done?'✅ Виконано':'🔴 Не виконано'}${!done?'\n\nВідмітити як виконане?':''}`)){
+    if(!done)markHwDone(hwId);
   }
 }
 
 async function markHwDone(hwId){
-  try{
-    await api('/api/mark-hw','POST',{tid:appData.tid,name:appData.name,hw_id:hwId});
-  } catch(e){}
+  try{await api('/api/mark-hw','POST',{tid:appData.tid,name:appData.name,hw_id:hwId});}catch(e){}
   const hw=(appData.homework||[]).find(h=>h.id===hwId);
   if(hw)hw.status='done';
   renderStudent();
@@ -1286,21 +1135,7 @@ function showStudentTab(tab){
   const tabs=['home','schedule','hw','journal'];
   tabs.forEach(t=>{
     const el=document.getElementById('s-'+t);
-    if(el){
-      el.style.display=t===tab?'flex':'none';
-      el.classList.toggle('active',t===tab);
-    }
-  });
-}
-
-function showTeacherTab(tab){
-  const tabs=['home','students','schedule','lessons'];
-  tabs.forEach(t=>{
-    const el=document.getElementById('t-'+t);
-    if(el){
-      el.style.display=t===tab?'flex':'none';
-      el.classList.toggle('active',t===tab);
-    }
+    if(el){el.style.display=t===tab?'flex':'none';}
   });
 }
 
@@ -1310,11 +1145,9 @@ async function submitPay(){
   if(!amount){toast('Введіть суму');return}
   closeModal('modal-pay');
   toast('✅ Надішліть фото чеку вчителю в боті');
-  // Повідомляємо бота через Telegram WebApp
   if(tg)tg.sendData(JSON.stringify({action:'pay_request',amount,name:appData.name,tid:appData.tid}));
 }
 
-// Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
