@@ -21,45 +21,44 @@ WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://mathkyrylo.com")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-db = {"teachers": {}}
 user_state = {}
 
 days = ["Понеділок", "Вівторок", "Середа", "Четвер", "Пʼятниця", "Субота", "Неділя"]
 
 
 # ─── БАЗА ДАНИХ ────────────────────────────────────────────────────────────────
+# Завжди читаємо з файлу — щоб синхронізуватись з api_server.py
 
 def load_db():
-    global db
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            db = json.load(f)
-    if "teachers" not in db:
-        db["teachers"] = {}
+            data = json.load(f)
+        if "teachers" not in data:
+            data["teachers"] = {}
+        return data
+    return {"teachers": {}}
 
-def save_db():
+def save_db(db):
     tmp = DATA_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DATA_FILE)
 
 def get_teacher(tid):
+    db = load_db()
     return db["teachers"].get(str(tid))
 
 def get_students(tid):
     t = get_teacher(tid)
     return t["students"] if t else {}
 
-def save_teacher(tid, data):
-    db["teachers"][str(tid)] = data
-    save_db()
-
 
 # ─── ДОПОМІЖНІ ФУНКЦІЇ ─────────────────────────────────────────────────────────
 
 def new_code(tid):
+    db = load_db()
     existing = set()
-    students = get_students(tid)
+    students = db["teachers"].get(str(tid), {}).get("students", {})
     for d in students.values():
         for key in ("u_code", "p_code", "su_code"):
             if d.get(key):
@@ -73,7 +72,7 @@ def new_hw_id():
     return str(random.randint(10000, 99999))
 
 def find_teacher_by_code(code):
-    """Шукає вчителя і учня по коду входу"""
+    db = load_db()
     for tid, tdata in db["teachers"].items():
         for sname, sdata in tdata.get("students", {}).items():
             for role_code, role_key, role_menu in [
@@ -86,7 +85,7 @@ def find_teacher_by_code(code):
     return None, None, None, None
 
 def find_student_by_uid(uid):
-    """Шукає учня по його Telegram ID"""
+    db = load_db()
     for tid, tdata in db["teachers"].items():
         for sname, sdata in tdata.get("students", {}).items():
             for role_key, role_menu in [("su_id", "super"), ("u_id", "student"), ("p_id", "parent")]:
@@ -182,11 +181,11 @@ async def send_reminders():
 
             print(f"[{now.strftime('%H:%M')}] Нагадування: шукаю заняття на {target_day} {target_time}")
 
+            db = load_db()  # читаємо свіжі дані кожну хвилину
             for tid, tdata in db["teachers"].items():
                 for sname, sdata in tdata.get("students", {}).items():
                     for session in sdata.get("sessions", []):
-                        match = session["day"] == target_day and session["time"] == target_time
-                        if match:
+                        if session["day"] == target_day and session["time"] == target_time:
                             u_id = sdata.get("u_id") or sdata.get("su_id")
                             if u_id:
                                 try:
@@ -206,41 +205,31 @@ async def send_reminders():
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    load_db()
     uid = message.from_user.id
     tid_str = str(uid)
+    db = load_db()
 
-    # Вчитель вже зареєстрований
     if tid_str in db["teachers"]:
         t = db["teachers"][tid_str]
         url = f"{WEBAPP_URL}?role=admin&tid={tid_str}"
         kb = get_webapp_menu(menu_teacher, url)
-        await message.answer(
-            f"Вітаю, {t['name']}! Ваша панель керування:",
-            reply_markup=kb
-        )
+        await message.answer(f"Вітаю, {t['name']}! Ваша панель керування:", reply_markup=kb)
         return
 
-    # Учень/батьки/супер
     tid, sname, role_key, role_menu = find_student_by_uid(uid)
     if tid:
-        sdata = db["teachers"][tid]["students"][sname]
         url = f"{WEBAPP_URL}?role={role_menu}&tid={tid}&name={sname}"
         kb = get_webapp_menu(get_student_menu(role_menu), url)
         greeting = f"Привіт, {sname}!" if role_menu != "parent" else f"Привіт! Кабінет учня {sname}:"
         await message.answer(greeting, reply_markup=kb)
         return
 
-    # Новий користувач — запитуємо хто він
     user_state[uid] = "waiting_role"
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="👨‍🏫 Я вчитель")],
         [KeyboardButton(text="🎓 Я учень / батьки")]
     ], resize_keyboard=True)
-    await message.answer(
-        "Привіт! Ласкаво просимо до TutorBot 👋\n\nОберіть свою роль:",
-        reply_markup=kb
-    )
+    await message.answer("Привіт! Ласкаво просимо до TutorBot 👋\n\nОберіть свою роль:", reply_markup=kb)
 
 
 # ─── РЕЄСТРАЦІЯ ВЧИТЕЛЯ ────────────────────────────────────────────────────────
@@ -250,16 +239,12 @@ async def choose_role(message: types.Message):
     uid = message.from_user.id
     if message.text == "👨‍🏫 Я вчитель":
         user_state[uid] = "teacher_waiting_name"
-        await message.answer(
-            "Чудово! Як вас звати? (Введіть ім'я та по батькові):",
-            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
-        )
+        await message.answer("Чудово! Як вас звати?",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
     elif message.text == "🎓 Я учень / батьки":
         user_state[uid] = "waiting_auth_code"
-        await message.answer(
-            "Введіть код доступу, який надав вчитель:",
-            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
-        )
+        await message.answer("Введіть код доступу, який надав вчитель:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
 
 @dp.message(lambda m: user_state.get(m.from_user.id) == "teacher_waiting_name")
 async def teacher_enter_name(message: types.Message):
@@ -273,21 +258,15 @@ async def teacher_enter_subject(message: types.Message):
     name = user_state[uid]["name"]
     subject = message.text.strip()
 
-    db["teachers"][str(uid)] = {
-        "name": name,
-        "subject": subject,
-        "students": {},
-        "links": {}
-    }
-    save_db()
+    db = load_db()
+    db["teachers"][str(uid)] = {"name": name, "subject": subject, "students": {}, "links": {}}
+    save_db(db)
     user_state[uid] = None
 
     url = f"{WEBAPP_URL}?role=admin&tid={uid}"
     kb = get_webapp_menu(menu_teacher, url)
     await message.answer(
-        f"✅ Вітаємо, {name}!\n"
-        f"Предмет: {subject}\n\n"
-        f"Ваш кабінет готовий. Починайте додавати учнів!",
+        f"✅ Вітаємо, {name}!\nПредмет: {subject}\n\nВаш кабінет готовий!",
         reply_markup=kb
     )
 
@@ -301,8 +280,9 @@ async def auth(message: types.Message):
 
     tid, sname, role_key, role_menu = find_teacher_by_code(code)
     if tid:
+        db = load_db()
         db["teachers"][tid]["students"][sname][role_key] = uid
-        save_db()
+        save_db(db)
         user_state[uid] = None
 
         url = f"{WEBAPP_URL}?role={role_menu}&tid={tid}&name={sname}"
@@ -319,30 +299,38 @@ async def auth(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗДІЛИ МЕНЮ ────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "👥 Керування учнями" and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text == "👥 Керування учнями")
 async def teacher_section_students(message: types.Message):
-    await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
-
-@dp.message(lambda m: m.text and m.text == "📖 Заняття і матеріали" and str(m.from_user.id) in db["teachers"])
-async def teacher_section_lessons(message: types.Message):
-    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
+    db = load_db()
+    if str(message.from_user.id) in db["teachers"]:
+        await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
 
 @dp.message(lambda m: m.text and m.text == "📖 Заняття і матеріали")
-async def student_section_lessons(message: types.Message):
-    await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
+async def section_lessons(message: types.Message):
+    db = load_db()
+    if str(message.from_user.id) in db["teachers"]:
+        await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
+    else:
+        await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
 
 
 # ─── ВЧИТЕЛЬ: ДОДАТИ УЧНЯ ──────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "➕ Додати учня" and str(m.from_user.id) in db["teachers"])
-async def add_student(message: types.Message):
+@dp.message(lambda m: m.text and m.text == "➕ Додати учня")
+async def add_student_start(message: types.Message):
+    db = load_db()
+    if str(message.from_user.id) not in db["teachers"]:
+        return
     user_state[message.from_user.id] = {"state": "waiting_name", "tid": str(message.from_user.id)}
     await message.answer("Введи ім'я учня:")
 
-@dp.message(lambda m: m.text and m.text == "📋 Список учнів" and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text == "📋 Список учнів")
 async def teacher_list(message: types.Message):
     tid = str(message.from_user.id)
-    students = get_students(tid)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
+    students = db["teachers"][tid].get("students", {})
     if not students:
         await message.answer("Учнів поки немає.", reply_markup=menu_teacher)
         return
@@ -350,24 +338,19 @@ async def teacher_list(message: types.Message):
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
-@dp.message(lambda m: m.text and m.text.startswith("Учень: ") and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text.startswith("Учень: "))
 async def manage_student(message: types.Message):
     tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
     name = message.text.replace("Учень: ", "")
-    students = get_students(tid)
+    students = db["teachers"][tid].get("students", {})
     if name not in students:
         await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
         return
 
     s = students[name]
-    if not s.get("u_id") and not s.get("u_code"):
-        s["u_code"] = new_code(tid)
-    if not s.get("p_id") and not s.get("p_code"):
-        s["p_code"] = new_code(tid)
-    if not s.get("su_id") and not s.get("su_code"):
-        s["su_code"] = new_code(tid)
-    save_db()
-
     bal = s["balance"]
     bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
     u_status = "✅" if s.get("u_id") else f"🔑 {s.get('u_code','—')}"
@@ -392,25 +375,37 @@ async def manage_student(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: РОЗКЛАД ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📅 Мій розклад" and str(m.from_user.id) in db["teachers"])
-async def teacher_schedule(message: types.Message):
-    tid = str(message.from_user.id)
-    students = get_students(tid)
-    today = days[datetime.today().weekday()]
-    today_sessions = []
-    for name, data in students.items():
-        for s in data.get("sessions", []):
-            if s["day"] == today:
-                today_sessions.append((s["time"], name))
-    today_sessions.sort(key=lambda x: x[0])
-    text = f"📅 Сьогодні ({today}):\n\n"
-    text += "\n".join([f"{name} — {t}" for t, name in today_sessions]) if today_sessions else "Немає занять"
-    await message.answer(text)
+@dp.message(lambda m: m.text and m.text == "📅 Мій розклад")
+async def schedule_handler(message: types.Message):
+    uid = message.from_user.id
+    tid_str = str(uid)
+    db = load_db()
 
-@dp.message(lambda m: m.text and m.text == "🗓 Розклад на тиждень" and str(m.from_user.id) in db["teachers"])
+    if tid_str in db["teachers"]:
+        students = db["teachers"][tid_str].get("students", {})
+        today = days[datetime.today().weekday()]
+        today_sessions = []
+        for name, data in students.items():
+            for s in data.get("sessions", []):
+                if s["day"] == today:
+                    today_sessions.append((s["time"], name))
+        today_sessions.sort(key=lambda x: x[0])
+        text = f"📅 Сьогодні ({today}):\n\n"
+        text += "\n".join([f"{name} — {t}" for t, name in today_sessions]) if today_sessions else "Немає занять"
+        await message.answer(text)
+    else:
+        tid, sname, sdata, role = find_student_by_uid(uid)
+        if sdata:
+            sessions = "\n".join([f"🔹 {s['day']} {s['time']}" for s in sdata.get("sessions", [])])
+            await message.answer(f"📅 Твій розклад:\n{sessions or 'Розклад ще не встановлено'}")
+
+@dp.message(lambda m: m.text and m.text == "🗓 Розклад на тиждень")
 async def teacher_week_schedule(message: types.Message):
     tid = str(message.from_user.id)
-    students = get_students(tid)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
+    students = db["teachers"][tid].get("students", {})
     today = days[datetime.today().weekday()]
     text = "🗓 *Розклад на тиждень:*\n"
     for day in days:
@@ -429,10 +424,13 @@ async def teacher_week_schedule(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: БАЛАНСИ ──────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "💳 Баланси" and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text == "💳 Баланси")
 async def teacher_balances(message: types.Message):
     tid = str(message.from_user.id)
-    students = get_students(tid)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
+    students = db["teachers"][tid].get("students", {})
     if not students:
         await message.answer("Список учнів порожній.")
         return
@@ -451,10 +449,13 @@ async def teacher_balances(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ВІДМІТИТИ ЗАНЯТТЯ ────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "✔️ Відмітити заняття" and str(m.from_user.id) in db["teachers"])
-async def mark_lesson(message: types.Message):
+@dp.message(lambda m: m.text and m.text == "✔️ Відмітити заняття")
+async def mark_lesson_start(message: types.Message):
     tid = str(message.from_user.id)
-    students = get_students(tid)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
+    students = db["teachers"][tid].get("students", {})
     if not students:
         await message.answer("Учнів немає.")
         return
@@ -462,11 +463,14 @@ async def mark_lesson(message: types.Message):
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer("Оберіть учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
-@dp.message(lambda m: m.text and m.text.startswith("Заняття: ") and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text.startswith("Заняття: "))
 async def mark_lesson_choose_action(message: types.Message):
     tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
     name = message.text.replace("Заняття: ", "")
-    if name not in get_students(tid):
+    if name not in db["teachers"][tid].get("students", {}):
         await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
         return
     user_state[message.from_user.id] = {"state": "mark_lesson_action", "name": name, "tid": tid}
@@ -480,10 +484,13 @@ async def mark_lesson_choose_action(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ДЗ ───────────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📝 Відправити домашнє завдання" and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text == "📝 Відправити домашнє завдання")
 async def hw_choose_student(message: types.Message):
     tid = str(message.from_user.id)
-    students = get_students(tid)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
+    students = db["teachers"][tid].get("students", {})
     if not students:
         await message.answer("Учнів немає.", reply_markup=menu_teacher)
         return
@@ -491,11 +498,14 @@ async def hw_choose_student(message: types.Message):
     kb.append([KeyboardButton(text="⬅️ Назад")])
     await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
-@dp.message(lambda m: m.text and m.text.startswith("ДЗ для: ") and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text.startswith("ДЗ для: "))
 async def hw_enter_text(message: types.Message):
     tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
     name = message.text.replace("ДЗ для: ", "")
-    if name not in get_students(tid):
+    if name not in db["teachers"][tid].get("students", {}):
         await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
         return
     user_state[message.from_user.id] = {"state": "hw_waiting_text", "name": name, "tid": tid}
@@ -507,22 +517,46 @@ async def hw_enter_text(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: ЖУРНАЛ ───────────────────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "📒 Журнал занять" and str(m.from_user.id) in db["teachers"])
-async def teacher_journal_choose_student(message: types.Message):
-    tid = str(message.from_user.id)
-    students = get_students(tid)
-    if not students:
-        await message.answer("Учнів немає.")
-        return
-    kb = [[KeyboardButton(text=f"Журнал: {n}")] for n in students]
-    kb.append([KeyboardButton(text="⬅️ Назад")])
-    await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+@dp.message(lambda m: m.text and m.text == "📒 Журнал занять")
+async def journal_handler(message: types.Message):
+    uid = message.from_user.id
+    tid = str(uid)
+    db = load_db()
+    if tid in db["teachers"]:
+        students = db["teachers"][tid].get("students", {})
+        if not students:
+            await message.answer("Учнів немає.")
+            return
+        kb = [[KeyboardButton(text=f"Журнал: {n}")] for n in students]
+        kb.append([KeyboardButton(text="⬅️ Назад")])
+        await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+    else:
+        tid2, sname, sdata, role = find_student_by_uid(uid)
+        if not sdata:
+            return
+        journal = (sdata.get("journal") or []).copy()
+        journal.reverse()
+        if not journal:
+            await message.answer("📒 Журнал порожній.")
+            return
+        kb = []
+        for i, entry in enumerate(journal):
+            kb.append([KeyboardButton(text=f"📒 Заняття {len(journal)-i}: {entry['date']}")])
+        kb.append([KeyboardButton(text="⬅️ Назад")])
+        text = "📒 *Журнал занять:*\n\n"
+        for entry in journal:
+            mat_count = len(entry.get("materials", []))
+            text += f"📅 {entry['date']} — *{entry['topic']}*{f' | 📎{mat_count}' if mat_count else ''}\n"
+        await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
-@dp.message(lambda m: m.text and m.text.startswith("Журнал: ") and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text.startswith("Журнал: "))
 async def teacher_journal_list(message: types.Message):
     tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
     name = message.text.replace("Журнал: ", "").strip()
-    students = get_students(tid)
+    students = db["teachers"][tid].get("students", {})
     if name not in students:
         await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
         return
@@ -540,14 +574,17 @@ async def teacher_journal_list(message: types.Message):
         text += f"📅 {entry['date']} — *{entry['topic']}*{f' | 📎{mat_count}' if mat_count else ''}\n"
     await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
 
-@dp.message(lambda m: m.text and m.text.startswith("Т.Журнал ") and str(m.from_user.id) in db["teachers"])
+@dp.message(lambda m: m.text and m.text.startswith("Т.Журнал "))
 async def teacher_journal_detail(message: types.Message):
     tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]:
+        return
     try:
         part = message.text.replace("Т.Журнал ", "")
         name, rest = part.split(" #", 1)
         idx = int(rest.split(":")[0].strip()) - 1
-        journal = get_students(tid)[name].get("journal", [])
+        journal = db["teachers"][tid]["students"][name].get("journal", [])
         entry = journal[idx]
     except (ValueError, IndexError, KeyError):
         await message.answer("Заняття не знайдено.")
@@ -570,26 +607,39 @@ async def teacher_journal_detail(message: types.Message):
 
 # ─── ВЧИТЕЛЬ: КОРИСНІ ПОСИЛАННЯ ───────────────────────────────────────────────
 
-@dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання" and str(m.from_user.id) in db["teachers"])
-async def teacher_links(message: types.Message):
-    tid = str(message.from_user.id)
-    links = db["teachers"][tid].get("links", {})
-    if not links:
-        user_state[message.from_user.id] = {"state": "teacher_links_waiting_label", "tid": tid}
-        await message.answer(
-            "🔗 Посилань поки немає.\nЯк назвемо перше?",
-            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
-        )
+@dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання")
+async def links_handler(message: types.Message):
+    uid = message.from_user.id
+    tid = str(uid)
+    db = load_db()
+    if tid in db["teachers"]:
+        links = db["teachers"][tid].get("links", {})
+        if not links:
+            user_state[uid] = {"state": "teacher_links_waiting_label", "tid": tid}
+            await message.answer("🔗 Посилань поки немає.\nЯк назвемо перше?",
+                reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+        else:
+            text = "🔗 *Корисні посилання:*\n\n"
+            for label, url in links.items():
+                text += f"• {label}: {url}\n"
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="➕ Додати посилання")],
+                [KeyboardButton(text="🗑 Видалити посилання")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            await message.answer(text, parse_mode="Markdown", reply_markup=kb)
     else:
+        tid2, sname, sdata, role = find_student_by_uid(uid)
+        if not sdata:
+            return
+        links = sdata.get("links", {})
+        if not links:
+            await message.answer("🔗 Посилань поки немає. Зверніться до вчителя.")
+            return
         text = "🔗 *Корисні посилання:*\n\n"
         for label, url in links.items():
-            text += f"• {label}: {url}\n"
-        kb = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text="➕ Додати посилання")],
-            [KeyboardButton(text="🗑 Видалити посилання")],
-            [KeyboardButton(text="⬅️ Назад")]
-        ], resize_keyboard=True)
-        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+            text += f"• [{label}]({url})\n"
+        await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
 
 # ─── УЧЕНЬ: БАЛАНС ─────────────────────────────────────────────────────────────
@@ -603,16 +653,13 @@ async def student_balance(message: types.Message):
         status = "✅" if bal >= 0 else "⚠️ (заборгованість)"
         await message.answer(f"👤 {sname}, баланс: {bal}₴ {status}")
 
-@dp.message(lambda m: m.text and ("Мій розклад" in m.text or "Розклад дитини" in m.text))
-async def student_schedule(message: types.Message):
+@dp.message(lambda m: m.text and "Розклад дитини" in m.text)
+async def parent_schedule(message: types.Message):
     uid = message.from_user.id
-    # Перевіряємо чи не вчитель
-    if str(uid) in db["teachers"]:
-        return
     tid, sname, sdata, role = find_student_by_uid(uid)
     if sdata:
         sessions = "\n".join([f"🔹 {s['day']} {s['time']}" for s in sdata.get("sessions", [])])
-        await message.answer(f"📅 Твій розклад:\n{sessions or 'Розклад ще не встановлено'}")
+        await message.answer(f"📅 Розклад {sname}:\n{sessions or 'Розклад ще не встановлено'}")
 
 @dp.message(lambda m: m.text and "Домашні завдання" in m.text)
 async def student_hw_list(message: types.Message):
@@ -665,29 +712,6 @@ async def student_hw_detail(message: types.Message):
     else:
         await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
-@dp.message(lambda m: m.text and m.text == "📒 Журнал занять")
-async def student_journal(message: types.Message):
-    uid = message.from_user.id
-    if str(uid) in db["teachers"]:
-        return
-    tid, sname, sdata, role = find_student_by_uid(uid)
-    if not sdata:
-        return
-    journal = (sdata.get("journal") or []).copy()
-    journal.reverse()
-    if not journal:
-        await message.answer("📒 Журнал порожній.")
-        return
-    kb = []
-    for i, entry in enumerate(journal):
-        kb.append([KeyboardButton(text=f"📒 Заняття {len(journal)-i}: {entry['date']}")])
-    kb.append([KeyboardButton(text="⬅️ Назад")])
-    text = "📒 *Журнал занять:*\n\n"
-    for entry in journal:
-        mat_count = len(entry.get("materials", []))
-        text += f"📅 {entry['date']} — *{entry['topic']}*{f' | 📎{mat_count}' if mat_count else ''}\n"
-    await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
-
 @dp.message(lambda m: m.text and m.text.startswith("📒 Заняття "))
 async def student_journal_detail(message: types.Message):
     uid = message.from_user.id
@@ -717,26 +741,6 @@ async def student_journal_detail(message: types.Message):
             pass
 
 
-# ─── УЧЕНЬ: КОРИСНІ ПОСИЛАННЯ ──────────────────────────────────────────────────
-
-@dp.message(lambda m: m.text and m.text == "🔗 Корисні посилання")
-async def student_links(message: types.Message):
-    uid = message.from_user.id
-    if str(uid) in db["teachers"]:
-        return
-    tid, sname, sdata, role = find_student_by_uid(uid)
-    if not sdata:
-        return
-    links = sdata.get("links", {})
-    if not links:
-        await message.answer("🔗 Посилань поки немає. Зверніться до вчителя.")
-        return
-    text = "🔗 *Корисні посилання:*\n\n"
-    for label, url in links.items():
-        text += f"• [{label}]({url})\n"
-    await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
-
-
 # ─── УЧЕНЬ: ВИХІД ──────────────────────────────────────────────────────────────
 
 @dp.message(lambda m: m.text and m.text == "🚪 Вийти з кабінета")
@@ -744,10 +748,11 @@ async def logout(message: types.Message):
     uid = message.from_user.id
     tid, sname, sdata, role = find_student_by_uid(uid)
     if sdata:
+        db = load_db()
         for key in ("u_id", "p_id", "su_id"):
-            if sdata.get(key) == uid:
-                sdata[key] = None
-        save_db()
+            if db["teachers"][tid]["students"][sname].get(key) == uid:
+                db["teachers"][tid]["students"][sname][key] = None
+        save_db(db)
         user_state[uid] = None
         await message.answer(
             f"👋 Ти вийшов з кабінету {sname}.\nЩоб увійти знову — введи свій код після /start.",
@@ -789,8 +794,6 @@ async def pay_photo(message: types.Message):
     amount = state["sum"]
     tid = state["tid"]
     sname = state["sname"]
-
-    teacher = db["teachers"].get(tid, {})
     tid_int = int(tid)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -818,10 +821,11 @@ async def confirm_pay(callback: types.CallbackQuery):
     tid = parts[3]
     sname = "_".join(parts[4:])
 
+    db = load_db()
     if tid in db["teachers"] and sname in db["teachers"][tid]["students"]:
+        db["teachers"][tid]["students"][sname]["balance"] += amount
+        save_db(db)
         sdata = db["teachers"][tid]["students"][sname]
-        sdata["balance"] += amount
-        save_db()
         await bot.send_message(payer_id, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {sdata['balance']}₴")
         await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n✅ ПІДТВЕРДЖЕНО")
     await callback.answer()
@@ -849,6 +853,7 @@ async def error_handler(event: types.ErrorEvent):
 async def handle(message: types.Message):
     uid = message.from_user.id
     state = user_state.get(uid)
+    db = load_db()  # завжди свіжі дані
     tid_str = str(uid)
     is_teacher = tid_str in db["teachers"]
 
@@ -856,7 +861,6 @@ async def handle(message: types.Message):
 
     # ── Матеріали до заняття ──
     if isinstance(state, dict) and state.get("state") == "lesson_send_materials":
-        tid = state["tid"]
         if message.photo:
             state["materials"].append({"type": "photo", "file_id": message.photo[-1].file_id, "caption": message.caption or ""})
             await message.answer(f"🖼 Фото {len(state['materials'])} додано. Ще або *Готово*.", parse_mode="Markdown")
@@ -881,50 +885,23 @@ async def handle(message: types.Message):
                 await message.answer("Головне меню", reply_markup=get_webapp_menu(get_student_menu(role), url))
         return
 
-    # ── Журнал занять ──
-    if message.text == "📒 Журнал занять":
+    # ── Назад ──
+    if message.text == "⬅️ Назад":
+        user_state[uid] = None
         if is_teacher:
-            await teacher_journal_choose_student(message)
+            url = f"{WEBAPP_URL}?role=admin&tid={tid_str}"
+            await message.answer("Головне меню", reply_markup=get_webapp_menu(menu_teacher, url))
         else:
-            await student_journal(message)
-        return
-
-    if message.text and message.text.startswith("Журнал: ") and is_teacher:
-        await teacher_journal_list(message)
-        return
-
-    if message.text and message.text.startswith("Т.Журнал ") and is_teacher:
-        await teacher_journal_detail(message)
-        return
-
-    if message.text and message.text.startswith("📒 Заняття "):
-        await student_journal_detail(message)
-        return
-
-    if message.text and message.text.startswith("ДЗ ") and ":" in message.text:
-        await student_hw_detail(message)
-        return
-
-    if message.text and message.text.startswith("Заняття: ") and is_teacher:
-        await mark_lesson_choose_action(message)
-        return
-
-    if message.text == "🚪 Вийти з кабінета":
-        await logout(message)
-        return
-
-    if message.text == "🔗 Корисні посилання":
-        if is_teacher:
-            await teacher_links(message)
-        else:
-            await student_links(message)
+            ftid, sname, sdata, role = find_student_by_uid(uid)
+            if sdata:
+                url = f"{WEBAPP_URL}?role={role}&tid={ftid}&name={sname}"
+                await message.answer("Головне меню", reply_markup=get_webapp_menu(get_student_menu(role), url))
         return
 
     if message.text in ("➕ Додати посилання", "🗑 Видалити посилання") and is_teacher:
-        tid = tid_str
-        links = db["teachers"][tid].get("links", {})
+        links = db["teachers"][tid_str].get("links", {})
         if message.text == "➕ Додати посилання":
-            user_state[uid] = {"state": "teacher_links_waiting_label", "tid": tid}
+            user_state[uid] = {"state": "teacher_links_waiting_label", "tid": tid_str}
             await message.answer("Як назвемо посилання?", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
         else:
             if not links:
@@ -932,12 +909,8 @@ async def handle(message: types.Message):
                 return
             kb = [[KeyboardButton(text=f"🗑 {label}")] for label in links]
             kb.append([KeyboardButton(text="⬅️ Назад")])
-            user_state[uid] = {"state": "teacher_links_waiting_delete", "tid": tid}
+            user_state[uid] = {"state": "teacher_links_waiting_delete", "tid": tid_str}
             await message.answer("Оберіть для видалення:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
-        return
-
-    if message.text == "🗓 Розклад на тиждень" and is_teacher:
-        await teacher_week_schedule(message)
         return
 
     # ── Стани ──
@@ -989,31 +962,50 @@ async def handle(message: types.Message):
         elif message.text == "✅ Готово":
             tid = state["tid"]
             name = state["name"]
-            u_code = new_code(tid)
-            p_code = new_code(tid)
-            su_code = new_code(tid)
-            db["teachers"][tid]["students"][name] = {
-                "price": state["price"], "balance": 0,
-                "sessions": state["sessions"], "homework": [], "journal": [], "links": {},
-                "u_code": u_code, "u_id": None,
-                "p_code": p_code, "p_id": None,
-                "su_code": su_code, "su_id": None
-            }
-            save_db()
-            user_state[uid] = None
-            sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
-            await message.answer(
-                f"✅ {name} доданий!\n💰 {state['price']}₴\n📅\n{sessions_text}\n\n"
-                f"🔑 Код учня: {u_code}\n👨‍👩‍👦 Код батьків: {p_code}\n⭐ Код супер-учня: {su_code}",
-                reply_markup=menu_teacher
-            )
+
+            if state.get("editing"):
+                # Редагування розкладу
+                db2 = load_db()
+                db2["teachers"][tid]["students"][name]["sessions"] = state["sessions"]
+                save_db(db2)
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(f"✅ Розклад {name} оновлено!\n{sessions_text}", reply_markup=menu_teacher)
+                u_id = db2["teachers"][tid]["students"][name].get("u_id") or db2["teachers"][tid]["students"][name].get("su_id")
+                if u_id:
+                    try:
+                        await bot.send_message(u_id, f"📅 Твій розклад оновлено!\n{sessions_text}")
+                    except Exception:
+                        pass
+            else:
+                # Новий учень
+                u_code = new_code(tid)
+                p_code = new_code(tid)
+                su_code = new_code(tid)
+                db2 = load_db()
+                db2["teachers"][tid]["students"][name] = {
+                    "price": state["price"], "balance": 0,
+                    "sessions": state["sessions"], "homework": [], "journal": [], "links": {},
+                    "u_code": u_code, "u_id": None,
+                    "p_code": p_code, "p_id": None,
+                    "su_code": su_code, "su_id": None
+                }
+                save_db(db2)
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(
+                    f"✅ {name} доданий!\n💰 {state['price']}₴\n📅\n{sessions_text}\n\n"
+                    f"🔑 Код учня: {u_code}\n👨‍👩‍👦 Код батьків: {p_code}\n⭐ Код супер-учня: {su_code}",
+                    reply_markup=menu_teacher
+                )
         return
 
     # Керування учнем
     if isinstance(state, dict) and state.get("state") == "managing_student":
         tid = state["tid"]
         name = state["name"]
-        students = get_students(tid)
+        db2 = load_db()
+        students = db2["teachers"].get(tid, {}).get("students", {})
 
         if message.text == f"💳 Керування балансом {name}":
             bal = students[name]["balance"]
@@ -1067,18 +1059,20 @@ async def handle(message: types.Message):
             return
 
         if message.text == f"❌ Видалити {name}":
-            del db["teachers"][tid]["students"][name]
-            save_db()
+            db2 = load_db()
+            del db2["teachers"][tid]["students"][name]
+            save_db(db2)
             user_state[uid] = None
             await message.answer(f"🗑 {name} видалений.", reply_markup=menu_teacher)
             return
 
         if message.text == f"🔑 Оновити коди {name}":
-            s = students[name]
+            db2 = load_db()
+            s = db2["teachers"][tid]["students"][name]
             s["u_code"] = new_code(tid); s["u_id"] = None
             s["p_code"] = new_code(tid); s["p_id"] = None
             s["su_code"] = new_code(tid); s["su_id"] = None
-            save_db()
+            save_db(db2)
             await message.answer(f"🔑 Нові коди для {name}:\nУчень: {s['u_code']}\nБатьки: {s['p_code']}\n⭐ Супер: {s['su_code']}")
             return
 
@@ -1090,7 +1084,6 @@ async def handle(message: types.Message):
                 [KeyboardButton(text=f"🗑л Посилання учня {name}")],
                 [KeyboardButton(text="⬅️ Назад")]
             ], resize_keyboard=True))
-            user_state[uid] = {"state": "managing_student", "name": name, "tid": tid}
             return
 
         if message.text == f"➕ Посилання учню {name}":
@@ -1115,9 +1108,10 @@ async def handle(message: types.Message):
             amount = int(message.text)
             tid = state["tid"]
             name = state["name"]
-            db["teachers"][tid]["students"][name]["balance"] += amount
-            save_db()
-            bal = db["teachers"][tid]["students"][name]["balance"]
+            db2 = load_db()
+            db2["teachers"][tid]["students"][name]["balance"] += amount
+            save_db(db2)
+            bal = db2["teachers"][tid]["students"][name]["balance"]
             user_state[uid] = None
             await message.answer(f"✅ +{amount}₴ до балансу {name}\n💳 Баланс: {'+' if bal>=0 else ''}{bal}₴", reply_markup=menu_teacher)
         except ValueError:
@@ -1129,13 +1123,14 @@ async def handle(message: types.Message):
             amount = int(message.text)
             tid = state["tid"]
             name = state["name"]
-            db["teachers"][tid]["students"][name]["balance"] -= amount
-            save_db()
-            bal = db["teachers"][tid]["students"][name]["balance"]
+            db2 = load_db()
+            db2["teachers"][tid]["students"][name]["balance"] -= amount
+            save_db(db2)
+            bal = db2["teachers"][tid]["students"][name]["balance"]
             user_state[uid] = None
             await message.answer(f"✅ -{amount}₴ з балансу {name}\n💳 Баланс: {'+' if bal>=0 else ''}{bal}₴", reply_markup=menu_teacher)
             if bal < 0:
-                sdata = db["teachers"][tid]["students"][name]
+                sdata = db2["teachers"][tid]["students"][name]
                 notify = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
                 for nid in notify:
                     try:
@@ -1151,9 +1146,10 @@ async def handle(message: types.Message):
             price = int(message.text)
             tid = state["tid"]
             name = state["name"]
-            old = db["teachers"][tid]["students"][name]["price"]
-            db["teachers"][tid]["students"][name]["price"] = price
-            save_db()
+            db2 = load_db()
+            old = db2["teachers"][tid]["students"][name]["price"]
+            db2["teachers"][tid]["students"][name]["price"] = price
+            save_db(db2)
             user_state[uid] = None
             await message.answer(f"✅ Ціна {name}: {old}₴ → {price}₴", reply_markup=menu_teacher)
         except ValueError:
@@ -1164,7 +1160,8 @@ async def handle(message: types.Message):
     if isinstance(state, dict) and state.get("state") == "mark_lesson_action":
         tid = state["tid"]
         name = state["name"]
-        sdata = db["teachers"][tid]["students"][name]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
 
         if message.text == "✅ Проведено":
             user_state[uid] = {"state": "lesson_enter_topic", "name": name, "tid": tid}
@@ -1199,13 +1196,12 @@ async def handle(message: types.Message):
         materials = state["materials"]
         user_state[uid] = None
 
-        sdata = db["teachers"][tid]["students"][name]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
         price = sdata["price"]
         sdata["balance"] -= price
-        if "journal" not in sdata:
-            sdata["journal"] = []
-        sdata["journal"].append({"date": date_str, "topic": topic, "materials": materials})
-        save_db()
+        sdata.setdefault("journal", []).append({"date": date_str, "topic": topic, "materials": materials})
+        save_db(db2)
 
         new_balance = sdata["balance"]
         await message.answer(
@@ -1248,7 +1244,8 @@ async def handle(message: types.Message):
         tid = state["tid"]
         user_state[uid] = None
         await message.answer(f"❌ Заняття {name} {date} скасовано.", reply_markup=menu_teacher)
-        sdata = db["teachers"][tid]["students"][name]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
         for nid in [i for i in [sdata.get("u_id"), sdata.get("su_id"), sdata.get("p_id")] if i]:
             try:
                 await bot.send_message(nid, f"❌ Заняття {date} скасовано. Баланс не змінювався.")
@@ -1270,7 +1267,8 @@ async def handle(message: types.Message):
         tid = state["tid"]
         user_state[uid] = None
         await message.answer(f"🔄 Заняття {name} перенесено з {old_date} на {new_date}.", reply_markup=menu_teacher)
-        sdata = db["teachers"][tid]["students"][name]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
         for nid in [i for i in [sdata.get("u_id"), sdata.get("su_id"), sdata.get("p_id")] if i]:
             try:
                 await bot.send_message(nid, f"🔄 Заняття перенесено!\nБуло: {old_date}\nСтало: {new_date}")
@@ -1284,11 +1282,12 @@ async def handle(message: types.Message):
         name = state["name"]
         date_str = datetime.now().strftime("%d.%m.%Y")
         hw_id = new_hw_id()
-        sdata = db["teachers"][tid]["students"][name]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
 
         if message.photo:
             sdata.setdefault("homework", []).append({"id": hw_id, "text": message.caption or "Дивись фото", "photo_id": message.photo[-1].file_id, "date": date_str, "status": "new"})
-            save_db()
+            save_db(db2)
             user_state[uid] = None
             await message.answer(f"✅ ДЗ надіслано {name}!", reply_markup=menu_teacher)
             u_id = sdata.get("u_id") or sdata.get("su_id")
@@ -1299,7 +1298,7 @@ async def handle(message: types.Message):
                     pass
         elif message.text:
             sdata.setdefault("homework", []).append({"id": hw_id, "text": message.text, "photo_id": None, "date": date_str, "status": "new"})
-            save_db()
+            save_db(db2)
             user_state[uid] = None
             await message.answer(f"✅ ДЗ надіслано {name}!", reply_markup=menu_teacher)
             u_id = sdata.get("u_id") or sdata.get("su_id")
@@ -1315,15 +1314,15 @@ async def handle(message: types.Message):
         tid = state["tid"]
         sname = state["sname"]
         hw_id = state["hw_id"]
-        sdata = db["teachers"][tid]["students"][sname]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][sname]
 
         if message.text == "✅ Відмітити як виконане":
             for hw in sdata.get("homework", []):
                 if hw["id"] == hw_id:
                     hw["status"] = "done"
-                    hw_date = hw["date"]
                     break
-            save_db()
+            save_db(db2)
             user_state[uid] = None
             await message.answer("✅ ДЗ відмічено як виконане!", reply_markup=get_student_menu("student"))
             try:
@@ -1341,14 +1340,15 @@ async def handle(message: types.Message):
         tid = state["tid"]
         sname = state["sname"]
         hw_id = state["hw_id"]
-        sdata = db["teachers"][tid]["students"][sname]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][sname]
         hw_date = "?"
         for hw in sdata.get("homework", []):
             if hw["id"] == hw_id:
                 hw["status"] = "done"
                 hw_date = hw["date"]
                 break
-        save_db()
+        save_db(db2)
         user_state[uid] = None
         await message.answer("✅ Фото надіслано! ДЗ виконане.", reply_markup=get_student_menu("student"))
         try:
@@ -1370,8 +1370,9 @@ async def handle(message: types.Message):
             return
         tid = state["tid"]
         label = state["label"]
-        db["teachers"][tid].setdefault("links", {})[label] = url
-        save_db()
+        db2 = load_db()
+        db2["teachers"][tid].setdefault("links", {})[label] = url
+        save_db(db2)
         user_state[uid] = None
         await message.answer(f"✅ Посилання *{label}* збережено!", parse_mode="Markdown", reply_markup=menu_teacher)
         return
@@ -1379,10 +1380,11 @@ async def handle(message: types.Message):
     if isinstance(state, dict) and state.get("state") == "teacher_links_waiting_delete" and message.text and message.text.startswith("🗑 "):
         label = message.text.replace("🗑 ", "").strip()
         tid = state["tid"]
-        links = db["teachers"][tid].get("links", {})
+        db2 = load_db()
+        links = db2["teachers"][tid].get("links", {})
         if label in links:
             del links[label]
-            save_db()
+            save_db(db2)
             await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
         user_state[uid] = None
         return
@@ -1400,8 +1402,9 @@ async def handle(message: types.Message):
             return
         tid = state["tid"]
         name = state["name"]
-        db["teachers"][tid]["students"][name].setdefault("links", {})[state["label"]] = url
-        save_db()
+        db2 = load_db()
+        db2["teachers"][tid]["students"][name].setdefault("links", {})[state["label"]] = url
+        save_db(db2)
         user_state[uid] = None
         await message.answer(f"✅ Посилання додано для {name}!", reply_markup=menu_teacher)
         return
@@ -1410,37 +1413,19 @@ async def handle(message: types.Message):
         label = message.text.replace("🗑л ", "").strip()
         tid = state["tid"]
         name = state["name"]
-        links = db["teachers"][tid]["students"][name].get("links", {})
+        db2 = load_db()
+        links = db2["teachers"][tid]["students"][name].get("links", {})
         if label in links:
             del links[label]
-            save_db()
+            save_db(db2)
             await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
         user_state[uid] = None
-        return
-
-    # Редагування розкладу (editing=True)
-    if isinstance(state, dict) and state.get("state") == "confirm_more_days" and state.get("editing"):
-        if message.text == "✅ Готово":
-            tid = state["tid"]
-            name = state["name"]
-            db["teachers"][tid]["students"][name]["sessions"] = state["sessions"]
-            save_db()
-            user_state[uid] = None
-            sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
-            await message.answer(f"✅ Розклад {name} оновлено!\n{sessions_text}", reply_markup=menu_teacher)
-            u_id = db["teachers"][tid]["students"][name].get("u_id") or db["teachers"][tid]["students"][name].get("su_id")
-            if u_id:
-                try:
-                    await bot.send_message(u_id, f"📅 Твій розклад оновлено!\n{sessions_text}")
-                except Exception:
-                    pass
         return
 
 
 # ─── ЗАПУСК ────────────────────────────────────────────────────────────────────
 
 async def main():
-    load_db()
     print("Бот запущено...")
     asyncio.create_task(send_reminders())
     await dp.start_polling(bot)
