@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>TutorApp</title>
+<title>TutorApp v2</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -414,10 +414,10 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div class="screen-body">
       <div class="balance-hero" id="s-balance-hero" style="background:var(--grad2)">
-        <div class="balance-label">Мій баланс</div>
+        <div class="balance-label">Баланс</div>
         <div class="balance-amount" id="s-balance">—₴</div>
         <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
-        <div class="balance-actions">
+        <div class="balance-actions" id="s-balance-actions">
           <button class="balance-btn" onclick="showStudentTab('hw')">📚 ДЗ</button>
           <button class="balance-btn" onclick="showStudentTab('journal')">📒 Журнал</button>
         </div>
@@ -426,7 +426,7 @@ select.form-input{appearance:none;cursor:pointer}
         <div class="section-title">Найближче заняття</div>
         <div id="s-next-lesson"></div>
       </div>
-      <div class="section">
+      <div class="section" id="s-hw-preview-section">
         <div class="section-title">Нові домашні завдання</div>
         <div id="s-hw-preview"></div>
       </div>
@@ -438,8 +438,8 @@ select.form-input{appearance:none;cursor:pointer}
     <nav class="bottom-nav">
       <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
       <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
     </nav>
   </div>
 
@@ -636,6 +636,18 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Час</div><input class="form-input" id="edit-schedule-time" type="time"></div>
     <button class="btn btn-primary" onclick="saveSchedule()">Зберегти</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-schedule')">Скасувати</button>
+  </div>
+</div>
+
+<!-- Pay Modal (parent/super) -->
+<div class="modal-overlay" id="modal-pay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Поповнити баланс</div>
+    <div style="text-align:center;padding:10px 0 16px;color:var(--text2);font-size:14px">Введіть суму та надішліть фото чеку вчителю через бота</div>
+    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="pay-amount" placeholder="500" type="number"></div>
+    <button class="btn btn-primary" onclick="submitPay()">Надіслати запит</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
   </div>
 </div>
 
@@ -1121,14 +1133,31 @@ function renderDemoStudent(){
 
 function renderStudent(){
   const d=appData;
+  const role=d.role||'student';
+  const canSeeBalance=(role==='parent'||role==='super');
+
   document.getElementById('s-student-name').textContent=d.name||'Мій кабінет';
 
-  const bal=d.balance??0;
-  document.getElementById('s-balance').textContent=fmtBal(bal);
-  document.getElementById('s-price-sub').textContent=`Ціна заняття: ${d.price||'—'}₴`;
-  if(bal<0)document.getElementById('s-balance-hero').style.background='linear-gradient(135deg,#f07060,#f09060)';
+  // Баланс — тільки для батьків та супер-учня
+  const heroEl=document.getElementById('s-balance-hero');
+  if(canSeeBalance){
+    heroEl.style.display='';
+    const bal=d.balance??0;
+    document.getElementById('s-balance').textContent=fmtBal(bal);
+    document.getElementById('s-price-sub').textContent=`Ціна заняття: ${d.price||'—'}₴`;
+    if(bal<0)heroEl.style.background='linear-gradient(135deg,#f07060,#f09060)';
 
-  // Next lesson
+    // Кнопки в балансі — для батьків поповнення, для всіх ДЗ і журнал
+    document.getElementById('s-balance-actions').innerHTML=`
+      ${role==='parent'||role==='super'?'<button class="balance-btn" onclick="showPayModal()">💳 Поповнити</button>':''}
+      <button class="balance-btn" onclick="showStudentTab(\'hw\')">📚 ДЗ</button>
+      <button class="balance-btn" onclick="showStudentTab(\'journal\')">📒 Журнал</button>
+    `;
+  } else {
+    heroEl.style.display='none';
+  }
+
+  // Наступне заняття
   const t=today();
   const tIdx=DAYS.indexOf(t);
   let next=null;
@@ -1148,11 +1177,17 @@ function renderStudent(){
       </div>
     </div>`:'<div class="empty">Розклад не встановлено</div>';
 
-  // HW preview (pending)
-  const pending=(d.homework||[]).filter(h=>h.status!=='done').slice().reverse().slice(0,3);
-  document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
+  // ДЗ превью — тільки для учня та супер-учня
+  const hwPreviewEl=document.getElementById('s-hw-preview-section');
+  if(role==='parent'){
+    if(hwPreviewEl)hwPreviewEl.style.display='none';
+  } else {
+    if(hwPreviewEl)hwPreviewEl.style.display='';
+    const pending=(d.homework||[]).filter(h=>h.status!=='done').slice().reverse().slice(0,3);
+    document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
+  }
 
-  // Links
+  // Посилання
   const links=d.links||{};
   document.getElementById('s-links-preview').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
     <div class="card clickable" onclick="window.open('${v}','_blank')">
@@ -1163,9 +1198,12 @@ function renderStudent(){
       </div>
     </div>`).join(''):'<div class="empty">Посилань немає</div>';
 
-  // Schedule
+  // Навігація — ховаємо ДЗ і журнал для батьків
+  document.querySelectorAll('.s-nav-hw').forEach(el=>el.style.display=role==='parent'?'none':'');
+  document.querySelectorAll('.s-nav-journal').forEach(el=>el.style.display=role==='parent'?'none':'');
+
   renderStudentSchedule();
-  renderHwList();
+  if(role!=='parent')renderHwList();
   renderStudentJournal();
 }
 
@@ -1255,6 +1293,16 @@ function showStudentTab(tab){
     const el=document.getElementById('s-'+t);
     if(el)el.classList.toggle('active',t===tab);
   });
+}
+
+function showPayModal(){openModal('modal-pay')}
+async function submitPay(){
+  const amount=parseInt(document.getElementById('pay-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  closeModal('modal-pay');
+  toast('✅ Надішліть фото чеку вчителю в боті');
+  // Повідомляємо бота через Telegram WebApp
+  if(tg)tg.sendData(JSON.stringify({action:'pay_request',amount,name:appData.name,tid:appData.tid}));
 }
 
 // Close modals on overlay click
