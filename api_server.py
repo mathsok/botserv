@@ -307,6 +307,125 @@ async def pay_request(request):
         return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
 
+
+async def send_materials(request):
+    """Надсилає матеріали заняття учню через Telegram"""
+    try:
+        reader = await request.multipart()
+        tid = None
+        name = None
+        topic = None
+        files = []
+
+        async for part in reader:
+            if part.name == 'tid':
+                tid = (await part.read()).decode()
+            elif part.name == 'name':
+                name = (await part.read()).decode()
+            elif part.name == 'topic':
+                topic = (await part.read()).decode()
+            elif part.name == 'files':
+                file_name = part.filename or 'file'
+                ct = part.headers.get('Content-Type', 'application/octet-stream')
+                data = await part.read()
+                files.append({'name': file_name, 'data': data, 'ct': ct, 'is_photo': ct.startswith('image/')})
+
+        if not all([tid, name, files]):
+            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+
+        db = load_db()
+        sdata = db["teachers"].get(tid, {}).get("students", {}).get(name, {})
+        notify = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
+
+        async with aiohttp_client.ClientSession() as session:
+            for nid in notify:
+                try:
+                    await session.post(
+                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                        json={"chat_id": nid, "text": f"📚 Матеріали до заняття: {topic}"}
+                    )
+                    for f in files:
+                        form = aiohttp_client.FormData()
+                        form.add_field("chat_id", str(nid))
+                        if f['is_photo']:
+                            form.add_field("photo", f['data'], filename=f['name'], content_type=f['ct'])
+                            await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
+                        else:
+                            form.add_field("document", f['data'], filename=f['name'], content_type=f['ct'])
+                            await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
+                except Exception as e:
+                    print(f"[MATERIALS] Error sending to {nid}: {e}")
+
+        return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
+
+
+async def send_hw_file(request):
+    """Надсилає ДЗ з файлом учню через Telegram"""
+    try:
+        reader = await request.multipart()
+        tid = None
+        name = None
+        text = None
+        file_data = None
+        file_name = 'hw'
+        file_ct = 'application/octet-stream'
+        is_photo = False
+
+        async for part in reader:
+            if part.name == 'tid':
+                tid = (await part.read()).decode()
+            elif part.name == 'name':
+                name = (await part.read()).decode()
+            elif part.name == 'text':
+                text = (await part.read()).decode()
+            elif part.name == 'file':
+                file_name = part.filename or 'hw'
+                file_ct = part.headers.get('Content-Type', 'application/octet-stream')
+                is_photo = file_ct.startswith('image/')
+                file_data = await part.read()
+
+        if not all([tid, name, file_data]):
+            return web.Response(text=json.dumps({"ok": False, "error": "missing fields"}), content_type="application/json", headers=cors)
+
+        from datetime import datetime
+        import random as rnd
+        hw_id = str(rnd.randint(10000, 99999))
+        date_str = datetime.now().strftime("%d.%m.%Y")
+
+        db = load_db()
+        s = db["teachers"].get(tid, {}).get("students", {}).get(name)
+        if s:
+            s.setdefault("homework", []).append({
+                "id": hw_id, "text": text or "Дивись файл",
+                "photo_id": None, "date": date_str, "status": "new"
+            })
+            save_db(db)
+
+            u_id = s.get("u_id") or s.get("su_id")
+            if u_id:
+                async with aiohttp_client.ClientSession() as session:
+                    caption = f"📝 Нове ДЗ!
+📅 {date_str}
+
+{text or ''}"
+                    form = aiohttp_client.FormData()
+                    form.add_field("chat_id", str(u_id))
+                    form.add_field("caption", caption)
+                    if is_photo:
+                        form.add_field("photo", file_data, filename=file_name, content_type=file_ct)
+                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
+                    else:
+                        form.add_field("document", file_data, filename=file_name, content_type=file_ct)
+                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
+
+        return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
+
 # ── APP ──
 app = web.Application()
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
@@ -326,6 +445,8 @@ app.router.add_post("/api/reset-codes", reset_codes)
 app.router.add_post("/api/add-student-link", add_student_link)
 app.router.add_post("/api/delete-student-link", delete_student_link)
 app.router.add_post("/api/pay-request", pay_request)
+app.router.add_post("/api/send-materials", send_materials)
+app.router.add_post("/api/send-hw-file", send_hw_file)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
