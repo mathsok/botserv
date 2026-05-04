@@ -578,16 +578,18 @@ select.form-input{appearance:none;cursor:pointer}
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Поповнити баланс</div>
-    <div style="text-align:center;padding:16px 0">
-      <div style="font-size:48px;margin-bottom:12px">💰</div>
-      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px">
-        Перейдіть до бота та натисніть<br>
-        <b style="color:var(--text)">💰 Поповнити баланс</b><br>
-        Введіть суму та надішліть фото чеку
-      </div>
-      <button class="btn btn-primary" onclick="window.open('https://t.me/app4tutorsbot','_blank');closeModal('modal-pay')">Відкрити бота →</button>
-      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Закрити</button>
+    <div class="form-group">
+      <div class="form-label">Сума (₴)</div>
+      <input class="form-input" id="pay-amount" placeholder="500" type="number">
     </div>
+    <div class="form-group">
+      <div class="form-label">Фото або документ чеку</div>
+      <input type="file" id="pay-file-input" accept="image/*,application/pdf"
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
+      <div id="pay-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
+    </div>
+    <button class="btn btn-primary" onclick="submitPay()">Надіслати запит</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
   </div>
 </div>
 
@@ -943,7 +945,8 @@ async function markLesson(){
   if(!res.ok){toast('Помилка');return}
 
   // Якщо є файли — надсилаємо через API
-  const files=window._lessonFiles||[];
+  const lessonInput=document.getElementById('lesson-file-input');
+  const files=lessonInput?Array.from(lessonInput.files||[]):[];
   if(files.length>0){
     const formData=new FormData();
     formData.append('tid',String(appData.tid));
@@ -986,24 +989,23 @@ async function sendHw(){
   const text=document.getElementById('hw-text').value.trim();
   if(!text&&!window._hwFile){toast('Введіть текст або додайте файл');return}
 
-  if(window._hwFile){
-    // Надсилаємо з файлом через API
+  const hwInput=document.getElementById('hw-file-input');
+  const hwFile=hwInput&&hwInput.files[0];
+  if(hwFile){
     const formData=new FormData();
     formData.append('tid',appData.tid);
     formData.append('name',name);
     formData.append('text',text||'Дивись файл');
-    formData.append('file',window._hwFile,window._hwFile.name);
+    formData.append('file',hwFile,hwFile.name);
     try{
       const res=await fetch('/api/send-hw-file',{method:'POST',body:formData});
       const data=await res.json();
       if(data.ok){
         closeModal('modal-send-hw');
-        window._hwFile=null;
         toast('✅ ДЗ надіслано '+name+'!');
       } else toast('Помилка: '+(data.error||'невідома'));
     }catch(e){toast('Помилка зʼєднання');}
   } else {
-    // Тільки текст
     const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
     if(res.ok){
       closeModal('modal-send-hw');
@@ -1292,7 +1294,36 @@ function showStudentTab(tab){
   });
 }
 
-function showPayModal(){openModal('modal-pay')}
+function showPayModal(){
+  document.getElementById('pay-amount').value='';
+  document.getElementById('pay-file-label').textContent='';
+  openModal('modal-pay');
+}
+
+async function submitPay(){
+  const amount=parseInt(document.getElementById('pay-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const fileInput=document.getElementById('pay-file-input');
+  const file=fileInput.files[0];
+  if(!file){toast('Прикріпіть чек');return}
+
+  const formData=new FormData();
+  formData.append('amount',String(amount));
+  formData.append('tid',String(appData.tid));
+  formData.append('name',appData.name);
+  formData.append('file',file,file.name);
+
+  try{
+    const res=await fetch('/api/pay-request',{method:'POST',body:formData});
+    const data=await res.json();
+    if(data.ok){
+      closeModal('modal-pay');
+      toast('✅ Запит надіслано! Очікуйте підтвердження.',3000);
+    } else {
+      toast('Помилка: '+(data.error||'невідома'));
+    }
+  }catch(e){toast('Помилка зʼєднання');}
+}
 
 
 
