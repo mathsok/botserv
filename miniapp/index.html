@@ -998,9 +998,7 @@ async function markLesson(){
 // ── SEND HW ──
 function showSendHw(){
   document.getElementById('hw-text').value='';
-  document.getElementById('hw-file-label').textContent='📎 Додати файл';
-  document.getElementById('hw-file-preview').style.display='none';
-  document.getElementById('hw-file-input').value='';
+  document.getElementById('hw-file-label').textContent='';
   window._hwFile=null;
   openModal('modal-send-hw');
 }
@@ -1010,15 +1008,6 @@ function handleHwFile(input){
   if(!file)return;
   window._hwFile=file;
   document.getElementById('hw-file-label').textContent='✅ '+file.name;
-  if(file.type.startsWith('image/')){
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const img=document.getElementById('hw-file-preview');
-      img.src=e.target.result;
-      img.style.display='block';
-    };
-    reader.readAsDataURL(file);
-  }
 }
 
 async function sendHw(){
