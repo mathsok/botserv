@@ -480,6 +480,29 @@ async def delete_journal_entry(request):
         save_db(db)
     return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
 
+
+async def get_file_url(request):
+    """Отримує тимчасовий URL файлу через Telegram Bot API"""
+    try:
+        body = await request.json()
+        file_id = body.get("file_id")
+        if not file_id:
+            return web.Response(text=json.dumps({"ok": False, "error": "no file_id"}), content_type="application/json", headers=cors)
+
+        async with aiohttp_client.ClientSession() as session:
+            async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}") as resp:
+                result = await resp.json()
+
+        if not result.get("ok"):
+            return web.Response(text=json.dumps({"ok": False, "error": result.get("description")}), content_type="application/json", headers=cors)
+
+        file_path = result["result"]["file_path"]
+        url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+        return web.Response(text=json.dumps({"ok": True, "url": url}), content_type="application/json", headers=cors)
+
+    except Exception as e:
+        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
+
 # ── APP ──
 app = web.Application()
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
@@ -502,6 +525,7 @@ app.router.add_post("/api/pay-request", pay_request)
 app.router.add_post("/api/send-materials", send_materials)
 app.router.add_post("/api/send-hw-file", send_hw_file)
 app.router.add_post("/api/delete-journal-entry", delete_journal_entry)
+app.router.add_post("/api/get-file-url", get_file_url)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
