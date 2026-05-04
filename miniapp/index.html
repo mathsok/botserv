@@ -668,12 +668,12 @@ async function markLesson(){
   const action=document.getElementById('mark-action').value;
   if(!topic){toast('Введіть тему');return}
 
-  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
-  if(!res.ok){toast('Помилка');return}
-
-  // Надсилаємо матеріали якщо є
+  // Читаємо файли ДО будь-яких запитів
   const lessonInput=document.getElementById('lesson-file-input');
   const files=lessonInput?Array.from(lessonInput.files||[]):[];
+
+  // Якщо є файли — спочатку надсилаємо їх (поки input ще не скинутий)
+  let materialsSent=false;
   if(files.length>0){
     const formData=new FormData();
     formData.append('tid',String(appData.tid));
@@ -684,13 +684,18 @@ async function markLesson(){
       const matRes=await fetch('/api/send-materials',{method:'POST',body:formData});
       const matData=await matRes.json();
       console.log('[MATERIALS]',matData);
+      if(matData.ok&&matData.sent>0)materialsSent=true;
     }catch(e){console.error('[MATERIALS ERROR]',e)}
   }
+
+  // Потім відмічаємо заняття
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
+  if(!res.ok){toast('Помилка');return}
 
   const s=(appData.students||[]).find(x=>x.name===name);
   if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
   renderTeacher();closeModal('modal-mark-lesson');
-  toast(files.length>0?'✅ Заняття відмічено! Матеріали надіслано учню.':'✅ Заняття відмічено!');
+  toast(materialsSent?'✅ Заняття відмічено! Матеріали надіслано учню.':'✅ Заняття відмічено!');
 }
 
 // SEND HW
