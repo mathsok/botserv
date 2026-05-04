@@ -1422,42 +1422,43 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 });
 
 // ── UPLOAD SCREEN ──
-let _uploadCallback = null;
-let _uploadType = null;
+window._uploadType = null;
+window._uploadedFiles = [];
 
 function openUploadScreen(type, title, desc, callback){
-  _uploadType = type;
-  _uploadCallback = callback;
+  window._uploadType = type;
+  window._uploadDone = callback;
   document.getElementById('upload-title').textContent = title;
   document.getElementById('upload-desc').textContent = desc;
   document.getElementById('upload-preview').textContent = '';
-  document.getElementById('main-file-input').value = '';
-  document.getElementById('main-file-input').multiple = (type === 'materials');
+  const mi = document.getElementById('main-file-input');
+  mi.value = '';
+  mi.multiple = (type === 'materials');
+  mi.onchange = function(){
+    const files = Array.from(this.files);
+    window._uploadedFiles = files;
+    document.getElementById('upload-preview').innerHTML = files.map(f=>'✅ '+f.name).join('<br>');
+  };
   pushScreen('screen-upload');
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
-  const mi = document.getElementById('main-file-input');
-  if(mi){
-    mi.addEventListener('change', function(){
-      const files = Array.from(this.files);
-      document.getElementById('upload-preview').textContent = files.map(f=>'✅ '+f.name).join('\n');
-    });
-  }
-});
-
 function confirmUpload(){
-  const input = document.getElementById('main-file-input');
-  const files = Array.from(input.files);
-  if(files.length === 0){toast('Оберіть файл');return}
-  // Зберігаємо файли і callback до goBack
-  const cb = _uploadCallback;
-  const savedFiles = files;
-  if(cb) cb(savedFiles);
+  const files = window._uploadedFiles||[];
+  if(files.length === 0){
+    // спробуємо ще раз з input
+    const input = document.getElementById('main-file-input');
+    const f2 = Array.from(input.files||[]);
+    if(f2.length === 0){toast('Оберіть файл');return}
+    window._uploadedFiles = f2;
+  }
+  const cb = window._uploadDone;
+  const savedFiles = window._uploadedFiles.slice();
   goBack();
+  if(cb) cb(savedFiles);
 }
 
 function cancelUpload(){
+  window._uploadedFiles=[];
   goBack();
 }
 </script>
