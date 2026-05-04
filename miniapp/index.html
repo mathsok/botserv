@@ -1443,18 +1443,13 @@ function openUploadScreen(type, title, desc, callback){
 }
 
 function confirmUpload(){
-  const files = window._uploadedFiles||[];
-  if(files.length === 0){
-    // спробуємо ще раз з input
-    const input = document.getElementById('main-file-input');
-    const f2 = Array.from(input.files||[]);
-    if(f2.length === 0){toast('Оберіть файл');return}
-    window._uploadedFiles = f2;
-  }
+  // Читаємо файли напряму з input в момент кліку
+  const input = document.getElementById('main-file-input');
+  const files = Array.from(input.files||[]);
+  if(files.length === 0){toast('Оберіть файл');return}
   const cb = window._uploadDone;
-  const savedFiles = window._uploadedFiles.slice();
   goBack();
-  if(cb) cb(savedFiles);
+  if(cb) cb(files);
 }
 
 function cancelUpload(){
