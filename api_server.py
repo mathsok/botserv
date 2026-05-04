@@ -173,10 +173,7 @@ async def mark_lesson(request):
                 ]]})
                 await session.post(
                     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                    json={"chat_id":int(tid),"text":f"✅ Заняття відмічено!
-📖 Тема: {topic}
-
-Надіслати матеріали учню {name}?","reply_markup":kb}
+                    json={"chat_id":int(tid),"text":f"✅ Заняття відмічено!\n📖 Тема: {topic}\n\nНадіслати матеріали учню {name}?","reply_markup":kb}
                 )
         except Exception as e:
             print(f"[MARK LESSON] notify error: {e}")
