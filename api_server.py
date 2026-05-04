@@ -1,8 +1,11 @@
 from aiohttp import web
+from dotenv import load_dotenv
 import json
 import os
 import random
 import aiohttp as aiohttp_client
+
+load_dotenv()
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "miniapp")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "database.json")
@@ -38,13 +41,7 @@ def teacher_to_response(tid, tdata):
     students = []
     for sname, sdata in tdata.get("students", {}).items():
         students.append({**sdata, "name": sname})
-    return {
-        "tid": tid,
-        "name": tdata.get("name",""),
-        "subject": tdata.get("subject",""),
-        "students": students,
-        "links": tdata.get("links",{})
-    }
+    return {"tid": tid, "name": tdata.get("name",""), "subject": tdata.get("subject",""), "students": students, "links": tdata.get("links",{})}
 
 cors = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 
@@ -76,8 +73,7 @@ async def get_student(request):
     tid = request.match_info["tid"]
     name = request.match_info["name"]
     db = load_db()
-    t = db["teachers"].get(tid, {})
-    s = t.get("students", {}).get(name)
+    s = db["teachers"].get(tid, {}).get("students", {}).get(name)
     if not s:
         return web.Response(text=json.dumps({"error": "not found"}), status=404, content_type="application/json", headers=cors)
     return web.Response(text=json.dumps({**s, "name": name}, ensure_ascii=False), content_type="application/json", headers=cors)
@@ -178,8 +174,17 @@ async def send_hw(request):
     from datetime import datetime
     import random as rnd
     hw_id = str(rnd.randint(10000,99999))
-    s.setdefault("homework",[]).append({"id":hw_id,"text":text,"photo_id":None,"date":datetime.now().strftime("%d.%m.%Y"),"status":"new"})
+    date_str = datetime.now().strftime("%d.%m.%Y")
+    s.setdefault("homework",[]).append({"id":hw_id,"text":text,"photo_id":None,"date":date_str,"status":"new"})
     save_db(db)
+    u_id = s.get("u_id") or s.get("su_id")
+    if u_id:
+        try:
+            async with aiohttp_client.ClientSession() as session:
+                await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={"chat_id": u_id, "text": f"📝 Нове ДЗ!\n📅 {date_str}\n\n{text}"})
+        except Exception as e:
+            print(f"[SEND HW] error: {e}")
     return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
 
 async def mark_hw(request):
@@ -236,80 +241,20 @@ async def delete_student_link(request):
         save_db(db)
     return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
 
-# ── НОВИЙ ЕНДПОІНТ: поповнення балансу з Mini App ──
-async def pay_request(request):
-    try:
-        reader = await request.multipart()
-        amount = None
-        tid = None
-        name = None
-        file_data = None
-        file_name = "check"
-        file_content_type = "image/jpeg"
-        is_photo = True
-
-        async for part in reader:
-            if part.name == "amount":
-                amount = int(await part.read())
-            elif part.name == "tid":
-                tid = (await part.read()).decode()
-            elif part.name == "name":
-                name = (await part.read()).decode()
-            elif part.name == "file":
-                file_name = part.filename or "check"
-                ct = part.headers.get("Content-Type", "image/jpeg")
-                file_content_type = ct
-                is_photo = ct.startswith("image/")
-                file_data = await part.read()
-
-        if not all([amount, tid, name, file_data]):
-            return web.Response(
-                text=json.dumps({"ok": False, "error": "missing fields"}),
-                content_type="application/json", headers=cors
-            )
-
-        caption = f"💰 Заявка на поповнення!\nВід: {name}\nСума: {amount}₴"
-        kb = json.dumps({"inline_keyboard": [[
-            {"text": "✅ Підтвердити", "callback_data": f"confirm_webapp_{amount}_{tid}_{name}"},
-            {"text": "❌ Відхилити", "callback_data": f"reject_webapp_{name}_{tid}"}
-        ]]})
-
-        async with aiohttp_client.ClientSession() as session:
-            if is_photo:
-                form = aiohttp_client.FormData()
-                form.add_field("chat_id", tid)
-                form.add_field("caption", caption)
-                form.add_field("reply_markup", kb)
-                form.add_field("photo", file_data, filename=file_name, content_type=file_content_type)
-                async with session.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form
-                ) as resp:
-                    result = await resp.json()
-            else:
-                form = aiohttp_client.FormData()
-                form.add_field("chat_id", tid)
-                form.add_field("caption", caption)
-                form.add_field("reply_markup", kb)
-                form.add_field("document", file_data, filename=file_name, content_type=file_content_type)
-                async with session.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form
-                ) as resp:
-                    result = await resp.json()
-
-        if result.get("ok"):
-            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-        else:
-            print(f"[PAY REQUEST] Telegram error: {result}")
-            return web.Response(text=json.dumps({"ok": False, "error": result.get("description","telegram error")}), content_type="application/json", headers=cors)
-
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
-
-
+async def delete_journal_entry(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    name = body["name"]
+    idx = body["idx"]
+    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
+    if s and 0 <= idx < len(s.get("journal",[])):
+        s["journal"].pop(idx)
+        save_db(db)
+    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
 
 async def send_materials(request):
-    """Надсилає матеріали заняття учню через Telegram і зберігає file_id в журналі"""
+    """Вчитель надсилає матеріали заняття учню через Mini App"""
     print("[SEND MATERIALS] Request received")
     try:
         reader = await request.multipart()
@@ -319,102 +264,108 @@ async def send_materials(request):
         files = []
 
         async for part in reader:
-            if part.name == 'tid':
+            if part.name == "tid":
                 tid = (await part.read()).decode()
-            elif part.name == 'name':
+            elif part.name == "name":
                 name = (await part.read()).decode()
-            elif part.name == 'topic':
+            elif part.name == "topic":
                 topic = (await part.read()).decode()
-            elif part.name == 'files':
-                file_name = part.filename or 'file'
-                ct = part.headers.get('Content-Type', 'application/octet-stream')
+            elif part.name == "files":
+                file_name = part.filename or "file"
+                ct = part.headers.get("Content-Type", "application/octet-stream")
                 data = await part.read()
-                files.append({'name': file_name, 'data': data, 'ct': ct, 'is_photo': ct.startswith('image/')})
+                files.append({"name": file_name, "data": data, "ct": ct, "is_photo": ct.startswith("image/")})
 
-        if not all([tid, name, files]):
-            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+        print(f"[SEND MATERIALS] tid={tid} name={name} topic={topic} files={len(files)}")
+
+        if not all([tid, name]) or not files:
+            return web.Response(text=json.dumps({"ok": True, "sent": 0}), content_type="application/json", headers=cors)
 
         db = load_db()
         sdata = db["teachers"].get(tid, {}).get("students", {}).get(name, {})
         notify = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
+        print(f"[SEND MATERIALS] notify={notify}")
 
-        # Збираємо file_id після першого надсилання
         saved_materials = []
 
         async with aiohttp_client.ClientSession() as session:
-            first = True
-            for nid in notify:
-                try:
-                    await session.post(
-                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                        json={"chat_id": nid, "text": f"📚 Матеріали до заняття: {topic}"}
-                    )
-                    for f in files:
-                        form = aiohttp_client.FormData()
-                        form.add_field("chat_id", str(nid))
-                        if f['is_photo']:
-                            form.add_field("photo", f['data'], filename=f['name'], content_type=f['ct'])
-                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form) as resp:
-                                result = await resp.json()
-                                if first and result.get("ok"):
-                                    msg = result.get("result", {})
-                                    photo = msg.get("photo", [])
-                                    fid = photo[-1]["file_id"] if photo else None
-                                    if fid:
-                                        saved_materials.append({"type": "photo", "file_id": fid, "caption": ""})
-                        else:
-                            form.add_field("document", f['data'], filename=f['name'], content_type=f['ct'])
-                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form) as resp:
-                                result = await resp.json()
-                                if first and result.get("ok"):
-                                    doc = result.get("result", {}).get("document", {})
-                                    fid = doc.get("file_id")
-                                    if fid:
-                                        saved_materials.append({"type": "document", "file_id": fid, "caption": f['name']})
-                    first = False
-                except Exception as e:
-                    print(f"[MATERIALS] Error sending to {nid}: {e}")
+            first_id = notify[0] if notify else int(tid)
 
-        # Зберігаємо матеріали в останній запис журналу з цією темою
-        if saved_materials:
+            for f in files:
+                file_id = None
+                form = aiohttp_client.FormData()
+                form.add_field("chat_id", str(first_id))
+                if topic:
+                    form.add_field("caption", topic)
+
+                if f["is_photo"]:
+                    form.add_field("photo", f["data"], filename=f["name"], content_type=f["ct"])
+                    async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form) as resp:
+                        result = await resp.json()
+                        print(f"[SEND MATERIALS] photo: {result.get('ok')} {result.get('description','')}")
+                        if result.get("ok"):
+                            photo = result["result"].get("photo", [])
+                            if photo:
+                                file_id = photo[-1]["file_id"]
+                                saved_materials.append({"type": "photo", "file_id": file_id, "caption": topic or ""})
+                else:
+                    form.add_field("document", f["data"], filename=f["name"], content_type=f["ct"])
+                    async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form) as resp:
+                        result = await resp.json()
+                        print(f"[SEND MATERIALS] document: {result.get('ok')} {result.get('description','')}")
+                        if result.get("ok"):
+                            doc = result["result"].get("document", {})
+                            file_id = doc.get("file_id")
+                            if file_id:
+                                saved_materials.append({"type": "document", "file_id": file_id, "caption": f["name"]})
+
+                if file_id and len(notify) > 1:
+                    for nid in notify[1:]:
+                        try:
+                            f2 = aiohttp_client.FormData()
+                            f2.add_field("chat_id", str(nid))
+                            if saved_materials[-1]["type"] == "photo":
+                                f2.add_field("photo", file_id)
+                                await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=f2)
+                            else:
+                                f2.add_field("document", file_id)
+                                await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=f2)
+                        except Exception as e:
+                            print(f"[SEND MATERIALS] error {nid}: {e}")
+
+        if saved_materials and topic:
             db2 = load_db()
             journal = db2["teachers"].get(tid, {}).get("students", {}).get(name, {}).get("journal", [])
-            # Знаходимо останній запис з цією темою
             for entry in reversed(journal):
                 if entry.get("topic") == topic:
                     entry["materials"] = saved_materials
                     break
             save_db(db2)
+            print(f"[SEND MATERIALS] Saved {len(saved_materials)} to journal")
 
-        return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+        return web.Response(text=json.dumps({"ok": True, "sent": len(saved_materials)}), content_type="application/json", headers=cors)
+
     except Exception as e:
         import traceback; traceback.print_exc()
         return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
 
 async def send_hw_file(request):
-    """Надсилає ДЗ з файлом учню через Telegram"""
+    """ДЗ з файлом — файл іде учню"""
     try:
         reader = await request.multipart()
-        tid = None
-        name = None
-        text = None
-        file_data = None
-        file_name = 'hw'
-        file_ct = 'application/octet-stream'
-        is_photo = False
+        tid = None; name = None; text = None
+        file_data = None; file_name = "hw"
+        file_ct = "application/octet-stream"; is_photo = False
 
         async for part in reader:
-            if part.name == 'tid':
-                tid = (await part.read()).decode()
-            elif part.name == 'name':
-                name = (await part.read()).decode()
-            elif part.name == 'text':
-                text = (await part.read()).decode()
-            elif part.name == 'file':
-                file_name = part.filename or 'hw'
-                file_ct = part.headers.get('Content-Type', 'application/octet-stream')
-                is_photo = file_ct.startswith('image/')
+            if part.name == "tid": tid = (await part.read()).decode()
+            elif part.name == "name": name = (await part.read()).decode()
+            elif part.name == "text": text = (await part.read()).decode()
+            elif part.name == "file":
+                file_name = part.filename or "hw"
+                file_ct = part.headers.get("Content-Type", "application/octet-stream")
+                is_photo = file_ct.startswith("image/")
                 file_data = await part.read()
 
         if not all([tid, name, file_data]):
@@ -427,26 +378,25 @@ async def send_hw_file(request):
 
         db = load_db()
         s = db["teachers"].get(tid, {}).get("students", {}).get(name)
-        if s:
-            s.setdefault("homework", []).append({
-                "id": hw_id, "text": text or "Дивись файл",
-                "photo_id": None, "date": date_str, "status": "new"
-            })
-            save_db(db)
+        if not s:
+            return web.Response(text=json.dumps({"ok": False, "error": "not found"}), content_type="application/json", headers=cors)
 
-            u_id = s.get("u_id") or s.get("su_id")
-            if u_id:
-                async with aiohttp_client.ClientSession() as session:
-                    caption = f"📝 Нове ДЗ!\n📅 {date_str}\n\n{text or ''}"
-                    form = aiohttp_client.FormData()
-                    form.add_field("chat_id", str(u_id))
-                    form.add_field("caption", caption)
-                    if is_photo:
-                        form.add_field("photo", file_data, filename=file_name, content_type=file_ct)
-                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
-                    else:
-                        form.add_field("document", file_data, filename=file_name, content_type=file_ct)
-                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
+        s.setdefault("homework", []).append({"id": hw_id, "text": text or "Дивись файл", "photo_id": None, "date": date_str, "status": "new"})
+        save_db(db)
+
+        u_id = s.get("u_id") or s.get("su_id")
+        if u_id:
+            async with aiohttp_client.ClientSession() as session:
+                caption = f"📝 Нове ДЗ!\n📅 {date_str}\n\n{text or ''}"
+                form = aiohttp_client.FormData()
+                form.add_field("chat_id", str(u_id))
+                form.add_field("caption", caption)
+                if is_photo:
+                    form.add_field("photo", file_data, filename=file_name, content_type=file_ct)
+                    await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
+                else:
+                    form.add_field("document", file_data, filename=file_name, content_type=file_ct)
+                    await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
 
         return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
     except Exception as e:
@@ -454,43 +404,76 @@ async def send_hw_file(request):
         return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
 
-async def delete_journal_entry(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    idx = body["idx"]
-    s = db["teachers"].get(tid, {}).get("students", {}).get(name)
-    if s and 0 <= idx < len(s.get("journal", [])):
-        s["journal"].pop(idx)
-        save_db(db)
-    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+async def pay_request(request):
+    """Чек від батьків — іде вчителю"""
+    try:
+        reader = await request.multipart()
+        amount = None; tid = None; name = None
+        file_data = None; file_name = "check"
+        file_ct = "image/jpeg"; is_photo = True
+
+        async for part in reader:
+            if part.name == "amount": amount = int(await part.read())
+            elif part.name == "tid": tid = (await part.read()).decode()
+            elif part.name == "name": name = (await part.read()).decode()
+            elif part.name == "file":
+                file_name = part.filename or "check"
+                file_ct = part.headers.get("Content-Type", "image/jpeg")
+                is_photo = file_ct.startswith("image/")
+                file_data = await part.read()
+
+        if not all([amount, tid, name, file_data]):
+            return web.Response(text=json.dumps({"ok": False, "error": "missing fields"}), content_type="application/json", headers=cors)
+
+        caption = f"💰 Заявка на поповнення!\nВід: {name}\nСума: {amount}₴"
+        kb = json.dumps({"inline_keyboard": [[
+            {"text": "✅ Підтвердити", "callback_data": f"confirm_webapp_{amount}_{tid}_{name}"},
+            {"text": "❌ Відхилити", "callback_data": f"reject_webapp_{name}_{tid}"}
+        ]]})
+
+        async with aiohttp_client.ClientSession() as session:
+            form = aiohttp_client.FormData()
+            form.add_field("chat_id", tid)
+            form.add_field("caption", caption)
+            form.add_field("reply_markup", kb)
+            if is_photo:
+                form.add_field("photo", file_data, filename=file_name, content_type=file_ct)
+                async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form) as resp:
+                    result = await resp.json()
+            else:
+                form.add_field("document", file_data, filename=file_name, content_type=file_ct)
+                async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form) as resp:
+                    result = await resp.json()
+
+        if result.get("ok"):
+            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+        print(f"[PAY] Telegram error: {result}")
+        return web.Response(text=json.dumps({"ok": False, "error": result.get("description","error")}), content_type="application/json", headers=cors)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
 
 async def get_file_url(request):
-    """Отримує тимчасовий URL файлу через Telegram Bot API"""
+    """Тимчасовий URL файлу для показу в Mini App"""
     try:
         body = await request.json()
         file_id = body.get("file_id")
         if not file_id:
-            return web.Response(text=json.dumps({"ok": False, "error": "no file_id"}), content_type="application/json", headers=cors)
-
+            return web.Response(text=json.dumps({"ok": False}), content_type="application/json", headers=cors)
         async with aiohttp_client.ClientSession() as session:
             async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}") as resp:
                 result = await resp.json()
-
         if not result.get("ok"):
-            return web.Response(text=json.dumps({"ok": False, "error": result.get("description")}), content_type="application/json", headers=cors)
-
+            return web.Response(text=json.dumps({"ok": False}), content_type="application/json", headers=cors)
         file_path = result["result"]["file_path"]
         url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
         return web.Response(text=json.dumps({"ok": True, "url": url}), content_type="application/json", headers=cors)
-
     except Exception as e:
         return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
 
-# ── APP ──
-app = web.Application()
+
+app = web.Application(client_max_size=50*1024*1024)
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
 app.router.add_get("/", handle_index)
 app.router.add_post("/api/register-teacher", register_teacher)
@@ -507,10 +490,10 @@ app.router.add_post("/api/mark-hw", mark_hw)
 app.router.add_post("/api/reset-codes", reset_codes)
 app.router.add_post("/api/add-student-link", add_student_link)
 app.router.add_post("/api/delete-student-link", delete_student_link)
-app.router.add_post("/api/pay-request", pay_request)
+app.router.add_post("/api/delete-journal-entry", delete_journal_entry)
 app.router.add_post("/api/send-materials", send_materials)
 app.router.add_post("/api/send-hw-file", send_hw_file)
-app.router.add_post("/api/delete-journal-entry", delete_journal_entry)
+app.router.add_post("/api/pay-request", pay_request)
 app.router.add_post("/api/get-file-url", get_file_url)
 app.router.add_static("/miniapp", STATIC_DIR)
 
