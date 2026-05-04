@@ -418,6 +418,29 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
+<!-- HW DETAIL MODAL (student) -->
+<div class="modal-overlay" id="modal-hw-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="hwd-title">Домашнє завдання</div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:8px" id="hwd-date"></div>
+    <div style="background:var(--card2);border-radius:var(--r2);padding:12px;margin-bottom:16px;font-size:14px;line-height:1.5" id="hwd-text"></div>
+    <div id="hwd-status" style="margin-bottom:16px"></div>
+    <div id="hwd-feedback" style="margin-bottom:16px"></div>
+    <div id="hwd-reply-form">
+      <div class="form-group"><div class="form-label">Ваша відповідь</div><textarea class="form-input" id="hwd-reply-text" placeholder="Напишіть відповідь або коментар..."></textarea></div>
+      <div class="form-group">
+        <div class="form-label">Файл (необов'язково)</div>
+        <input type="file" id="hwd-reply-file" accept="image/*,application/pdf" style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
+      </div>
+      <button class="btn btn-primary" onclick="submitHwReply()" style="margin-bottom:8px">📤 Надіслати відповідь</button>
+      <button class="btn btn-secondary" onclick="markHwDoneFromModal()">✅ Просто відмітити як виконане</button>
+    </div>
+    <div id="hwd-done-msg" style="display:none;text-align:center;padding:10px 0;color:var(--green);font-weight:600">✅ ДЗ виконано!</div>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-hw-detail')">Закрити</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -962,9 +985,78 @@ async function resendMaterials(idx){
 function showHwDetail(hwId){
   const hw=(appData.homework||[]).find(h=>h.id===hwId);
   if(!hw)return;
+  window._currentHwId=hwId;
+
+  document.getElementById('hwd-title').textContent='📝 ДЗ від '+hw.date;
+  document.getElementById('hwd-date').textContent='';
+  document.getElementById('hwd-text').textContent=hw.text;
+  document.getElementById('hwd-reply-text').value='';
+  document.getElementById('hwd-reply-file').value='';
+
   const done=hw.status==='done';
-  if(done){alert(`ДЗ від ${hw.date}\n\n${hw.text}\n\nСтатус: ✅ Виконано`);return}
-  if(confirm(`ДЗ від ${hw.date}\n\n${hw.text}\n\n🔴 Не виконано\n\nВідмітити як виконане?`))markHwDone(hwId);
+  document.getElementById('hwd-status').innerHTML=done
+    ?'<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>'
+    :'<div style="color:var(--red);font-weight:600;margin-bottom:8px">🔴 Не виконано</div>';
+
+  // Показуємо фідбек вчителя якщо є
+  const feedback=hw.feedback;
+  const fbEl=document.getElementById('hwd-feedback');
+  if(feedback){
+    fbEl.innerHTML=`<div style="background:rgba(124,111,247,.1);border:1px solid rgba(124,111,247,.2);border-radius:var(--r2);padding:12px">
+      <div style="font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:6px">💬 Коментар вчителя</div>
+      <div style="font-size:14px">${feedback}</div>
+    </div>`;
+  } else {
+    fbEl.innerHTML='';
+  }
+
+  // Форма відповіді — показуємо тільки якщо не виконано
+  document.getElementById('hwd-reply-form').style.display=done?'none':'';
+  document.getElementById('hwd-done-msg').style.display=done?'block':'none';
+
+  openModal('modal-hw-detail');
+}
+
+async function submitHwReply(){
+  const hwId=window._currentHwId;
+  const hw=(appData.homework||[]).find(h=>h.id===hwId);
+  if(!hw)return;
+
+  const text=document.getElementById('hwd-reply-text').value.trim();
+  const fileInput=document.getElementById('hwd-reply-file');
+  const file=fileInput&&fileInput.files[0];
+
+  if(!text&&!file){toast('Напишіть відповідь або прикріпіть файл');return}
+
+  const formData=new FormData();
+  formData.append('tid',String(appData.tid));
+  formData.append('name',appData.name);
+  formData.append('hw_id',hwId);
+  formData.append('text',text||'');
+  if(file)formData.append('file',file,file.name);
+
+  try{
+    const res=await fetch('/api/submit-hw-reply',{method:'POST',body:formData});
+    const data=await res.json();
+    if(data.ok){
+      hw.status='done';
+      hw.reply=text;
+      document.getElementById('hwd-reply-form').style.display='none';
+      document.getElementById('hwd-done-msg').style.display='block';
+      document.getElementById('hwd-status').innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>';
+      renderStudent();
+      toast('✅ Відповідь надіслано вчителю!',3000);
+    } else toast('Помилка: '+(data.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+async function markHwDoneFromModal(){
+  const hwId=window._currentHwId;
+  await markHwDone(hwId);
+  document.getElementById('hwd-reply-form').style.display='none';
+  document.getElementById('hwd-done-msg').style.display='block';
+  document.getElementById('hwd-status').innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>';
+  closeModal('modal-hw-detail');
 }
 
 async function markHwDone(hwId){
