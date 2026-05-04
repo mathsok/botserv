@@ -828,6 +828,26 @@ async def pay_check(message: types.Message):
 
 # ─── CALLBACKS ─────────────────────────────────────────────────────────────────
 
+@dp.callback_query(F.data == "skip_materials")
+async def skip_materials(callback: types.CallbackQuery):
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.answer("Пропущено")
+
+@dp.callback_query(F.data.startswith("send_materials_"))
+async def send_materials_start(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    tid = parts[2]
+    sname = "_".join(parts[3:])
+    uid = callback.from_user.id
+    user_state[uid] = {"state": "waiting_materials", "tid": tid, "sname": sname}
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await bot.send_message(uid,
+        f"📎 Надішліть матеріали для {sname}.\nМожна фото, документи — скільки завгодно.\nКоли закінчите — натисніть *Готово*.",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="✅ Готово з матеріалами")]], resize_keyboard=True)
+    )
+    await callback.answer()
+
 @dp.callback_query(F.data.startswith("confirm_"))
 async def confirm_pay(callback: types.CallbackQuery):
     parts = callback.data.split("_")
@@ -940,6 +960,44 @@ async def handle(message: types.Message):
             icon = "📄" if "pdf" in mime else "📎"
             state["materials"].append({"type": "document", "file_id": message.document.file_id, "caption": message.caption or "", "name": message.document.file_name or "файл"})
             await message.answer(f"{icon} {message.document.file_name} ({len(state['materials'])}) додано. Ще або *Готово*.", parse_mode="Markdown")
+            return
+
+    # ── Матеріали після відмітки через Mini App ──
+    if isinstance(state, dict) and state.get("state") == "waiting_materials":
+        tid = state["tid"]
+        sname = state["sname"]
+        if message.text == "✅ Готово з матеріалами":
+            user_state[uid] = None
+            materials = state.get("materials", [])
+            # Зберігаємо матеріали в журнал
+            db2 = load_db()
+            journal = db2["teachers"].get(tid, {}).get("students", {}).get(sname, {}).get("journal", [])
+            if journal:
+                journal[-1]["materials"] = materials
+                save_db(db2)
+            # Надсилаємо учню
+            sdata = db2["teachers"].get(tid, {}).get("students", {}).get(sname, {})
+            notify = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
+            for nid in notify:
+                try:
+                    if materials:
+                        await bot.send_message(nid, f"📚 Матеріали до заняття: {journal[-1].get('topic','')}")
+                        for mat in materials:
+                            if mat["type"] == "photo":
+                                await bot.send_photo(nid, mat["file_id"])
+                            elif mat["type"] == "document":
+                                await bot.send_document(nid, mat["file_id"])
+                except Exception:
+                    pass
+            await message.answer(f"✅ Матеріали надіслано учню {sname}!", reply_markup=menu_teacher)
+            return
+        if message.photo:
+            state.setdefault("materials", []).append({"type": "photo", "file_id": message.photo[-1].file_id, "caption": message.caption or ""})
+            await message.answer(f"🖼 Фото додано ({len(state['materials'])}). Ще або *Готово з матеріалами*.", parse_mode="Markdown")
+            return
+        if message.document:
+            state.setdefault("materials", []).append({"type": "document", "file_id": message.document.file_id, "caption": message.caption or ""})
+            await message.answer(f"📎 Документ додано ({len(state['materials'])}). Ще або *Готово з матеріалами*.", parse_mode="Markdown")
             return
 
     # ── Назад ──
