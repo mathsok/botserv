@@ -668,29 +668,33 @@ async function markLesson(){
   const action=document.getElementById('mark-action').value;
   if(!topic){toast('Введіть тему');return}
 
-  // Читаємо файли ДО будь-яких запитів
+  // Читаємо файли ДО будь-яких запитів і зберігаємо в FormData одразу
   const lessonInput=document.getElementById('lesson-file-input');
   const files=lessonInput?Array.from(lessonInput.files||[]):[];
-
-  // Якщо є файли — спочатку надсилаємо їх (поки input ще не скинутий)
-  let materialsSent=false;
+  // Готуємо FormData одразу поки файли ще доступні
+  let materialsFormData=null;
   if(files.length>0){
-    const formData=new FormData();
-    formData.append('tid',String(appData.tid));
-    formData.append('name',name);
-    formData.append('topic',topic);
-    for(const file of files)formData.append('files',file,file.name);
+    materialsFormData=new FormData();
+    materialsFormData.append('tid',String(appData.tid));
+    materialsFormData.append('name',name);
+    materialsFormData.append('topic',topic);
+    for(const file of files)materialsFormData.append('files',file,file.name);
+  }
+
+  // Спочатку відмічаємо заняття — щоб запис в журналі існував
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
+  if(!res.ok){toast('Помилка');return}
+
+  // Надсилаємо матеріали (журнал вже є, FormData вже готова)
+  let materialsSent=false;
+  if(materialsFormData){
     try{
-      const matRes=await fetch('/api/send-materials',{method:'POST',body:formData});
+      const matRes=await fetch('/api/send-materials',{method:'POST',body:materialsFormData});
       const matData=await matRes.json();
       console.log('[MATERIALS]',matData);
       if(matData.ok&&matData.sent>0)materialsSent=true;
     }catch(e){console.error('[MATERIALS ERROR]',e)}
   }
-
-  // Потім відмічаємо заняття
-  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
-  if(!res.ok){toast('Помилка');return}
 
   const s=(appData.students||[]).find(x=>x.name===name);
   if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
