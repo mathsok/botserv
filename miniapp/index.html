@@ -932,7 +932,7 @@ async function showJournalDetail(idx){
     if(m.type==='photo'){
       return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block">${m.caption?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${m.caption}</div>`:''}</div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото (недоступне)</div></div></div></div>';
     }else{
-      return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||'Документ'}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||'Документ'}</div><div class="item-sub">Недоступно</div></div></div></div>';
+      return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div><div class="item-sub">Недоступно</div></div></div></div>';
     }
   }).join('');
 }
