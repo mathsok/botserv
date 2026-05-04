@@ -496,6 +496,7 @@ app.router.add_post("/api/send-hw-file", send_hw_file)
 app.router.add_post("/api/pay-request", pay_request)
 app.router.add_post("/api/get-file-url", get_file_url)
 app.router.add_post("/api/resend-materials", resend_materials)
+app.router.add_post("/api/submit-hw-reply", submit_hw_reply)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
