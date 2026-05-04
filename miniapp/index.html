@@ -345,6 +345,25 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
+<!-- FILE UPLOAD SCREEN -->
+<div id="screen-upload" class="screen" style="flex-direction:column">
+  <div class="header">
+    <button class="header-back" onclick="cancelUpload()">‹</button>
+    <div class="header-title" id="upload-title">Додати матеріали</div>
+  </div>
+  <div class="screen-body" style="padding:20px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:8px">📎</div>
+      <div style="font-size:14px;color:var(--text2)" id="upload-desc">Оберіть файли для завантаження</div>
+    </div>
+    <input type="file" id="main-file-input" multiple accept="image/*,application/pdf,video/*"
+      style="width:100%;padding:12px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:14px;margin-bottom:14px">
+    <div id="upload-preview" style="margin-bottom:14px;font-size:13px;color:var(--green)"></div>
+    <button class="btn btn-primary" onclick="confirmUpload()">✅ Підтвердити</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="cancelUpload()">Скасувати</button>
+  </div>
+</div>
+
 <!-- STUDENT CARD (teacher view) -->
 <div id="screen-student-card" class="screen" style="flex-direction:column">
   <div class="header">
@@ -512,10 +531,8 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
     <div class="form-group">
       <div class="form-label">Фото або документ (необов'язково)</div>
-      <input type="file" id="hw-file-input" accept="image/*,application/pdf"
-        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
-      <div id="hw-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
-      <img id="hw-file-preview" style="max-width:100%;border-radius:8px;margin-top:8px;display:none">
+      <button class="btn btn-secondary" type="button" onclick="openHwFileUpload()" style="margin-bottom:6px">📎 Додати файл</button>
+      <div id="hw-file-label" style="color:var(--green);font-size:13px;min-height:16px"></div>
     </div>
     <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
@@ -595,10 +612,8 @@ select.form-input{appearance:none;cursor:pointer}
         <div style="font-weight:600;font-size:16px;margin-bottom:6px">Прикріпіть чек</div>
         <div style="font-size:13px;color:var(--text2)">Фото або документ підтвердження оплати</div>
       </div>
-      <input type="file" id="pay-file-input" accept="image/*,application/pdf"
-        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
-      <div id="pay-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
-      <img id="pay-preview" style="max-width:100%;border-radius:8px;margin-top:10px;display:none">
+      <button class="btn btn-secondary" type="button" onclick="openPayFileUpload()" style="margin-bottom:6px">📎 Вибрати файл</button>
+      <div id="pay-file-label" style="color:var(--green);font-size:13px;min-height:16px"></div>
       <button class="btn btn-primary" style="margin-top:14px" onclick="submitPay()">Надіслати запит</button>
       <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
     </div>
@@ -900,6 +915,33 @@ async function deleteJournalEntry(studentName, idx){
     renderTeacherDashboard();
     toast('🗑 Запис видалено');
   } else toast('Помилка');
+}
+
+function openLessonFileUpload(){
+  closeModal('modal-mark-lesson');
+  openUploadScreen('materials','Матеріали заняття','Оберіть фото або документи для учня',function(files){
+    window._lessonFiles=files;
+    document.getElementById('lesson-file-label').textContent='✅ '+files.length+' файл(ів) вибрано';
+    openModal('modal-mark-lesson');
+  });
+}
+
+function openHwFileUpload(){
+  closeModal('modal-send-hw');
+  openUploadScreen('hw','Файл до ДЗ','Оберіть фото або документ',function(files){
+    window._hwFile=files[0];
+    document.getElementById('hw-file-label').textContent='✅ '+files[0].name;
+    openModal('modal-send-hw');
+  });
+}
+
+function openPayFileUpload(){
+  closeModal('modal-pay');
+  openUploadScreen('pay','Фото чеку','Оберіть фото або документ підтвердження оплати',function(files){
+    window._payFile=files[0];
+    document.getElementById('pay-file-label').textContent='✅ '+files[0].name;
+    openModal('modal-pay');
+  });
 }
 
 function showMarkLesson(){
@@ -1390,17 +1432,41 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
 
-// File input listeners
+// ── UPLOAD SCREEN ──
+let _uploadCallback = null;
+let _uploadType = null;
+
+function openUploadScreen(type, title, desc, callback){
+  _uploadType = type;
+  _uploadCallback = callback;
+  document.getElementById('upload-title').textContent = title;
+  document.getElementById('upload-desc').textContent = desc;
+  document.getElementById('upload-preview').textContent = '';
+  document.getElementById('main-file-input').value = '';
+  document.getElementById('main-file-input').multiple = (type === 'materials');
+  pushScreen('screen-upload');
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
-  const li=document.getElementById('lesson-file-input');
-  if(li)li.addEventListener('change',function(){handleLessonFiles(this);});
-
-  const hi=document.getElementById('hw-file-input');
-  if(hi)hi.addEventListener('change',function(){handleHwFile(this);});
-
-  const pi=document.getElementById('pay-file-input');
-  if(pi)pi.addEventListener('change',function(){handlePayFile(this);});
+  const mi = document.getElementById('main-file-input');
+  if(mi){
+    mi.addEventListener('change', function(){
+      const files = Array.from(this.files);
+      document.getElementById('upload-preview').textContent = files.map(f=>'✅ '+f.name).join('\n');
+    });
+  }
 });
+
+function confirmUpload(){
+  const files = Array.from(document.getElementById('main-file-input').files);
+  if(files.length === 0){toast('Оберіть файл');return}
+  if(_uploadCallback) _uploadCallback(files);
+  goBack();
+}
+
+function cancelUpload(){
+  goBack();
+}
 </script>
 </body>
 </html>
