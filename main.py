@@ -719,6 +719,21 @@ async def pay_check(message: types.Message):
 
 # ─── CALLBACKS ────────────────────────────────────────────────────────────────
 
+@dp.callback_query(F.data.startswith("hw_feedback_"))
+async def hw_feedback_start(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    hw_id = parts[2]
+    tid = parts[3]
+    sname = "_".join(parts[4:])
+    uid = callback.from_user.id
+    user_state[uid] = {"state": "hw_feedback_text", "hw_id": hw_id, "tid": tid, "sname": sname}
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await bot.send_message(uid,
+        f"💬 Напишіть коментар або надішліть фото з виправленнями для {sname}:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
+    )
+    await callback.answer()
+
 @dp.callback_query(F.data.startswith("confirm_"))
 async def confirm_pay(callback: types.CallbackQuery):
     parts = callback.data.split("_")
