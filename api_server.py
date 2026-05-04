@@ -163,7 +163,25 @@ async def mark_lesson(request):
     if action == "done":
         s["balance"] -= s["price"]
         s.setdefault("journal",[]).append({"date":date_str,"topic":topic,"materials":[]})
-    save_db(db)
+        save_db(db)
+        # Просимо вчителя надіслати матеріали через бота
+        try:
+            async with aiohttp_client.ClientSession() as session:
+                kb = json.dumps({"inline_keyboard":[[
+                    {"text":"📎 Надіслати матеріали","callback_data":f"send_materials_{tid}_{name}"},
+                    {"text":"⏭ Пропустити","callback_data":"skip_materials"}
+                ]]})
+                await session.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={"chat_id":int(tid),"text":f"✅ Заняття відмічено!
+📖 Тема: {topic}
+
+Надіслати матеріали учню {name}?","reply_markup":kb}
+                )
+        except Exception as e:
+            print(f"[MARK LESSON] notify error: {e}")
+    else:
+        save_db(db)
     return web.Response(text=json.dumps({"ok":True,"balance":s.get("balance",0)}), content_type="application/json", headers=cors)
 
 async def send_hw(request):
