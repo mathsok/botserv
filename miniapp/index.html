@@ -593,6 +593,16 @@ select.form-input{appearance:none;cursor:pointer}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-journal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="jd-title">Заняття</div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:16px" id="jd-date"></div>
+    <div id="jd-materials"></div>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-journal-detail')">Закрити</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1255,18 +1265,45 @@ function renderHwList(){
 
 function renderStudentJournal(){
   const journal=(appData.journal||[]).slice().reverse();
-  document.getElementById('s-journal-list').innerHTML=journal.length?journal.map(e=>{
+  document.getElementById('s-journal-list').innerHTML=journal.length?journal.map((e,i)=>{
     const parts=e.date.split('.');
-    return`<div class="card fade-up">
+    const matCount=(e.materials||[]).length;
+    const idx=journal.length-1-i;
+    return`<div class="card clickable fade-up" onclick="showJournalDetail(${idx})">
       <div class="list-item">
         <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
         <div class="item-info">
           <div class="item-name">${e.topic}</div>
-          <div class="item-sub">${(e.materials||[]).length?`📎 ${e.materials.length} файл(ів)`:'Без матеріалів'}</div>
+          <div class="item-sub">${matCount?'📎 '+matCount+' файл(ів)':'Без матеріалів'}</div>
         </div>
+        ${matCount?'<div style="color:var(--accent);font-size:18px">›</div>':''}
       </div>
     </div>`;
   }).join(''):'<div class="empty"><div class="empty-icon">📒</div>Журнал порожній</div>';
+}
+
+function showJournalDetail(idx){
+  const journal=(appData.journal||[]);
+  const entry=journal[idx];
+  if(!entry)return;
+  document.getElementById('jd-title').textContent=entry.topic;
+  document.getElementById('jd-date').textContent='📅 '+entry.date;
+  const materials=entry.materials||[];
+  if(materials.length===0){
+    document.getElementById('jd-materials').innerHTML='<div class="empty" style="padding:20px 0">Матеріалів немає</div>';
+  } else {
+    document.getElementById('jd-materials').innerHTML=materials.map((m,i)=>`
+      <div class="card" style="margin-bottom:8px">
+        <div class="list-item">
+          <div style="font-size:24px">${m.type==='photo'?'🖼':'📄'}</div>
+          <div class="item-info">
+            <div class="item-name">${m.type==='photo'?'Фото':(m.caption||m.name||'Документ')}</div>
+          </div>
+          <a href="https://t.me/app4tutorsbot" target="_blank" style="color:var(--accent);font-size:13px;font-weight:600;text-decoration:none">Відкрити в боті</a>
+        </div>
+      </div>`).join('');
+  }
+  openModal('modal-journal-detail');
 }
 
 function showHwDetail(hwId){
