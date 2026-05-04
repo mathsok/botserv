@@ -1449,8 +1449,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 function confirmUpload(){
   const files = Array.from(document.getElementById('main-file-input').files);
   if(files.length === 0){toast('Оберіть файл');return}
-  if(_uploadCallback) _uploadCallback(files);
+  // Спочатку goBack, потім callback з затримкою
   goBack();
+  setTimeout(()=>{
+    if(_uploadCallback) _uploadCallback(files);
+  }, 100);
 }
 
 function cancelUpload(){
