@@ -935,11 +935,24 @@ async function showJournalDetail(idx){
   }));
   matEl.innerHTML=items.map(m=>{
     if(m.type==='photo'){
-      return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block">${m.caption?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${m.caption}</div>`:''}</div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото (недоступне)</div></div></div></div>';
+      return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block">${m.caption?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${m.caption}</div>`:''}</div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото</div></div></div></div>';
     }else{
-      return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div><div class="item-sub">Недоступно</div></div></div></div>';
+      return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div></div></div>';
     }
-  }).join('');
+  }).join('')+`<button class="btn btn-secondary" style="margin-top:12px" onclick="resendMaterials(${idx})">📨 Надіслати в бота</button>`;
+}
+
+async function resendMaterials(idx){
+  try{
+    const res=await fetch('/api/resend-materials',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tid:appData.tid,name:appData.name,idx,uid:window.Telegram?.WebApp?.initDataUnsafe?.user?.id||0})
+    });
+    const data=await res.json();
+    if(data.ok)toast('✅ Матеріали надіслано в бота!',3000);
+    else toast('Помилка: '+(data.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
 }
 
 function showHwDetail(hwId){
