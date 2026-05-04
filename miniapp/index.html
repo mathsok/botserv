@@ -1447,13 +1447,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 function confirmUpload(){
-  const files = Array.from(document.getElementById('main-file-input').files);
+  const input = document.getElementById('main-file-input');
+  const files = Array.from(input.files);
   if(files.length === 0){toast('Оберіть файл');return}
-  // Спочатку goBack, потім callback з затримкою
+  // Зберігаємо файли і callback до goBack
+  const cb = _uploadCallback;
+  const savedFiles = files;
+  if(cb) cb(savedFiles);
   goBack();
-  setTimeout(()=>{
-    if(_uploadCallback) _uploadCallback(files);
-  }, 100);
 }
 
 function cancelUpload(){
