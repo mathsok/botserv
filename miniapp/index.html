@@ -1,534 +1,1424 @@
-from aiohttp import web
-import json
-import os
-import random
-import aiohttp as aiohttp_client
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TutorApp v2</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0d0d1a;--bg2:#151528;--bg3:#1c1c35;
+  --card:rgba(255,255,255,0.05);--card2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0ff;--text2:rgba(240,240,255,0.55);--text3:rgba(240,240,255,0.3);
+  --accent:#7c6ff7;--accent2:#a599ff;
+  --green:#5df0a0;--red:#f07060;--yellow:#f0d060;--blue:#60c0f0;
+  --grad1:linear-gradient(135deg,#7c6ff7,#f07090);
+  --grad2:linear-gradient(135deg,#60c0f0,#5df0a0);
+  --grad3:linear-gradient(135deg,#f0d060,#f09060);
+  --r:14px;--r2:10px;--r3:20px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;margin:0;padding:0}
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "miniapp")
-DATA_FILE = os.path.join(os.path.dirname(__file__), "database.json")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex}
+.screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen-body::-webkit-scrollbar{display:none}
 
-def load_db():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"teachers": {}}
+.header{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;background:var(--bg);backdrop-filter:blur(10px)}
+.header-back{width:36px;height:36px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.header-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;flex:1}
+.header-action{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap}
 
-def save_db(db):
-    tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, DATA_FILE)
+.bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(13,13,26,0.95);backdrop-filter:blur(20px);position:sticky;bottom:0;z-index:10}
+.nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif}
+.nav-btn.active{color:var(--accent)}
+.nav-btn svg{width:22px;height:22px}
+.nav-btn span{font-size:10px;font-weight:600;letter-spacing:.2px}
 
-def new_code(existing):
-    while True:
-        code = str(random.randint(1000, 9999))
-        if code not in existing:
-            return code
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;transition:background .15s}
+.card:active{background:var(--card2)}
+.card.clickable{cursor:pointer}
 
-def get_existing_codes(db):
-    codes = set()
-    for t in db["teachers"].values():
-        for s in t.get("students", {}).values():
-            for k in ("u_code","p_code","su_code"):
-                if s.get(k): codes.add(s[k])
-    return codes
+.section{padding:0 14px;margin-bottom:20px}
+.section-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
 
-def teacher_to_response(tid, tdata):
-    students = []
-    for sname, sdata in tdata.get("students", {}).items():
-        students.append({**sdata, "name": sname})
-    return {
-        "tid": tid,
-        "name": tdata.get("name",""),
-        "subject": tdata.get("subject",""),
-        "students": students,
-        "links": tdata.get("links",{})
+.balance-hero{margin:14px;border-radius:var(--r);padding:20px;position:relative;overflow:hidden;background:var(--grad1)}
+.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(255,255,255,0.08);border-radius:50%}
+.balance-hero::after{content:'';position:absolute;bottom:-30px;left:10px;width:100px;height:100px;background:rgba(255,255,255,0.05);border-radius:50%}
+.balance-label{font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px;position:relative}
+.balance-amount{font-family:'Nunito',sans-serif;font-size:38px;font-weight:900;position:relative;line-height:1.1;margin:4px 0 2px}
+.balance-sub{font-size:12px;opacity:.75;position:relative}
+.balance-actions{display:flex;gap:8px;margin-top:14px;position:relative}
+.balance-btn{flex:1;padding:9px;border-radius:var(--r2);background:rgba(255,255,255,0.18);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);transition:background .15s}
+.balance-btn:active{background:rgba(255,255,255,0.28)}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-bottom:20px}
+.stat-card{border-radius:var(--r);padding:14px;background:var(--card);border:1px solid var(--border)}
+.stat-icon{font-size:22px;margin-bottom:6px;line-height:1}
+.stat-val{font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;line-height:1}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+.list-item{display:flex;align-items:center;gap:12px}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;flex-shrink:0}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-sub{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-right{text-align:right;flex-shrink:0}
+.chevron{color:var(--text3);font-size:16px}
+
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.badge-green{background:rgba(93,240,160,.15);color:var(--green)}
+.badge-red{background:rgba(240,112,96,.15);color:var(--red)}
+.badge-yellow{background:rgba(240,208,96,.15);color:var(--yellow)}
+.badge-blue{background:rgba(96,192,240,.15);color:var(--blue)}
+.badge-purple{background:rgba(124,111,247,.15);color:var(--accent2)}
+
+.day-group{margin-bottom:16px}
+.day-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px}
+.day-label.today{color:var(--accent2)}
+.lesson-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:6px}
+.lesson-time{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--accent2);min-width:42px}
+.lesson-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+.hw-status{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.hw-done{background:rgba(93,240,160,.15);color:var(--green)}
+.hw-pending{background:rgba(240,112,96,.15);color:var(--red)}
+
+.journal-date-box{flex-shrink:0;text-align:center;background:rgba(124,111,247,.15);border:1px solid rgba(124,111,247,.2);border-radius:var(--r2);padding:6px 10px}
+.journal-day{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--accent2);line-height:1}
+.journal-mon{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+textarea.form-input{resize:none;height:80px}
+select.form-input{appearance:none;cursor:pointer}
+
+.btn{width:100%;padding:14px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+.btn *,.nav-btn *,.card.clickable *,.balance-btn *,.btn-sm *{pointer-events:none}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--grad1);color:#fff}
+.btn-secondary{background:var(--card2);border:1px solid var(--border2);color:var(--text)}
+.btn-danger{background:rgba(240,112,96,.15);border:1px solid rgba(240,112,96,.3);color:var(--red)}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:var(--r2);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600}
+.btn-sm-primary{background:var(--accent);color:#fff}
+.btn-sm-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
+
+.tabs{display:flex;gap:6px;padding:0 14px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all .15s}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:10px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;margin-bottom:16px}
+
+.link-icon{width:36px;height:36px;border-radius:var(--r2);background:rgba(124,111,247,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+
+.code-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.code-val{font-family:'Nunito',sans-serif;font-weight:800;font-size:20px;letter-spacing:3px;color:var(--accent2)}
+.code-copy{font-size:12px;color:var(--accent);font-weight:600;cursor:pointer}
+
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,50,.95);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all .25s;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.steps{display:flex;gap:6px;margin-bottom:20px}
+.step{flex:1;height:3px;border-radius:2px;background:var(--border2);transition:background .3s}
+.step.done{background:var(--accent)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .25s ease both}
+
+.role-screen{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:30px 20px;background:var(--bg)}
+.role-logo{text-align:center;margin-bottom:40px}
+.role-logo-icon{font-size:56px;margin-bottom:12px}
+.role-logo-name{font-family:'Nunito',sans-serif;font-weight:900;font-size:28px;background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.role-logo-sub{font-size:14px;color:var(--text2);margin-top:4px}
+.role-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s}
+.role-card:active{background:var(--card2);transform:scale(.99)}
+.role-emoji{font-size:32px;line-height:1;flex-shrink:0}
+.role-card-info{flex:1}
+.role-card-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px}
+.role-card-sub{font-size:12px;color:var(--text2);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- ROLE SELECTION -->
+<div id="screen-role" class="screen active">
+  <div class="screen-body">
+    <div class="role-screen">
+      <div class="role-logo">
+        <div class="role-logo-icon">📚</div>
+        <div class="role-logo-name">TutorApp</div>
+        <div class="role-logo-sub">Оберіть свою роль</div>
+      </div>
+      <div id="role-cards">
+        <div class="role-card" onclick="setRole('teacher')">
+          <div class="role-emoji">👨‍🏫</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я вчитель</div>
+            <div class="role-card-sub">Керування учнями та заняттями</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="role-card" onclick="setRole('student')">
+          <div class="role-emoji">🎓</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я учень</div>
+            <div class="role-card-sub">Розклад, ДЗ та баланс</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="role-card" onclick="setRole('parent')">
+          <div class="role-emoji">👨‍👩‍👦</div>
+          <div class="role-card-info">
+            <div class="role-card-title">Я батько / мати</div>
+            <div class="role-card-sub">Розклад дитини та баланс</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER REGISTRATION -->
+<div id="screen-teacher-reg" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
+    <div class="header-title">Реєстрація вчителя</div>
+  </div>
+  <div class="screen-body" style="padding:20px">
+    <div class="form-group">
+      <div class="form-label">Ваше ім'я та по батькові</div>
+      <input class="form-input" id="reg-name" placeholder="Іван Петрович" type="text">
+    </div>
+    <div class="form-group">
+      <div class="form-label">Предмет</div>
+      <input class="form-input" id="reg-subject" placeholder="Математика" type="text">
+    </div>
+    <button class="btn btn-primary" onclick="registerTeacher()">Зареєструватись</button>
+  </div>
+</div>
+
+<!-- AUTH CODE -->
+<div id="screen-auth" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
+    <div class="header-title">Вхід</div>
+  </div>
+  <div class="screen-body" style="padding:20px">
+    <div style="text-align:center;padding:20px 0 30px">
+      <div style="font-size:48px;margin-bottom:12px">🔑</div>
+      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Введіть код доступу</div>
+      <div style="font-size:14px;color:var(--text2)">Код надає ваш вчитель</div>
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="auth-code" placeholder="0000" type="number" style="text-align:center;font-size:28px;font-family:'Nunito',sans-serif;font-weight:800;letter-spacing:6px">
+    </div>
+    <button class="btn btn-primary" onclick="authWithCode()">Увійти</button>
+  </div>
+</div>
+
+<!-- TEACHER APP -->
+<div id="screen-teacher" class="screen">
+  <!-- HOME TAB -->
+  <div id="t-home" style="display:flex;flex-direction:column;flex:1;position:relative">
+    <div class="header">
+      <div class="header-title" id="t-teacher-name">Кабінет вчителя</div>
+      <div class="header-action" onclick="showAddStudent()">+ Учень</div>
+    </div>
+    <div class="screen-body">
+      <div class="stat-grid" style="margin-top:14px">
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(124,111,247,.2),rgba(240,112,144,.1))">
+          <div class="stat-icon">👥</div>
+          <div class="stat-val" id="t-stat-students">0</div>
+          <div class="stat-lbl">Учнів</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(96,192,240,.2),rgba(93,240,160,.1))">
+          <div class="stat-icon">📅</div>
+          <div class="stat-val" id="t-stat-today">0</div>
+          <div class="stat-lbl">Сьогодні занять</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(93,240,160,.2),rgba(240,208,96,.1))">
+          <div class="stat-icon">💰</div>
+          <div class="stat-val" id="t-stat-income">—</div>
+          <div class="stat-lbl">Дохід (міс.)</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg,rgba(240,112,96,.2),rgba(240,169,96,.1))">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-val" id="t-stat-debts">0</div>
+          <div class="stat-lbl">Боргів</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Сьогоднішні заняття</div>
+        <div id="t-today-lessons"><div class="empty"><div class="empty-icon">🎉</div>Сьогодні занять немає</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Учні</div>
+        <div id="t-students-preview"></div>
+        <button class="btn btn-secondary" style="margin-top:6px" onclick="showTeacherTab('students')">Всі учні →</button>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+
+  <!-- STUDENTS TAB -->
+  <div id="t-students" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header">
+      <div class="header-title">Учні</div>
+      <div class="header-action" onclick="showAddStudent()">+ Додати</div>
+    </div>
+    <div class="screen-body" style="padding:14px">
+      <div id="t-students-list"></div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+
+  <!-- SCHEDULE TAB -->
+  <div id="t-schedule" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Розклад на тиждень</div></div>
+    <div class="screen-body" style="padding:14px"><div id="t-week-schedule"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+
+  <!-- LESSONS TAB -->
+  <div id="t-lessons" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Заняття</div></div>
+    <div class="screen-body" style="padding:14px">
+      <div class="section">
+        <div class="section-title">Дії</div>
+        <div class="card clickable" onclick="showMarkLesson()" style="margin-bottom:10px">
+          <div class="list-item">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#5df0a0,#60c0f0);display:flex;align-items:center;justify-content:center;font-size:20px">✔️</div>
+            <div class="item-info"><div class="item-name">Відмітити заняття</div><div class="item-sub">Тема, матеріали, баланс</div></div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+        <div class="card clickable" onclick="showSendHw()">
+          <div class="list-item">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#7c6ff7,#f07090);display:flex;align-items:center;justify-content:center;font-size:20px">📝</div>
+            <div class="item-info"><div class="item-name">Надіслати ДЗ</div><div class="item-sub">Текст або фото</div></div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Журнал</div>
+        <div id="t-journal-list"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
+      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- STUDENT CARD (teacher view) -->
+<div id="screen-student-card" class="screen" style="flex-direction:column">
+  <div class="header">
+    <button class="header-back" onclick="goBack()">‹</button>
+    <div class="header-title" id="sc-name">Учень</div>
+    <div class="header-action" onclick="showDeleteStudent()">Видалити</div>
+  </div>
+  <div class="screen-body" style="padding:14px">
+    <div class="balance-hero" id="sc-balance-hero">
+      <div class="balance-label">Баланс</div>
+      <div class="balance-amount" id="sc-balance">0₴</div>
+      <div class="balance-sub" id="sc-price">Ціна: 0₴/заняття</div>
+      <div class="balance-actions">
+        <button class="balance-btn" onclick="showAddBalance()">+ Поповнити</button>
+        <button class="balance-btn" onclick="showSubBalance()">− Списати</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Розклад</div>
+      <div id="sc-sessions"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="showEditSchedule()">✏️ Змінити розклад</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Коди доступу</div>
+      <div id="sc-codes"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="resetCodes()">🔄 Оновити коди</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Корисні посилання</div>
+      <div id="sc-links"></div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="showAddLink()">+ Додати посилання</button>
+    </div>
+    <div class="section">
+      <div class="section-title">Налаштування</div>
+      <div class="card clickable" onclick="showEditPrice()">
+        <div class="list-item">
+          <div class="item-info"><div class="item-name">Змінити ціну заняття</div></div>
+          <div class="chevron">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT APP -->
+<div id="screen-student" class="screen">
+  <div id="s-home" style="display:flex;flex-direction:column;flex:1;position:relative">
+    <div class="header">
+      <div class="header-title" id="s-student-name">Мій кабінет</div>
+    </div>
+    <div class="screen-body">
+      <div class="balance-hero" id="s-balance-hero" style="background:var(--grad2)">
+        <div class="balance-label">Баланс</div>
+        <div class="balance-amount" id="s-balance">—₴</div>
+        <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
+        <div class="balance-actions" id="s-balance-actions"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Найближче заняття</div>
+        <div id="s-next-lesson"></div>
+      </div>
+      <div class="section" id="s-hw-preview-section">
+        <div class="section-title">Нові домашні завдання</div>
+        <div id="s-hw-preview"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Корисні посилання</div>
+        <div id="s-links-preview"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-schedule" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Мій розклад</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-schedule-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-hw" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Домашні завдання</div></div>
+    <div class="tabs" style="margin-top:10px">
+      <div class="tab active" onclick="filterHw('all',this)">Всі</div>
+      <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
+      <div class="tab" onclick="filterHw('done',this)">Виконані</div>
+    </div>
+    <div class="screen-body" style="padding:0 14px 14px"><div id="s-hw-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn active s-nav-hw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+
+  <div id="s-journal" style="display:none;flex-direction:column;flex:1;position:relative">
+    <div class="header"><div class="header-title">Журнал занять</div></div>
+    <div class="screen-body" style="padding:14px"><div id="s-journal-list"></div></div>
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
+      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
+      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
+      <button class="nav-btn active s-nav-journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-student">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новий учень</div>
+    <div class="form-group"><div class="form-label">Ім'я учня</div><input class="form-input" id="new-student-name" placeholder="Іван Петренко"></div>
+    <div class="form-group"><div class="form-label">Ціна заняття (₴)</div><input class="form-input" id="new-student-price" placeholder="500" type="number"></div>
+    <div class="form-group">
+      <div class="form-label">Дні занять</div>
+      <div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+      <div id="day-times"></div>
+    </div>
+    <button class="btn btn-primary" onclick="addStudent()">Додати учня</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-student')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-mark-lesson">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Відмітити заняття</div>
+    <div class="form-group"><div class="form-label">Учень</div><select class="form-input" id="mark-student"></select></div>
+    <div class="form-group"><div class="form-label">Тема заняття</div><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
+    <div class="form-group"><div class="form-label">Дія</div>
+      <select class="form-input" id="mark-action">
+        <option value="done">✅ Проведено (списати баланс)</option>
+        <option value="cancel">❌ Скасовано (без списання)</option>
+        <option value="reschedule">🔄 Перенесено</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Матеріали (необов'язково)</div>
+      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;cursor:pointer">
+      <div id="lesson-file-label" style="color:var(--green);font-size:13px;margin-top:6px;min-height:16px"></div>
+      <div id="lesson-files-preview" style="margin-top:8px;font-size:13px;color:var(--green)"></div>
+    </div>
+    <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-mark-lesson')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-send-hw">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Домашнє завдання</div>
+    <div class="form-group"><div class="form-label">Учень</div><select class="form-input" id="hw-student"></select></div>
+    <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
+    <div class="form-group">
+      <div class="form-label">Фото або документ (необов'язково)</div>
+
+    </div>
+    <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-balance-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Поповнити баланс</div>
+    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="balance-add-amount" placeholder="500" type="number"></div>
+    <button class="btn btn-primary" onclick="addBalance()">Поповнити</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-add')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-balance-sub">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Списати з балансу</div>
+    <div class="form-group"><div class="form-label">Сума (₴)</div><input class="form-input" id="balance-sub-amount" placeholder="500" type="number"></div>
+    <button class="btn btn-danger" onclick="subBalance()">Списати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-sub')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-price">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Змінити ціну</div>
+    <div class="form-group"><div class="form-label">Нова ціна (₴)</div><input class="form-input" id="edit-price-val" type="number"></div>
+    <button class="btn btn-primary" onclick="editPrice()">Зберегти</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-price')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-link">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Корисне посилання</div>
+    <div class="form-group"><div class="form-label">Назва</div><input class="form-input" id="link-label" placeholder="Посилання на конференцію"></div>
+    <div class="form-group"><div class="form-label">URL</div><input class="form-input" id="link-url" placeholder="https://meet.google.com/..." type="url"></div>
+    <button class="btn btn-primary" onclick="addLink()">Додати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-link')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-schedule">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Змінити розклад</div>
+    <div class="form-group">
+      <div class="form-label">Дні занять</div>
+      <div id="edit-days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Час</div><input class="form-input" id="edit-schedule-time" type="time"></div>
+    <button class="btn btn-primary" onclick="saveSchedule()">Зберегти</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-schedule')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Поповнити баланс</div>
+    <div class="form-group">
+      <div class="form-label">Сума (₴)</div>
+      <input class="form-input" id="pay-amount" placeholder="500" type="number">
+    </div>
+    <div class="form-group">
+      <div class="form-label">Фото або документ чеку</div>
+      <input type="file" id="pay-file-input" accept="image/*,application/pdf"
+        style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
+      <div id="pay-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
+    </div>
+    <button class="btn btn-primary" onclick="submitPay()">Надіслати запит</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-journal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="jd-title">Заняття</div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:16px" id="jd-date"></div>
+    <div id="jd-materials"></div>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-journal-detail')">Закрити</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg){
+  tg.expand();
+}
+
+const API = '';
+const DAYS = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
+const DAY_SHORT = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+const MONTHS = ['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+const COLORS = ['linear-gradient(135deg,#7c6ff7,#f07090)','linear-gradient(135deg,#60c0f0,#5df0a0)','linear-gradient(135deg,#f0d060,#f09060)','linear-gradient(135deg,#f07060,#f09060)','linear-gradient(135deg,#5df0a0,#60c0f0)'];
+
+let appData = null;
+let currentRole = null;
+let currentStudent = null;
+let screenStack = [];
+let hwFilter = 'all';
+
+const params = new URLSearchParams(location.search);
+const urlRole = params.get('role');
+const urlTid = params.get('tid');
+const urlName = params.get('name');
+
+// ── UTILS ──
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function avatarColor(name){let h=0;for(let c of name)h+=c.charCodeAt(0);return COLORS[h%COLORS.length]}
+function today(){const d=new Date().getDay();return DAYS[d===0?6:d-1]}
+function fmtBal(b){return(b>=0?'+':'')+b+'₴'}
+function monthShort(m){return MONTHS[parseInt(m)]||m}
+
+function toast(msg,ms=2000){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+async function api(path,method='GET',body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  return r.json();
+}
+
+// ── SCREENS ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  screenStack=[];
+}
+
+function pushScreen(id){
+  const current=document.querySelector('.screen.active');
+  if(current)screenStack.push(current.id);
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function goBack(){
+  const prev=screenStack.pop();
+  if(prev){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(prev)?.classList.add('active');
+  } else {
+    showScreen('screen-teacher');
+    showTeacherTab('home');
+  }
+}
+
+function openModal(id){document.getElementById(id)?.classList.add('open')}
+function closeModal(id){document.getElementById(id)?.classList.remove('open')}
+
+// ── ROLE SELECTION ──
+function setRole(role){
+  currentRole=role;
+  if(role==='teacher'){
+    if(urlTid){loadTeacher(urlTid);}
+    else{showScreen('screen-teacher-reg');}
+  } else {
+    showScreen('screen-auth');
+  }
+}
+
+// ── AUTO LOGIN ──
+window.addEventListener('load',()=>{
+  if(urlRole==='admin'&&urlTid){loadTeacher(urlTid);return}
+  if((urlRole==='student'||urlRole==='super'||urlRole==='parent')&&urlTid&&urlName){
+    loadStudent(urlTid,urlName,urlRole);return;
+  }
+});
+
+// ── TEACHER ──
+async function registerTeacher(){
+  const name=document.getElementById('reg-name').value.trim();
+  const subject=document.getElementById('reg-subject').value.trim();
+  if(!name||!subject){toast('Заповніть всі поля');return}
+  const tid=tg?.initDataUnsafe?.user?.id||Math.floor(Math.random()*1e9);
+  const res=await api('/api/register-teacher','POST',{tid,name,subject});
+  if(res.ok){loadTeacher(tid);}
+  else toast('Помилка реєстрації');
+}
+
+async function loadTeacher(tid){
+  try{
+    const data=await api(`/api/teacher/${tid}`);
+    appData=data;appData.tid=String(tid);
+    renderTeacherDashboard();
+    showScreen('screen-teacher');
+    showTeacherTab('home');
+  } catch(e){console.error(e);toast('Помилка завантаження')}
+}
+
+// ── ГОЛОВНА ФУНКЦІЯ РЕНДЕРУ ВЧИТЕЛЯ ──
+function renderTeacherDashboard(){
+  const d=appData;
+  const students=d.students||[];
+  const t=today();
+  document.getElementById('t-teacher-name').textContent=d.name||'Кабінет вчителя';
+  document.getElementById('t-stat-students').textContent=students.length;
+  const todayLessons=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===t).map(x=>({...x,name:s.name}))).sort((a,b)=>a.time.localeCompare(b.time));
+  document.getElementById('t-stat-today').textContent=todayLessons.length;
+  document.getElementById('t-stat-debts').textContent=students.filter(s=>s.balance<0).length;
+
+  const tlEl=document.getElementById('t-today-lessons');
+  tlEl.innerHTML=todayLessons.length?todayLessons.map(l=>`
+    <div class="lesson-row">
+      <div class="lesson-time">${l.time}</div>
+      <div class="lesson-dot"></div>
+      <div class="item-info"><div class="item-name">${l.name}</div></div>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Сьогодні занять немає</div>';
+
+  document.getElementById('t-students-preview').innerHTML=students.slice(0,3).map(s=>studentCardHTML(s)).join('');
+  document.getElementById('t-students-list').innerHTML=students.length?students.map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає.<br>Додайте першого!</div>';
+
+  renderWeekSchedule(students);
+
+  // Будуємо журнал з індексами для видалення
+  const allJournal=students.flatMap(s=>(s.journal||[]).map((e,i)=>({...e,studentName:s.name,sIdx:i}))).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('t-journal-list').innerHTML=allJournal.slice(0,20).map(e=>{
+    const parts=e.date.split('.');
+    return`<div class="card fade-up">
+      <div class="list-item">
+        <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
+        <div class="item-info"><div class="item-name">${e.topic}</div><div class="item-sub">${e.studentName}${e.materials?.length?' · 📎'+e.materials.length:''}</div></div>
+        <span onclick="deleteJournalEntry('${e.studentName}',${e.sIdx})" style="color:var(--red);font-size:20px;cursor:pointer;padding:4px 8px">🗑</span>
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty">Журнал порожній</div>';
+
+  ['mark-student','hw-student'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(sel)sel.innerHTML=students.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  });
+}
+
+function studentCardHTML(s){
+  const bal=s.balance;
+  const balStr=fmtBal(bal);
+  const balCls=bal>=0?'badge-green':'badge-red';
+  const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(', ');
+  return`<div class="card clickable fade-up" onclick="openStudentCard('${s.name}')">
+    <div class="list-item">
+      <div class="avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>
+      <div class="item-info">
+        <div class="item-name">${s.name}</div>
+        <div class="item-sub">${sched||'Розклад не встановлено'}</div>
+      </div>
+      <div class="item-right"><span class="badge ${balCls}">${balStr}</span></div>
+    </div>
+  </div>`;
+}
+
+function renderWeekSchedule(students){
+  const t=today();
+  document.getElementById('t-week-schedule').innerHTML=DAYS.map(day=>{
+    const lessons=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,name:s.name}))).sort((a,b)=>a.time.localeCompare(b.time));
+    return`<div class="day-group">
+      <div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>
+      ${lessons.length?lessons.map(l=>`<div class="lesson-row"><div class="lesson-time">${l.time}</div><div class="lesson-dot"></div><div class="item-info"><div class="item-name">${l.name}</div></div></div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:6px 0">Немає занять</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ── STUDENT CARD (teacher view) — окрема функція ──
+function openStudentCard(name){
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(!s)return;
+  currentStudent=s;
+  document.getElementById('sc-name').textContent=s.name;
+  const bal=s.balance;
+  document.getElementById('sc-balance').textContent=fmtBal(bal);
+  document.getElementById('sc-price').textContent=`Ціна: ${s.price}₴/заняття`;
+  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#f07060,#f09060)':'linear-gradient(135deg,#7c6ff7,#f07090)';
+
+  const sessEl=document.getElementById('sc-sessions');
+  sessEl.innerHTML=(s.sessions||[]).length?(s.sessions||[]).map(x=>`<div class="card"><div class="list-item"><div class="lesson-time">${x.time}</div><div class="item-info"><div class="item-name">${x.day}</div></div></div></div>`).join(''):'<div style="color:var(--text3);font-size:14px">Розклад не встановлено</div>';
+
+  document.getElementById('sc-codes').innerHTML=`
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">📱 Код учня</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">👨‍👩‍👦 Код батьків</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">⭐ Код супер-учня</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
+
+  renderStudentCardLinks();
+  pushScreen('screen-student-card');
+}
+
+function renderStudentCardLinks(){
+  const s=currentStudent;
+  const links=s.links||{};
+  document.getElementById('sc-links').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
+    <div class="card">
+      <div class="list-item">
+        <div class="link-icon">🔗</div>
+        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div>
+        <span style="color:var(--red);cursor:pointer;font-size:18px" onclick="deleteLink('${k}')">×</span>
+      </div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:14px">Посилань немає</div>';
+}
+
+function copyCode(code){
+  navigator.clipboard?.writeText(code);
+  toast('Код скопійовано: '+code);
+}
+
+// ── ADD STUDENT ──
+function showAddStudent(){
+  document.getElementById('new-student-name').value='';
+  document.getElementById('new-student-price').value='';
+  document.getElementById('days-picker').innerHTML=DAYS.map(d=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[DAYS.indexOf(d)]}</button>`).join('');
+  document.getElementById('day-times').innerHTML='';
+  openModal('modal-add-student');
+}
+
+function toggleDay(btn){
+  btn.classList.toggle('btn-sm-primary');
+  btn.classList.toggle('btn-sm-ghost');
+  const day=btn.dataset.day;
+  const timesEl=document.getElementById('day-times');
+  const existing=document.getElementById('time-row-'+day);
+  if(btn.classList.contains('btn-sm-primary')){
+    const row=document.createElement('div');
+    row.id='time-row-'+day;
+    row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:90px">${DAY_SHORT[DAYS.indexOf(day)]}</div><input class="form-input" id="time-input-${day}" type="text" placeholder="16:00" maxlength="5" style="flex:1;padding:10px 12px" oninput="formatTimeInput(this)">`;
+    timesEl.appendChild(row);
+    document.getElementById('time-input-'+day).focus();
+  } else {
+    if(existing)existing.remove();
+  }
+}
+
+function formatTimeInput(input){
+  let v=input.value.replace(/\D/g,'');
+  if(v.length>2)v=v.slice(0,2)+':'+v.slice(2,4);
+  input.value=v;
+}
+
+async function addStudent(){
+  const name=document.getElementById('new-student-name').value.trim();
+  const price=parseInt(document.getElementById('new-student-price').value)||0;
+  if(!name){toast('Введіть ім\'я');return}
+
+  const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  if(!selectedDays.length){toast('Оберіть хоча б один день');return}
+
+  const sessions=[];
+  for(const day of selectedDays){
+    const timeVal=(document.getElementById('time-input-'+day)?.value||'').trim();
+    if(!timeVal||!/^\d{1,2}:\d{2}$/.test(timeVal)){toast(`Введіть час для ${day}`);return}
+    sessions.push({day,time:timeVal});
+  }
+
+  try{
+    const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
+    if(res.ok||res.student){
+      if(!appData.students)appData.students=[];
+      appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
+      renderTeacherDashboard();
+      closeModal('modal-add-student');
+      toast('\u2705 '+name+' доданий!');
+    } else toast('Помилка: '+(res.error||'невідома'));
+  } catch(e){toast('Помилка з\'єднання')}
+}
+
+// ── MARK LESSON ──
+async function deleteJournalEntry(studentName, idx){
+  if(!confirm(`Видалити запис із журналу?`)) return;
+  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
+  if(res.ok){
+    const s=(appData.students||[]).find(x=>x.name===studentName);
+    if(s&&s.journal)s.journal.splice(idx,1);
+    renderTeacherDashboard();
+    toast('🗑 Запис видалено');
+  } else toast('Помилка');
+}
+
+function openLessonFileUpload(){
+  closeModal('modal-mark-lesson');
+  openUploadScreen('materials','Матеріали заняття','Оберіть фото або документи для учня',function(files){
+    window._lessonFiles=files;
+    document.getElementById('lesson-file-label').textContent='✅ '+files.length+' файл(ів) вибрано';
+    openModal('modal-mark-lesson');
+  });
+}
+
+function openHwFileUpload(){
+  closeModal('modal-send-hw');
+  openUploadScreen('hw','Файл до ДЗ','Оберіть фото або документ',function(files){
+    window._hwFile=files[0];
+    document.getElementById('hw-file-label').textContent='✅ '+files[0].name;
+    openModal('modal-send-hw');
+  });
+}
+
+function openPayFileUpload(){
+  closeModal('modal-pay');
+  openUploadScreen('pay','Фото чеку','Оберіть фото або документ підтвердження оплати',function(files){
+    window._payFile=files[0];
+    document.getElementById('pay-file-label').textContent='✅ '+files[0].name;
+    openModal('modal-pay');
+  });
+}
+
+function showMarkLesson(){
+  document.getElementById('mark-topic').value='';
+  document.getElementById('mark-action').value='done';
+  document.getElementById('lesson-file-label').textContent='📎 Додати фото або документ';
+  document.getElementById('lesson-files-preview').innerHTML='';
+  document.getElementById('lesson-file-input').value='';
+  window._lessonFiles=[];
+  openModal('modal-mark-lesson');
+}
+
+function handleLessonFiles(input){
+  const files=Array.from(input.files);
+  window._lessonFiles=files;
+  document.getElementById('lesson-file-label').textContent=`✅ ${files.length} файл(ів) вибрано`;
+  document.getElementById('lesson-files-preview').innerHTML=files.map(f=>`<div>📎 ${f.name}</div>`).join('');
+}
+
+async function markLesson(){
+  const name=document.getElementById('mark-student').value;
+  const topic=document.getElementById('mark-topic').value.trim();
+  const action=document.getElementById('mark-action').value;
+  if(!topic){toast('Введіть тему');return}
+
+  // Спочатку відмічаємо заняття
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
+  if(!res.ok){toast('Помилка');return}
+
+  // Якщо є файли — надсилаємо через API
+  const lessonInput=document.getElementById('lesson-file-input');
+  const files=lessonInput?Array.from(lessonInput.files||[]):[];
+  if(files.length>0){
+    const formData=new FormData();
+    formData.append('tid',String(appData.tid));
+    formData.append('name',name);
+    formData.append('topic',topic);
+    for(const file of files) formData.append('files',file,file.name);
+    try{
+      const matRes=await fetch('/api/send-materials',{method:'POST',body:formData});
+      const matData=await matRes.json();
+      if(!matData.ok) console.error('send-materials error:',matData.error);
+    }catch(e){console.error('send-materials fetch error:',e);}
+  }
+
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
+  renderTeacherDashboard();
+  closeModal('modal-mark-lesson');
+  document.getElementById('mark-topic').value='';
+  window._lessonFiles=[];
+  toast('✅ Заняття відмічено!');
+}
+
+// ── SEND HW ──
+function showSendHw(){
+  document.getElementById('hw-text').value='';
+  document.getElementById('hw-file-label').textContent='';
+  window._hwFile=null;
+  openModal('modal-send-hw');
+}
+
+function handleHwFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  window._hwFile=file;
+  document.getElementById('hw-file-label').textContent='✅ '+file.name;
+}
+
+async function sendHw(){
+  const name=document.getElementById('hw-student').value;
+  const text=document.getElementById('hw-text').value.trim();
+  if(!text&&!window._hwFile){toast('Введіть текст або додайте файл');return}
+
+  const hwInput=document.getElementById('hw-file-input');
+  const hwFile=hwInput&&hwInput.files[0];
+  if(hwFile){
+    const formData=new FormData();
+    formData.append('tid',appData.tid);
+    formData.append('name',name);
+    formData.append('text',text||'Дивись файл');
+    formData.append('file',hwFile,hwFile.name);
+    try{
+      const res=await fetch('/api/send-hw-file',{method:'POST',body:formData});
+      const data=await res.json();
+      if(data.ok){
+        closeModal('modal-send-hw');
+        toast('✅ ДЗ надіслано '+name+'!');
+      } else toast('Помилка: '+(data.error||'невідома'));
+    }catch(e){toast('Помилка зʼєднання');}
+  } else {
+    const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
+    if(res.ok){
+      closeModal('modal-send-hw');
+      document.getElementById('hw-text').value='';
+      toast('✅ ДЗ надіслано '+name+'!');
+    } else toast('Помилка');
+  }
+}
+
+// ── BALANCE ──
+function showAddBalance(){document.getElementById('balance-add-amount').value='';openModal('modal-balance-add')}
+function showSubBalance(){document.getElementById('balance-sub-amount').value='';openModal('modal-balance-sub')}
+
+async function addBalance(){
+  const amount=parseInt(document.getElementById('balance-add-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount});
+  if(res.ok){
+    currentStudent.balance+=amount;
+    openStudentCard(currentStudent.name);
+    renderTeacherDashboard();
+    closeModal('modal-balance-add');
+    toast('✅ Поповнено на +'+amount+'₴');
+  } else toast('Помилка');
+}
+
+async function subBalance(){
+  const amount=parseInt(document.getElementById('balance-sub-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount:-amount});
+  if(res.ok){
+    currentStudent.balance-=amount;
+    openStudentCard(currentStudent.name);
+    renderTeacherDashboard();
+    closeModal('modal-balance-sub');
+    toast('✅ Списано -'+amount+'₴');
+  } else toast('Помилка');
+}
+
+// ── EDIT PRICE ──
+function showEditPrice(){document.getElementById('edit-price-val').value=currentStudent.price;openModal('modal-edit-price')}
+async function editPrice(){
+  const price=parseInt(document.getElementById('edit-price-val').value)||0;
+  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,price});
+  if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacherDashboard();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
+  else toast('Помилка');
+}
+
+// ── LINKS ──
+function showAddLink(){openModal('modal-add-link')}
+async function addLink(){
+  const label=document.getElementById('link-label').value.trim();
+  const url=document.getElementById('link-url').value.trim();
+  if(!label||!url){toast('Заповніть всі поля');return}
+  const res=await api('/api/add-student-link','POST',{tid:appData.tid,name:currentStudent.name,label,url});
+  if(res.ok){
+    if(!currentStudent.links)currentStudent.links={};
+    currentStudent.links[label]=url;
+    renderStudentCardLinks();
+    closeModal('modal-add-link');
+    document.getElementById('link-label').value='';
+    document.getElementById('link-url').value='';
+    toast('✅ Посилання додано');
+  } else toast('Помилка');
+}
+
+async function deleteLink(label){
+  const res=await api('/api/delete-student-link','POST',{tid:appData.tid,name:currentStudent.name,label});
+  if(res.ok){delete currentStudent.links[label];renderStudentCardLinks();toast('🗑 Видалено')}
+}
+
+// ── SCHEDULE EDIT ──
+function showEditSchedule(){
+  const dp=document.getElementById('edit-days-picker');
+  const selectedDays=(currentStudent.sessions||[]).map(s=>s.day);
+  dp.innerHTML=DAYS.map(d=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[DAYS.indexOf(d)]}</button>`).join('');
+  const time=(currentStudent.sessions||[])[0]?.time||'16:00';
+  document.getElementById('edit-schedule-time').value=time;
+  openModal('modal-edit-schedule');
+}
+
+async function saveSchedule(){
+  const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  const time=document.getElementById('edit-schedule-time').value;
+  const sessions=days.map(day=>({day,time}));
+  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,sessions});
+  if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacherDashboard();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
+  else toast('Помилка');
+}
+
+// ── RESET CODES ──
+async function resetCodes(){
+  const res=await api('/api/reset-codes','POST',{tid:appData.tid,name:currentStudent.name});
+  if(res.ok){Object.assign(currentStudent,{u_code:res.u_code,p_code:res.p_code,su_code:res.su_code,u_id:null,p_id:null,su_id:null});openStudentCard(currentStudent.name);toast('🔄 Коди оновлено')}
+}
+
+// ── DELETE STUDENT ──
+function showDeleteStudent(){
+  if(confirm(`Видалити ${currentStudent.name}?`))doDeleteStudent();
+}
+
+async function doDeleteStudent(){
+  const res=await api('/api/delete-student','POST',{tid:appData.tid,name:currentStudent.name});
+  if(res.ok){
+    appData.students=(appData.students||[]).filter(s=>s.name!==currentStudent.name);
+    renderTeacherDashboard();goBack();toast('🗑 '+currentStudent.name+' видалений');
+  }
+}
+
+// ── TEACHER TABS ──
+function showTeacherTab(tab){
+  const tabs=['home','students','schedule','lessons'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('t-'+t);
+    if(el){el.style.display=t===tab?'flex':'none';}
+  });
+}
+
+// ── STUDENT VIEW ──
+async function loadStudent(tid,name,role){
+  try{
+    const data=await api(`/api/student/${tid}/${encodeURIComponent(name)}`);
+    appData={...data,tid,name,role};
+    renderStudent();
+    showScreen('screen-student');
+    showStudentTab('home');
+  } catch(e){console.error(e)}
+}
+
+async function authWithCode(){
+  const code=document.getElementById('auth-code').value.trim();
+  if(!code){toast('Введіть код');return}
+  try{
+    const res=await api('/api/auth','POST',{code,uid:tg?.initDataUnsafe?.user?.id||0});
+    if(res.ok){
+      appData={...res.student,tid:res.tid,name:res.name,role:res.role};
+      renderStudent();showScreen('screen-student');showStudentTab('home');
+    } else toast('❌ Код не знайдено');
+  } catch(e){toast('Помилка з\'єднання')}
+}
+
+function renderStudent(){
+  const d=appData;
+  const role=d.role||'student';
+  document.getElementById('s-student-name').textContent=d.name||'Мій кабінет';
+
+  const heroEl=document.getElementById('s-balance-hero');
+  const canSeeBalance=(role==='parent'||role==='super');
+  if(canSeeBalance){
+    heroEl.style.display='';
+    const bal=d.balance??0;
+    document.getElementById('s-balance').textContent=fmtBal(bal);
+    document.getElementById('s-price-sub').textContent=`Ціна заняття: ${d.price||'—'}₴`;
+    if(bal<0)heroEl.style.background='linear-gradient(135deg,#f07060,#f09060)';
+    document.getElementById('s-balance-actions').innerHTML=`
+      ${role==='parent'||role==='super'?'<button class="balance-btn" onclick="showPayModal()">💳 Поповнити</button>':''}
+      <button class="balance-btn" onclick="showStudentTab('hw')">📚 ДЗ</button>
+      <button class="balance-btn" onclick="showStudentTab('journal')">📒 Журнал</button>`;
+  } else {
+    heroEl.style.display='none';
+  }
+
+  const t=today();
+  const tIdx=DAYS.indexOf(t);
+  let next=null;
+  for(let i=0;i<7;i++){
+    const day=DAYS[(tIdx+i)%7];
+    const found=(d.sessions||[]).find(s=>s.day===day);
+    if(found){next={...found,isToday:i===0};break}
+  }
+  document.getElementById('s-next-lesson').innerHTML=next?`
+    <div class="card" style="background:linear-gradient(135deg,rgba(124,111,247,.2),rgba(96,192,240,.1))">
+      <div class="list-item">
+        <div style="font-size:36px">📅</div>
+        <div class="item-info">
+          <div class="item-name" style="font-size:22px;font-family:'Nunito',sans-serif;font-weight:800">${next.time}</div>
+          <div class="item-sub">${next.isToday?'Сьогодні':next.day}</div>
+        </div>
+      </div>
+    </div>`:'<div class="empty">Розклад не встановлено</div>';
+
+  const hwPreviewEl=document.getElementById('s-hw-preview-section');
+  if(role==='parent'){
+    if(hwPreviewEl)hwPreviewEl.style.display='none';
+  } else {
+    if(hwPreviewEl)hwPreviewEl.style.display='';
+    const pending=(d.homework||[]).filter(h=>h.status!=='done').slice().reverse().slice(0,3);
+    document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
+  }
+
+  const links=d.links||{};
+  document.getElementById('s-links-preview').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
+    <div class="card clickable" onclick="window.open('${v}','_blank')">
+      <div class="list-item">
+        <div class="link-icon">🔗</div>
+        <div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div>
+        <div style="color:var(--accent);font-size:18px">↗</div>
+      </div>
+    </div>`).join(''):'<div class="empty">Посилань немає</div>';
+
+  document.querySelectorAll('.s-nav-hw').forEach(el=>el.style.display=role==='parent'?'none':'');
+  document.querySelectorAll('.s-nav-journal').forEach(el=>el.style.display=role==='parent'?'none':'');
+
+  renderStudentSchedule();
+  if(role!=='parent')renderHwList();
+  renderStudentJournal();
+}
+
+function renderStudentSchedule(){
+  const d=appData;const t=today();
+  document.getElementById('s-schedule-list').innerHTML=DAYS.map(day=>{
+    const found=(d.sessions||[]).filter(s=>s.day===day);
+    if(!found.length)return'';
+    return`<div class="day-group">
+      <div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>
+      ${found.map(s=>`<div class="lesson-row"><div class="lesson-time">${s.time}</div><div class="lesson-dot" style="background:var(--green)"></div><div class="item-info"><div class="item-name">Заняття</div></div></div>`).join('')}
+    </div>`;
+  }).join('')||'<div class="empty">Розклад не встановлено</div>';
+}
+
+function hwItemHTML(h){
+  const done=h.status==='done';
+  return`<div class="card clickable fade-up" onclick="showHwDetail('${h.id}')">
+    <div class="list-item">
+      <div class="hw-status ${done?'hw-done':'hw-pending'}">${done?'✓':'!'}</div>
+      <div class="item-info">
+        <div class="item-name">${h.text.slice(0,50)}${h.text.length>50?'…':''}</div>
+        <div class="item-sub">${h.date}</div>
+      </div>
+      <div class="chevron">›</div>
+    </div>
+  </div>`;
+}
+
+function filterHw(f,el){
+  hwFilter=f;
+  document.querySelectorAll('#s-hw .tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderHwList();
+}
+
+function renderHwList(){
+  const hw=(appData.homework||[]).slice().reverse();
+  const filtered=hwFilter==='all'?hw:hwFilter==='done'?hw.filter(h=>h.status==='done'):hw.filter(h=>h.status!=='done');
+  document.getElementById('s-hw-list').innerHTML=filtered.length?filtered.map(h=>hwItemHTML(h)).join(''):'<div class="empty">Немає завдань</div>';
+}
+
+function renderStudentJournal(){
+  const journal=(appData.journal||[]).slice().reverse();
+  document.getElementById('s-journal-list').innerHTML=journal.length?journal.map((e,i)=>{
+    const parts=e.date.split('.');
+    const matCount=(e.materials||[]).length;
+    const idx=journal.length-1-i;
+    return`<div class="card clickable fade-up" onclick="showJournalDetail(${idx})">
+      <div class="list-item">
+        <div class="journal-date-box"><div class="journal-day">${parts[0]}</div><div class="journal-mon">${monthShort(parts[1])}</div></div>
+        <div class="item-info">
+          <div class="item-name">${e.topic}</div>
+          <div class="item-sub">${matCount?'📎 '+matCount+' файл(ів)':'Без матеріалів'}</div>
+        </div>
+        ${matCount?'<div style="color:var(--accent);font-size:18px">›</div>':''}
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty"><div class="empty-icon">📒</div>Журнал порожній</div>';
+}
+
+async function showJournalDetail(idx){
+  const journal=(appData.journal||[]);
+  const entry=journal[idx];
+  if(!entry)return;
+  document.getElementById('jd-title').textContent=entry.topic;
+  document.getElementById('jd-date').textContent='📅 '+entry.date;
+  const materials=entry.materials||[];
+  const matEl=document.getElementById('jd-materials');
+
+  if(materials.length===0){
+    matEl.innerHTML='<div class="empty" style="padding:20px 0">Матеріалів немає</div>';
+  } else {
+    matEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:10px 0">⏳ Завантаження...</div>';
+    openModal('modal-journal-detail');
+
+    // Отримуємо URL кожного файлу
+    const items = await Promise.all(materials.map(async(m)=>{
+      try{
+        const res=await fetch('/api/get-file-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_id:m.file_id})});
+        const data=await res.json();
+        return {...m, url: data.ok ? data.url : null};
+      }catch(e){return {...m, url:null};}
+    }));
+
+    matEl.innerHTML=items.map(m=>{
+      if(m.type==='photo'){
+        return m.url
+          ? `<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block">${m.caption?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${m.caption}</div>`:''}</div>`
+          : `<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото (недоступне)</div></div></div></div>`;
+      } else {
+        return m.url
+          ? `<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||'Документ'}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`
+          : `<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||'Документ'}</div><div class="item-sub">Недоступно</div></div></div></div>`;
+      }
+    }).join('');
+    return;
+  }
+  openModal('modal-journal-detail');
+}
+
+function showHwDetail(hwId){
+  const hw=(appData.homework||[]).find(h=>h.id===hwId);
+  if(!hw)return;
+  const done=hw.status==='done';
+  if(confirm(`ДЗ від ${hw.date}\n\n${hw.text}\n\nСтатус: ${done?'✅ Виконано':'🔴 Не виконано'}${!done?'\n\nВідмітити як виконане?':''}`)){
+    if(!done)markHwDone(hwId);
+  }
+}
+
+async function markHwDone(hwId){
+  try{await api('/api/mark-hw','POST',{tid:appData.tid,name:appData.name,hw_id:hwId});}catch(e){}
+  const hw=(appData.homework||[]).find(h=>h.id===hwId);
+  if(hw)hw.status='done';
+  renderStudent();
+  toast('✅ ДЗ виконано!');
+}
+
+function showStudentTab(tab){
+  const tabs=['home','schedule','hw','journal'];
+  tabs.forEach(t=>{
+    const el=document.getElementById('s-'+t);
+    if(el){el.style.display=t===tab?'flex':'none';}
+  });
+}
+
+function showPayModal(){
+  document.getElementById('pay-amount').value='';
+  document.getElementById('pay-file-label').textContent='';
+  openModal('modal-pay');
+}
+
+async function submitPay(){
+  const amount=parseInt(document.getElementById('pay-amount').value)||0;
+  if(!amount){toast('Введіть суму');return}
+  const fileInput=document.getElementById('pay-file-input');
+  const file=fileInput.files[0];
+  if(!file){toast('Прикріпіть чек');return}
+
+  const formData=new FormData();
+  formData.append('amount',String(amount));
+  formData.append('tid',String(appData.tid));
+  formData.append('name',appData.name);
+  formData.append('file',file,file.name);
+
+  try{
+    const res=await fetch('/api/pay-request',{method:'POST',body:formData});
+    const data=await res.json();
+    if(data.ok){
+      closeModal('modal-pay');
+      toast('✅ Запит надіслано! Очікуйте підтвердження.',3000);
+    } else {
+      toast('Помилка: '+(data.error||'невідома'));
     }
-
-cors = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
-
-async def options_handler(request):
-    return web.Response(headers=cors)
-
-async def handle_index(request):
-    with open(os.path.join(STATIC_DIR, "index.html"), "r", encoding="utf-8") as f:
-        return web.Response(text=f.read(), content_type="text/html")
-
-async def register_teacher(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    if tid not in db["teachers"]:
-        db["teachers"][tid] = {"name": body["name"], "subject": body["subject"], "students": {}, "links": {}}
-        save_db(db)
-    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-
-async def get_teacher(request):
-    tid = request.match_info["tid"]
-    db = load_db()
-    t = db["teachers"].get(tid)
-    if not t:
-        return web.Response(text=json.dumps({"error": "not found"}), status=404, content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps(teacher_to_response(tid, t), ensure_ascii=False), content_type="application/json", headers=cors)
-
-async def get_student(request):
-    tid = request.match_info["tid"]
-    name = request.match_info["name"]
-    db = load_db()
-    t = db["teachers"].get(tid, {})
-    s = t.get("students", {}).get(name)
-    if not s:
-        return web.Response(text=json.dumps({"error": "not found"}), status=404, content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps({**s, "name": name}, ensure_ascii=False), content_type="application/json", headers=cors)
-
-async def auth_handler(request):
-    body = await request.json()
-    code = str(body.get("code","")).strip()
-    uid = body.get("uid", 0)
-    db = load_db()
-    for tid, tdata in db["teachers"].items():
-        for sname, sdata in tdata.get("students", {}).items():
-            for role_code, role_key, role in [("su_code","su_id","super"),("u_code","u_id","student"),("p_code","p_id","parent")]:
-                if sdata.get(role_code) == code:
-                    sdata[role_key] = uid
-                    save_db(db)
-                    return web.Response(text=json.dumps({"ok":True,"tid":tid,"name":sname,"role":role,"student":{**sdata,"name":sname}}, ensure_ascii=False), content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps({"ok":False}), content_type="application/json", headers=cors)
-
-async def add_student(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    if tid not in db["teachers"]:
-        return web.Response(text=json.dumps({"error":"teacher not found"}), status=404, content_type="application/json", headers=cors)
-    codes = get_existing_codes(db)
-    u_code = new_code(codes); codes.add(u_code)
-    p_code = new_code(codes); codes.add(p_code)
-    su_code = new_code(codes)
-    student = {"price": body.get("price",0), "balance": 0, "sessions": body.get("sessions",[]), "homework": [], "journal": [], "links": {}, "u_code": u_code, "u_id": None, "p_code": p_code, "p_id": None, "su_code": su_code, "su_id": None}
-    db["teachers"][tid]["students"][name] = student
-    save_db(db)
-    return web.Response(text=json.dumps({"ok":True,"student":{**student,"name":name},"u_code":u_code,"p_code":p_code,"su_code":su_code}), content_type="application/json", headers=cors)
-
-async def edit_student(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if not s:
-        return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-    if "price" in body: s["price"] = body["price"]
-    if "sessions" in body: s["sessions"] = body["sessions"]
-    save_db(db)
-    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-
-async def delete_student(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    if name in db["teachers"].get(tid,{}).get("students",{}):
-        del db["teachers"][tid]["students"][name]
-        save_db(db)
-    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-
-async def update_balance(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    amount = body["amount"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if s:
-        s["balance"] += amount
-        save_db(db)
-        return web.Response(text=json.dumps({"ok":True,"balance":s["balance"]}), content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-
-async def mark_lesson(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    topic = body.get("topic","")
-    action = body.get("action","done")
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if not s:
-        return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-    from datetime import datetime
-    date_str = datetime.now().strftime("%d.%m.%Y")
-    if action == "done":
-        s["balance"] -= s["price"]
-        s.setdefault("journal",[]).append({"date":date_str,"topic":topic,"materials":[]})
-        save_db(db)
-        # Просимо вчителя надіслати матеріали через бота
-        try:
-            async with aiohttp_client.ClientSession() as session:
-                kb = json.dumps({"inline_keyboard":[[
-                    {"text":"📎 Надіслати матеріали","callback_data":f"send_materials_{tid}_{name}"},
-                    {"text":"⏭ Пропустити","callback_data":"skip_materials"}
-                ]]})
-                await session.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                    json={"chat_id":int(tid),"text":f"✅ Заняття відмічено!\n📖 Тема: {topic}\n\nНадіслати матеріали учню {name}?","reply_markup":kb}
-                )
-        except Exception as e:
-            print(f"[MARK LESSON] notify error: {e}")
-    else:
-        save_db(db)
-    return web.Response(text=json.dumps({"ok":True,"balance":s.get("balance",0)}), content_type="application/json", headers=cors)
-
-async def send_hw(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    text = body.get("text","")
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if not s:
-        return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-    from datetime import datetime
-    import random as rnd
-    hw_id = str(rnd.randint(10000,99999))
-    s.setdefault("homework",[]).append({"id":hw_id,"text":text,"photo_id":None,"date":datetime.now().strftime("%d.%m.%Y"),"status":"new"})
-    save_db(db)
-    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-
-async def mark_hw(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    hw_id = body["hw_id"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if s:
-        for hw in s.get("homework",[]):
-            if hw["id"] == hw_id:
-                hw["status"] = "done"
-                break
-        save_db(db)
-    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-
-async def reset_codes(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if s:
-        codes = get_existing_codes(db)
-        u_code = new_code(codes); codes.add(u_code)
-        p_code = new_code(codes); codes.add(p_code)
-        su_code = new_code(codes)
-        s.update({"u_code":u_code,"u_id":None,"p_code":p_code,"p_id":None,"su_code":su_code,"su_id":None})
-        save_db(db)
-        return web.Response(text=json.dumps({"ok":True,"u_code":u_code,"p_code":p_code,"su_code":su_code}), content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-
-async def add_student_link(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if s:
-        s.setdefault("links",{})[body["label"]] = body["url"]
-        save_db(db)
-        return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-    return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
-
-async def delete_student_link(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
-    if s and body["label"] in s.get("links",{}):
-        del s["links"][body["label"]]
-        save_db(db)
-    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
-
-# ── НОВИЙ ЕНДПОІНТ: поповнення балансу з Mini App ──
-async def pay_request(request):
-    try:
-        reader = await request.multipart()
-        amount = None
-        tid = None
-        name = None
-        file_data = None
-        file_name = "check"
-        file_content_type = "image/jpeg"
-        is_photo = True
-
-        async for part in reader:
-            if part.name == "amount":
-                amount = int(await part.read())
-            elif part.name == "tid":
-                tid = (await part.read()).decode()
-            elif part.name == "name":
-                name = (await part.read()).decode()
-            elif part.name == "file":
-                file_name = part.filename or "check"
-                ct = part.headers.get("Content-Type", "image/jpeg")
-                file_content_type = ct
-                is_photo = ct.startswith("image/")
-                file_data = await part.read()
-
-        if not all([amount, tid, name, file_data]):
-            return web.Response(
-                text=json.dumps({"ok": False, "error": "missing fields"}),
-                content_type="application/json", headers=cors
-            )
-
-        caption = f"💰 Заявка на поповнення!\nВід: {name}\nСума: {amount}₴"
-        kb = json.dumps({"inline_keyboard": [[
-            {"text": "✅ Підтвердити", "callback_data": f"confirm_webapp_{amount}_{tid}_{name}"},
-            {"text": "❌ Відхилити", "callback_data": f"reject_webapp_{name}_{tid}"}
-        ]]})
-
-        async with aiohttp_client.ClientSession() as session:
-            if is_photo:
-                form = aiohttp_client.FormData()
-                form.add_field("chat_id", tid)
-                form.add_field("caption", caption)
-                form.add_field("reply_markup", kb)
-                form.add_field("photo", file_data, filename=file_name, content_type=file_content_type)
-                async with session.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form
-                ) as resp:
-                    result = await resp.json()
-            else:
-                form = aiohttp_client.FormData()
-                form.add_field("chat_id", tid)
-                form.add_field("caption", caption)
-                form.add_field("reply_markup", kb)
-                form.add_field("document", file_data, filename=file_name, content_type=file_content_type)
-                async with session.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form
-                ) as resp:
-                    result = await resp.json()
-
-        if result.get("ok"):
-            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-        else:
-            print(f"[PAY REQUEST] Telegram error: {result}")
-            return web.Response(text=json.dumps({"ok": False, "error": result.get("description","telegram error")}), content_type="application/json", headers=cors)
-
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
+  }catch(e){toast('Помилка зʼєднання');}
+}
 
 
 
-async def send_materials(request):
-    """Надсилає матеріали заняття учню через Telegram і зберігає file_id в журналі"""
-    try:
-        reader = await request.multipart()
-        tid = None
-        name = None
-        topic = None
-        files = []
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
+});
 
-        async for part in reader:
-            if part.name == 'tid':
-                tid = (await part.read()).decode()
-            elif part.name == 'name':
-                name = (await part.read()).decode()
-            elif part.name == 'topic':
-                topic = (await part.read()).decode()
-            elif part.name == 'files':
-                file_name = part.filename or 'file'
-                ct = part.headers.get('Content-Type', 'application/octet-stream')
-                data = await part.read()
-                files.append({'name': file_name, 'data': data, 'ct': ct, 'is_photo': ct.startswith('image/')})
+// ── UPLOAD SCREEN ──
+window._uploadType = null;
+window._uploadedFiles = [];
 
-        if not all([tid, name, files]):
-            return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+function openUploadScreen(type, title, desc, callback){
+  window._uploadType = type;
+  window._uploadDone = callback;
+  document.getElementById('upload-title').textContent = title;
+  document.getElementById('upload-desc').textContent = desc;
+  document.getElementById('upload-preview').textContent = '';
+  const mi = document.getElementById('main-file-input');
+  mi.value = '';
+  mi.multiple = (type === 'materials');
+  mi.onchange = function(){
+    const files = Array.from(this.files);
+    window._uploadedFiles = files;
+    document.getElementById('upload-preview').innerHTML = files.map(f=>'✅ '+f.name).join('<br>');
+  };
+  pushScreen('screen-upload');
+}
 
-        db = load_db()
-        sdata = db["teachers"].get(tid, {}).get("students", {}).get(name, {})
-        notify = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
+function confirmUpload(){
+  // Читаємо файли напряму з input в момент кліку
+  const input = document.getElementById('main-file-input');
+  const files = Array.from(input.files||[]);
+  if(files.length === 0){toast('Оберіть файл');return}
+  const cb = window._uploadDone;
+  goBack();
+  if(cb) cb(files);
+}
 
-        # Збираємо file_id після першого надсилання
-        saved_materials = []
-
-        async with aiohttp_client.ClientSession() as session:
-            first = True
-            for nid in notify:
-                try:
-                    await session.post(
-                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                        json={"chat_id": nid, "text": f"📚 Матеріали до заняття: {topic}"}
-                    )
-                    for f in files:
-                        form = aiohttp_client.FormData()
-                        form.add_field("chat_id", str(nid))
-                        if f['is_photo']:
-                            form.add_field("photo", f['data'], filename=f['name'], content_type=f['ct'])
-                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form) as resp:
-                                result = await resp.json()
-                                if first and result.get("ok"):
-                                    msg = result.get("result", {})
-                                    photo = msg.get("photo", [])
-                                    fid = photo[-1]["file_id"] if photo else None
-                                    if fid:
-                                        saved_materials.append({"type": "photo", "file_id": fid, "caption": ""})
-                        else:
-                            form.add_field("document", f['data'], filename=f['name'], content_type=f['ct'])
-                            async with session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form) as resp:
-                                result = await resp.json()
-                                if first and result.get("ok"):
-                                    doc = result.get("result", {}).get("document", {})
-                                    fid = doc.get("file_id")
-                                    if fid:
-                                        saved_materials.append({"type": "document", "file_id": fid, "caption": f['name']})
-                    first = False
-                except Exception as e:
-                    print(f"[MATERIALS] Error sending to {nid}: {e}")
-
-        # Зберігаємо матеріали в останній запис журналу з цією темою
-        if saved_materials:
-            db2 = load_db()
-            journal = db2["teachers"].get(tid, {}).get("students", {}).get(name, {}).get("journal", [])
-            # Знаходимо останній запис з цією темою
-            for entry in reversed(journal):
-                if entry.get("topic") == topic:
-                    entry["materials"] = saved_materials
-                    break
-            save_db(db2)
-
-        return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
-
-
-async def send_hw_file(request):
-    """Надсилає ДЗ з файлом учню через Telegram"""
-    try:
-        reader = await request.multipart()
-        tid = None
-        name = None
-        text = None
-        file_data = None
-        file_name = 'hw'
-        file_ct = 'application/octet-stream'
-        is_photo = False
-
-        async for part in reader:
-            if part.name == 'tid':
-                tid = (await part.read()).decode()
-            elif part.name == 'name':
-                name = (await part.read()).decode()
-            elif part.name == 'text':
-                text = (await part.read()).decode()
-            elif part.name == 'file':
-                file_name = part.filename or 'hw'
-                file_ct = part.headers.get('Content-Type', 'application/octet-stream')
-                is_photo = file_ct.startswith('image/')
-                file_data = await part.read()
-
-        if not all([tid, name, file_data]):
-            return web.Response(text=json.dumps({"ok": False, "error": "missing fields"}), content_type="application/json", headers=cors)
-
-        from datetime import datetime
-        import random as rnd
-        hw_id = str(rnd.randint(10000, 99999))
-        date_str = datetime.now().strftime("%d.%m.%Y")
-
-        db = load_db()
-        s = db["teachers"].get(tid, {}).get("students", {}).get(name)
-        if s:
-            s.setdefault("homework", []).append({
-                "id": hw_id, "text": text or "Дивись файл",
-                "photo_id": None, "date": date_str, "status": "new"
-            })
-            save_db(db)
-
-            u_id = s.get("u_id") or s.get("su_id")
-            if u_id:
-                async with aiohttp_client.ClientSession() as session:
-                    caption = f"📝 Нове ДЗ!\n📅 {date_str}\n\n{text or ''}"
-                    form = aiohttp_client.FormData()
-                    form.add_field("chat_id", str(u_id))
-                    form.add_field("caption", caption)
-                    if is_photo:
-                        form.add_field("photo", file_data, filename=file_name, content_type=file_ct)
-                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data=form)
-                    else:
-                        form.add_field("document", file_data, filename=file_name, content_type=file_ct)
-                        await session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument", data=form)
-
-        return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
-
-
-async def delete_journal_entry(request):
-    body = await request.json()
-    db = load_db()
-    tid = str(body["tid"])
-    name = body["name"]
-    idx = body["idx"]
-    s = db["teachers"].get(tid, {}).get("students", {}).get(name)
-    if s and 0 <= idx < len(s.get("journal", [])):
-        s["journal"].pop(idx)
-        save_db(db)
-    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
-
-
-async def get_file_url(request):
-    """Отримує тимчасовий URL файлу через Telegram Bot API"""
-    try:
-        body = await request.json()
-        file_id = body.get("file_id")
-        if not file_id:
-            return web.Response(text=json.dumps({"ok": False, "error": "no file_id"}), content_type="application/json", headers=cors)
-
-        async with aiohttp_client.ClientSession() as session:
-            async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}") as resp:
-                result = await resp.json()
-
-        if not result.get("ok"):
-            return web.Response(text=json.dumps({"ok": False, "error": result.get("description")}), content_type="application/json", headers=cors)
-
-        file_path = result["result"]["file_path"]
-        url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-        return web.Response(text=json.dumps({"ok": True, "url": url}), content_type="application/json", headers=cors)
-
-    except Exception as e:
-        return web.Response(text=json.dumps({"ok": False, "error": str(e)}), content_type="application/json", headers=cors)
-
-# ── APP ──
-app = web.Application()
-app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
-app.router.add_get("/", handle_index)
-app.router.add_post("/api/register-teacher", register_teacher)
-app.router.add_get("/api/teacher/{tid}", get_teacher)
-app.router.add_get("/api/student/{tid}/{name}", get_student)
-app.router.add_post("/api/auth", auth_handler)
-app.router.add_post("/api/add-student", add_student)
-app.router.add_post("/api/edit-student", edit_student)
-app.router.add_post("/api/delete-student", delete_student)
-app.router.add_post("/api/update-balance", update_balance)
-app.router.add_post("/api/mark-lesson", mark_lesson)
-app.router.add_post("/api/send-hw", send_hw)
-app.router.add_post("/api/mark-hw", mark_hw)
-app.router.add_post("/api/reset-codes", reset_codes)
-app.router.add_post("/api/add-student-link", add_student_link)
-app.router.add_post("/api/delete-student-link", delete_student_link)
-app.router.add_post("/api/pay-request", pay_request)
-app.router.add_post("/api/send-materials", send_materials)
-app.router.add_post("/api/send-hw-file", send_hw_file)
-app.router.add_post("/api/delete-journal-entry", delete_journal_entry)
-app.router.add_post("/api/get-file-url", get_file_url)
-app.router.add_static("/miniapp", STATIC_DIR)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("API_PORT", 8080))
-    print(f"API сервер запущено на порту {port}")
-    web.run_app(app, host="0.0.0.0", port=port)
+function cancelUpload(){
+  window._uploadedFiles=[];
+  goBack();
+}
+</script>
+</body>
+</html>
