@@ -204,6 +204,7 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
       <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
       <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
     </nav>
   </div>
   <div id="t-students" style="display:none;flex-direction:column;min-height:100vh">
@@ -291,6 +292,7 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
       <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
       <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
+      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
     </nav>
   </div>
   <div id="s-schedule" style="display:none;flex-direction:column;min-height:100vh">
@@ -449,6 +451,21 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div id="hwd-done-msg" style="display:none;text-align:center;padding:10px 0;color:var(--green);font-weight:600">✅ ДЗ виконано!</div>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-hw-detail')">Закрити</button>
+  </div>
+</div>
+
+<!-- NOTES MODAL -->
+
+<div class="modal-overlay" id="modal-notes">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📌 Мої нотатки</div>
+    <div id="notes-list" style="margin-bottom:14px;max-height:300px;overflow-y:auto"></div>
+    <div class="form-group">
+      <textarea class="form-input" id="note-input" placeholder="Текст нотатки або посилання..."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="addNote()">+ Додати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-notes')">Закрити</button>
   </div>
 </div>
 
@@ -1116,6 +1133,80 @@ async function submitPay(){
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
+
+// ── NOTES ──
+let _notesRole = null;
+let _notes = [];
+
+async function showNotes(){
+  _notesRole = appData.role || 'teacher';
+  document.getElementById('note-input').value = '';
+  document.getElementById('notes-list').innerHTML = '<div style="color:var(--text3);font-size:13px">Завантаження...</div>';
+  openModal('modal-notes');
+
+  try{
+    const tid = appData.tid;
+    const role = _notesRole;
+    const name = appData.name || '';
+    const res = await fetch('/api/notes/' + tid + '?role=' + role + '&name=' + encodeURIComponent(name));
+    const data = await res.json();
+    _notes = data.notes || [];
+    renderNotes();
+  }catch(e){
+    document.getElementById('notes-list').innerHTML = '<div style="color:var(--red);font-size:13px">Помилка завантаження</div>';
+  }
+}
+
+function renderNotes(){
+  const el = document.getElementById('notes-list');
+  if(!_notes.length){
+    el.innerHTML = '<div class="empty" style="padding:16px 0">Нотаток немає</div>';
+    return;
+  }
+  el.innerHTML = _notes.map(n => {
+    const isUrl = n.text.startsWith('http');
+    return '<div class="card" style="margin-bottom:8px"><div class="list-item">' +
+      '<div class="item-info">' +
+        (isUrl
+          ? '<a href="' + n.text + '" target="_blank" style="color:var(--accent);font-size:14px;word-break:break-all">' + n.text + '</a>'
+          : '<div style="font-size:14px;word-break:break-all">' + n.text + '</div>'
+        ) +
+      '</div>' +
+      '<span onclick="deleteNote('' + n.id + '')" style="color:var(--red);font-size:18px;cursor:pointer;flex-shrink:0;padding:0 4px">×</span>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function addNote(){
+  const text = document.getElementById('note-input').value.trim();
+  if(!text){toast('Введіть текст');return}
+  try{
+    const res = await api('/api/add-note','POST',{
+      tid: appData.tid,
+      role: _notesRole,
+      name: appData.name || '',
+      text
+    });
+    if(res.ok){
+      _notes.push(res.note);
+      renderNotes();
+      document.getElementById('note-input').value = '';
+    } else toast('Помилка');
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+async function deleteNote(noteId){
+  try{
+    await api('/api/delete-note','POST',{
+      tid: appData.tid,
+      role: _notesRole,
+      name: appData.name || '',
+      note_id: noteId
+    });
+    _notes = _notes.filter(n => n.id !== noteId);
+    renderNotes();
+  }catch(e){toast('Помилка')}
+}
 </script>
 
 </body>
