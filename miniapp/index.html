@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
@@ -123,6 +124,7 @@ select.form-input{appearance:none;cursor:pointer}
 <body>
 
 <!-- ROLE SELECTION -->
+
 <div id="screen-role" class="screen active">
   <div class="screen-body">
     <div class="role-screen">
@@ -151,6 +153,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- TEACHER REG -->
+
 <div id="screen-teacher-reg" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('screen-role')">‹</button>
@@ -164,6 +167,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- AUTH -->
+
 <div id="screen-auth" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('screen-role')">‹</button>
@@ -181,6 +185,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- TEACHER APP -->
+
 <div id="screen-teacher" class="screen">
   <div id="t-home" style="display:flex;flex-direction:column;min-height:100vh">
     <div class="header"><div class="header-title" id="t-teacher-name">Кабінет вчителя</div><div class="header-action" onclick="showAddStudent()">+ Учень</div></div>
@@ -245,6 +250,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- STUDENT CARD -->
+
 <div id="screen-student-card" class="screen">
   <div class="header"><button class="header-back" onclick="goBack()">‹</button><div class="header-title" id="sc-name">Учень</div><div class="header-action" onclick="showDeleteStudent()">Видалити</div></div>
   <div class="screen-body" style="padding:14px">
@@ -265,6 +271,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- STUDENT APP -->
+
 <div id="screen-student" class="screen">
   <div id="s-home" style="display:flex;flex-direction:column;min-height:100vh">
     <div class="header"><div class="header-title" id="s-student-name">Мій кабінет</div></div>
@@ -324,6 +331,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- MODALS -->
+
 <div class="modal-overlay" id="modal-add-student">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -367,7 +375,7 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><div class="form-label">Текст завдання</div><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
     <div class="form-group">
       <div class="form-label">Файл (необов'язково)</div>
-      <input type="file" id="hw-file-input" accept="image/*,application/pdf" style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
+      <input type="file" id="hw-file-input" accept="image/*,application/pdf,video/*" multiple style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
       <div id="hw-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
     </div>
     <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
@@ -392,6 +400,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- PAY MODAL -->
+
 <div class="modal-overlay" id="modal-pay">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -408,6 +417,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- JOURNAL DETAIL MODAL -->
+
 <div class="modal-overlay" id="modal-journal-detail">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -419,6 +429,7 @@ select.form-input{appearance:none;cursor:pointer}
 </div>
 
 <!-- HW DETAIL MODAL (student) -->
+
 <div class="modal-overlay" id="modal-hw-detail">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -431,7 +442,7 @@ select.form-input{appearance:none;cursor:pointer}
       <div class="form-group"><div class="form-label">Ваша відповідь</div><textarea class="form-input" id="hwd-reply-text" placeholder="Напишіть відповідь або коментар..."></textarea></div>
       <div class="form-group">
         <div class="form-label">Файл (необов'язково)</div>
-        <input type="file" id="hwd-reply-file" accept="image/*,application/pdf" style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
+        <input type="file" id="hwd-reply-file" accept="image/*,application/pdf,video/*" multiple style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
       </div>
       <button class="btn btn-primary" onclick="submitHwReply()" style="margin-bottom:8px">📤 Надіслати відповідь</button>
       <button class="btn btn-secondary" onclick="markHwDoneFromModal()">✅ Просто відмітити як виконане</button>
@@ -740,16 +751,17 @@ async function sendHw(){
   const hwFile=hwInput&&hwInput.files[0];
   if(!text&&!hwFile){toast('Введіть текст або додайте файл');return}
 
-  if(hwFile){
+  const hwFiles=hwInput?Array.from(hwInput.files||[]):[];
+  if(hwFiles.length>0){
     const formData=new FormData();
     formData.append('tid',appData.tid);
     formData.append('name',name);
-    formData.append('text',text||'Дивись файл');
-    formData.append('file',hwFile,hwFile.name);
+    formData.append('text',text||'Дивись файли');
+    for(const f of hwFiles)formData.append('files',f,f.name);
     try{
       const res=await fetch('/api/send-hw-file',{method:'POST',body:formData});
       const data=await res.json();
-      if(data.ok){closeModal('modal-send-hw');toast('✅ ДЗ надіслано '+name+'!');}
+      if(data.ok){closeModal('modal-send-hw');document.getElementById('hw-text').value='';toast('✅ ДЗ надіслано '+name+'!');}
       else toast('Помилка: '+(data.error||'невідома'));
     }catch(e){toast('Помилка зʼєднання')}
   } else {
@@ -1028,12 +1040,13 @@ async function submitHwReply(){
 
   if(!text&&!file){toast('Напишіть відповідь або прикріпіть файл');return}
 
+  const replyFiles=fileInput?Array.from(fileInput.files||[]):[];
   const formData=new FormData();
   formData.append('tid',String(appData.tid));
   formData.append('name',appData.name);
   formData.append('hw_id',hwId);
   formData.append('text',text||'');
-  if(file)formData.append('file',file,file.name);
+  for(const f of replyFiles)formData.append('files',f,f.name);
 
   try{
     const res=await fetch('/api/submit-hw-reply',{method:'POST',body:formData});
@@ -1104,5 +1117,6 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
 </script>
+
 </body>
 </html>
