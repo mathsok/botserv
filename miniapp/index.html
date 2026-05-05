@@ -215,6 +215,7 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn active" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Учні</span></button>
       <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
       <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
     </nav>
   </div>
   <div id="t-schedule" style="display:none;flex-direction:column;min-height:100vh">
@@ -225,6 +226,7 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
       <button class="nav-btn active" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
       <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
     </nav>
   </div>
   <div id="t-lessons" style="display:none;flex-direction:column;min-height:100vh">
@@ -246,6 +248,7 @@ select.form-input{appearance:none;cursor:pointer}
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
       <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
       <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
+      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
     </nav>
   </div>
 </div>
@@ -451,6 +454,20 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div id="hwd-done-msg" style="display:none;text-align:center;padding:10px 0;color:var(--green);font-weight:600">✅ ДЗ виконано!</div>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-hw-detail')">Закрити</button>
+  </div>
+</div>
+
+<!-- STUDENT OWN LINKS MODAL -->
+
+<div class="modal-overlay" id="modal-student-links">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔗 Мої посилання</div>
+    <div id="student-links-list" style="margin-bottom:14px"></div>
+    <div class="form-group"><div class="form-label">Назва</div><input class="form-input" id="s-link-label" placeholder="Зошит, Google Drive..."></div>
+    <div class="form-group"><div class="form-label">Посилання або текст</div><input class="form-input" id="s-link-url" placeholder="https://... або просто текст"></div>
+    <button class="btn btn-primary" onclick="addStudentOwnLink()">+ Додати</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-student-links')">Закрити</button>
   </div>
 </div>
 
@@ -922,7 +939,9 @@ function renderStudent(){
   }
 
   const links=d.links||{};
-  document.getElementById('s-links-preview').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`<div class="card clickable" onclick="window.open('${v}','_blank')"><div class="list-item"><div class="link-icon">🔗</div><div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div><div style="color:var(--accent);font-size:18px">↗</div></div></div>`).join(''):'<div class="empty">Посилань немає</div>';
+  const ownLinks=d.own_links||[];
+  const allLinks=[...Object.entries(links).map(([k,v])=>({label:k,url:v,own:false})),...ownLinks.map(l=>({label:l.label,url:l.url,id:l.id,own:true}))];
+  document.getElementById('s-links-preview').innerHTML=(allLinks.length?allLinks.map(l=>`<div class="card clickable" onclick="window.open('${l.url}','_blank')"><div class="list-item"><div class="link-icon">🔗</div><div class="item-info"><div class="item-name">${l.label}</div><div class="item-sub">${l.url}</div></div>${l.own?`<span onclick="event.stopPropagation();deleteStudentOwnLink('${l.id}')" style="color:var(--red);font-size:18px;cursor:pointer;padding:0 4px">×</span>`:'<div style="color:var(--accent);font-size:18px">↗</div>'}</div></div>`).join(''):'')+'<button class="btn btn-secondary" style="margin-top:8px" onclick="showStudentLinksModal()">+ Додати посилання</button>';
 
   document.querySelectorAll('.s-nav-hw').forEach(el=>el.style.display=role==='parent'?'none':'');
   document.querySelectorAll('.s-nav-journal').forEach(el=>el.style.display=role==='parent'?'none':'');
@@ -1133,6 +1152,52 @@ async function submitPay(){
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
+
+// ── STUDENT OWN LINKS ──
+function showStudentLinksModal(){
+  document.getElementById('s-link-label').value='';
+  document.getElementById('s-link-url').value='';
+  renderStudentOwnLinks();
+  openModal('modal-student-links');
+}
+
+function renderStudentOwnLinks(){
+  const links=appData.own_links||[];
+  document.getElementById('student-links-list').innerHTML=links.length?links.map(l=>`
+    <div class="card" style="margin-bottom:8px"><div class="list-item">
+      <div class="link-icon">🔗</div>
+      <div class="item-info"><div class="item-name">${l.label}</div><div class="item-sub">${l.url}</div></div>
+      <span onclick="deleteStudentOwnLink('${l.id}')" style="color:var(--red);font-size:18px;cursor:pointer;padding:0 4px">×</span>
+    </div></div>`).join(''):'<div style="color:var(--text3);font-size:13px;margin-bottom:8px">Власних посилань немає</div>';
+}
+
+async function addStudentOwnLink(){
+  const label=document.getElementById('s-link-label').value.trim();
+  const url=document.getElementById('s-link-url').value.trim();
+  if(!label||!url){toast('Заповніть обидва поля');return}
+  try{
+    const res=await api('/api/add-student-own-link','POST',{tid:appData.tid,name:appData.name,role:appData.role,label,url});
+    if(res.ok){
+      if(!appData.own_links)appData.own_links=[];
+      appData.own_links.push(res.link);
+      document.getElementById('s-link-label').value='';
+      document.getElementById('s-link-url').value='';
+      renderStudentOwnLinks();
+      renderStudent();
+      toast('✅ Посилання додано');
+    } else toast('Помилка');
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+async function deleteStudentOwnLink(linkId){
+  try{
+    await api('/api/delete-student-own-link','POST',{tid:appData.tid,name:appData.name,role:appData.role,link_id:linkId});
+    appData.own_links=(appData.own_links||[]).filter(l=>l.id!==linkId);
+    renderStudentOwnLinks();
+    renderStudent();
+    toast('🗑 Видалено');
+  }catch(e){toast('Помилка')}
+}
 
 // ── NOTES ──
 let _notesRole = null;
