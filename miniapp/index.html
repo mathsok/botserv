@@ -210,11 +210,12 @@ select.form-input{appearance:none;cursor:pointer}
 .role-logo-icon{font-size:52px;margin-bottom:10px}
 .role-logo-name{font-weight:700;font-size:26px;color:var(--text)}
 .role-logo-sub{font-size:13px;color:var(--text2);margin-top:4px}
-.role-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s}
+.role-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s;width:100%}
 .role-card:active{background:var(--card2)}
 .role-emoji{font-size:28px;line-height:1;flex-shrink:0}
 .role-card-title{font-weight:600;font-size:15px;color:var(--text)}
 .role-card-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.role-card .chevron{margin-left:auto;flex-shrink:0}
 
 /* LIST ITEMS */
 .list-item{display:flex;align-items:center;gap:11px}
@@ -300,15 +301,17 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="screen-body">
       <div class="metrics-grid">
         <div class="metric-card"><div class="metric-val" id="t-stat-students">0</div><div class="metric-lbl">Учнів</div></div>
-        <div class="metric-card"><div class="metric-val" id="t-stat-today">0</div><div class="metric-lbl">Сьогодні</div></div>
-        <div class="metric-card"><div class="metric-val" id="t-stat-income" style="font-size:18px">—</div><div class="metric-lbl">Дохід / міс</div></div>
+        <div class="metric-card"><div class="metric-val" id="t-stat-today">0</div><div class="metric-lbl">Занять сьогодні</div></div>
+        <div class="metric-card"><div class="metric-val" id="t-stat-income" style="font-size:18px">0₴</div><div class="metric-lbl">Дохід за поточний місяць</div></div>
         <div class="metric-card"><div class="metric-val" id="t-stat-debts">0</div><div class="metric-lbl">Боргів</div></div>
       </div>
       <div style="padding:0 14px">
         <div class="sec-header"><div class="sec-title">Розклад · 3 дні</div><div class="sec-action" onclick="showTeacherTab('schedule')">Весь →</div></div>
         <div id="t-schedule-preview"></div>
         <div class="sec-header"><div class="sec-title">Учні</div><div class="sec-action" onclick="showTeacherTab('students')">Всі →</div></div>
-        <div id="t-students-preview"></div>
+        <div id="t-students-preview">
+          <div class="empty" style="padding:16px 0;font-size:12px">Завантаження...</div>
+        </div>
       </div>
     </div>
     <nav class="bottom-nav">
@@ -334,7 +337,7 @@ select.form-input{appearance:none;cursor:pointer}
   <!-- SCHEDULE TAB -->
   <div id="t-schedule" style="display:none;flex-direction:column;min-height:100vh">
     <div class="t-app-header"><div class="t-app-name">Розклад на тиждень</div></div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="t-week-schedule"></div></div>
+    <div class="screen-body" style="padding:14px"><div id="t-week-schedule"></div></div>
     <nav class="bottom-nav">
       <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
       <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
@@ -715,6 +718,24 @@ function renderTeacher(){
   document.getElementById('t-stat-debts').textContent=debts.length;
   document.getElementById('t-stat-debts').className='metric-val'+(debts.length>0?' red':'');
 
+  // Income: sum from journal entries this calendar month
+  const now=new Date();
+  const thisMonth=now.getMonth()+1;
+  const thisYear=now.getFullYear();
+  let monthIncome=0;
+  for(const s of students){
+    for(const e of (s.journal||[])){
+      const parts=e.date.split('.');
+      const d=parseInt(parts[0]),m=parseInt(parts[1]),y=parseInt(parts[2])||thisYear;
+      if(m===thisMonth&&y===thisYear) monthIncome+=s.price||0;
+    }
+  }
+  const incomeEl=document.getElementById('t-stat-income');
+  if(incomeEl){
+    incomeEl.textContent=monthIncome>0?monthIncome+'₴':'0₴';
+    incomeEl.style.fontSize=monthIncome>=10000?'16px':monthIncome>=1000?'18px':'22px';
+  }
+
   // 3-day schedule preview
   const days3=[t];
   const tIdx=DAYS.indexOf(t);
@@ -752,6 +773,10 @@ function renderTeacher(){
       ${balHTML}
     </div>`;
   }).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
+
+  // Students preview (first 3 for home tab)
+  const previewEl=document.getElementById('t-students-preview');
+  if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
   // Journal
   const allJ=students.flatMap(s=>(s.journal||[]).map((e,i)=>({...e,studentName:s.name,sIdx:i}))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -1155,11 +1180,30 @@ function renderStudent(){
 
 function renderStudentSchedule(){
   const d=appData,t=today();
-  document.getElementById('s-schedule-list').innerHTML=DAYS.map(day=>{
-    const found=(d.sessions||[]).filter(s=>s.day===day);
-    if(!found.length)return'';
-    return`<div class="day-group"><div class="day-label ${day===t?'today':''}">${day}${day===t?' · сьогодні':''}</div>${found.map(s=>`<div class="lesson-row"><div class="lesson-time">${s.time}</div><div class="lesson-dot" style="background:var(--green)"></div><div class="item-info"><div class="item-name">Заняття</div></div></div>`).join('')}</div>`;
-  }).join('')||'<div class="empty">Розклад не встановлено</div>';
+  const tIdx=DAYS.indexOf(t);
+  // Sort days starting from today
+  const sortedDays=DAYS.slice(tIdx).concat(DAYS.slice(0,tIdx));
+  const activeDays=sortedDays.filter(day=>(d.sessions||[]).some(s=>s.day===day));
+  if(!activeDays.length){
+    document.getElementById('s-schedule-list').innerHTML='<div class="empty"><div class="empty-icon">📅</div>Розклад не встановлено</div>';
+    return;
+  }
+  document.getElementById('s-schedule-list').innerHTML=activeDays.map(day=>{
+    const sessions=(d.sessions||[]).filter(s=>s.day===day).sort((a,b)=>a.time.localeCompare(b.time));
+    const isToday=day===t;
+    return`<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:${isToday?'var(--accent)':'var(--text2)'};padding:5px 0;margin-bottom:8px;${isToday?'':''}display:flex;align-items:center;gap:6px">
+        ${isToday?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>':''}
+        ${day}${isToday?' · сьогодні':''}
+      </div>
+      ${sessions.map(s=>`
+        <div style="background:var(--bg2);border:1px solid ${isToday?'rgba(124,111,247,.3)':'var(--border)'};border-radius:14px;padding:18px 20px;margin-bottom:8px;${isToday?'box-shadow:0 0 0 1px rgba(124,111,247,.1)':''}">
+          <div style="font-size:32px;font-weight:600;color:${isToday?'var(--accent)':'var(--green)'};letter-spacing:-.5px;line-height:1;margin-bottom:6px">${s.time}</div>
+          <div style="font-size:13px;color:var(--text2);font-weight:500">Заняття${isToday?' · <span style="color:var(--accent)">Сьогодні</span>':''}</div>
+          ${isToday?'<div style="margin-top:10px;background:rgba(124,111,247,.08);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent);font-weight:500">Приготуйся до заняття 📚</div>':''}
+        </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
 function hwItemHTML(h){
