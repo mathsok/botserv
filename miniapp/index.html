@@ -1,1763 +1,1375 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>TutorApp</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-*{pointer-events:auto}
-button *,a *{pointer-events:none}
-:root{
-  --bg:#0c0c0f;--bg2:#111118;--bg3:#1a1a25;
-  --card:rgba(255,255,255,0.04);--card2:rgba(255,255,255,0.07);
-  --border:#1e1e2a;--border2:#2a2a3a;
-  --text:#dddde8;--text2:#7a7a8a;--text3:#3a3a4a;
-  --accent:#7c6ff7;--accent2:#a599ff;
-  --green:#5ce0d8;--red:#e24b4a;--yellow:#ef9f27;--blue:#378add;
-  --r:12px;--r2:9px;
-}
-html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;margin:0;padding:0;min-height:100vh;-webkit-font-smoothing:antialiased}
-.screen{display:none;flex-direction:column;min-height:100vh}
-.screen.active{display:flex}
-.screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.screen-body::-webkit-scrollbar{display:none}
-
-/* HEADER */
-.header{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;background:var(--bg)}
-.header-back{width:34px;height:34px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.header-title{font-weight:500;font-size:16px;flex:1}
-.header-action{font-size:13px;color:var(--accent);font-weight:500;cursor:pointer;white-space:nowrap}
-
-/* NAV */
-.bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(12,12,15,0.95);backdrop-filter:blur(20px);position:sticky;bottom:0;z-index:10}
-.nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif;position:relative}
-.nav-btn.active{color:var(--accent)}
-.nav-btn.active::after{content:'';position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:16px;height:2px;background:var(--accent);border-radius:1px}
-.nav-btn svg{width:21px;height:21px}
-.nav-btn span{font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
-
-/* CARDS */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:background .15s}
-.card.clickable{cursor:pointer}
-.card.clickable:active{background:var(--card2)}
-
-/* SECTION */
-.section{padding:0 14px;margin-bottom:16px}
-.sec-header{display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px}
-.sec-title{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
-.sec-action{font-size:12px;color:var(--accent);font-weight:500;cursor:pointer}
-
-/* TEACHER SPECIFIC */
-.t-app-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.t-app-name{font-size:15px;font-weight:500;color:var(--text)}
-.t-app-sub{font-size:11px;color:var(--text2);margin-top:1px;font-weight:400}
-.add-pill{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--accent);cursor:pointer;border:none;font-family:'Inter',sans-serif}
-
-/* METRICS */
-.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding:0 14px}
-.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-.metric-val{font-size:26px;font-weight:500;color:var(--text);line-height:1;letter-spacing:-.3px}
-.metric-val.red{color:var(--red)}
-.metric-lbl{font-size:10px;font-weight:500;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
-
-/* SCHEDULE */
-.day-block{margin-bottom:10px}
-.day-head{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);padding:5px 8px;border-radius:7px;margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.day-head.today{background:var(--bg3);color:var(--accent)}
-.day-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
-.lesson-row{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:5px}
-.lesson-time{font-size:13px;font-weight:500;color:var(--green);min-width:44px}
-.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.lesson-name{font-size:13px;font-weight:400;color:var(--text)}
-.lesson-bal{margin-left:auto;font-size:12px;font-weight:500}
-.lesson-bal.ok{color:var(--text3)}
-.lesson-bal.debt{color:var(--red)}
-
-/* STUDENT CARDS */
-.student-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden;cursor:pointer}
-.s-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.s-info{flex:1;min-width:0}
-.s-name{font-size:14px;font-weight:400;color:var(--text)}
-.s-sched{font-size:11px;color:var(--text2);margin-top:2px}
-.s-badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0}
-.s-badge.debt{background:rgba(226,75,74,.1);color:var(--red);border:1px solid rgba(226,75,74,.2)}
-.s-badge.zero{color:var(--text3);font-size:11px}
-
-/* JOURNAL */
-.journal-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:7px}
-.j-top{display:flex;align-items:center;gap:10px}
-.j-date-box{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0}
-.j-day{font-size:18px;font-weight:600;color:#a0a0c0;line-height:1}
-.j-mon{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.j-info{flex:1;min-width:0}
-.j-topic{font-size:13px;font-weight:400;color:var(--text)}
-.j-meta{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center}
-.j-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
-.j-tag.muted{background:var(--bg3);color:var(--text2)}
-.j-tag.teal{background:rgba(92,224,216,.08);color:var(--green)}
-.j-del{color:var(--text3);font-size:16px;cursor:pointer;padding:2px 4px;margin-left:auto;flex-shrink:0}
-
-/* ACTION CARDS */
-.action-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer}
-.action-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.action-icon svg{width:16px;height:16px}
-.action-label{font-size:14px;font-weight:400;color:var(--text)}
-.action-sub{font-size:11px;color:var(--text2);margin-top:1px}
-.chevron-r{margin-left:auto;color:var(--text3);font-size:18px}
-
-/* STUDENT SPECIFIC */
-.s-app-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.s-greeting{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase}
-.s-av{width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--accent)}
-
-/* NEXT LESSON CARD */
-.next-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:16px;margin-bottom:10px;position:relative;overflow:hidden}
-.next-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--green))}
-.next-lbl{font-size:10px;font-weight:600;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
-.next-subj{font-size:19px;font-weight:500;color:var(--text);letter-spacing:-.2px;margin-bottom:3px}
-.next-teacher{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px;margin-bottom:12px}
-.tdot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:500}
-.chip.acc{color:var(--green)}
-.chip.neu{color:var(--text2)}
-
-/* HW ITEMS */
-.hw-item-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 12px;margin-bottom:7px;display:flex;align-items:flex-start;gap:9px;cursor:pointer}
-.hw-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center}
-.hw-check.done{background:var(--accent);border-color:var(--accent)}
-.hw-stripe{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
-.hw-body{flex:1;min-width:0}
-.hw-title{font-size:13px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hw-due{display:flex;align-items:center;gap:4px;margin-top:3px}
-.due-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
-.due-lbl{font-size:11px;font-weight:500}
-
-/* LINKS */
-.link-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.link-icon-sq{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.link-body{flex:1;min-width:0}
-.link-name{font-size:13px;font-weight:400;color:var(--text)}
-.link-url{font-size:10px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.link-arr{color:var(--text3);font-size:16px;margin-left:auto;flex-shrink:0}
-.add-dashed{width:100%;background:transparent;border:1px dashed var(--border2);border-radius:var(--r2);padding:11px;font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:4px}
-
-/* BALANCE HERO */
-.balance-hero{margin:14px;border-radius:var(--r);padding:18px;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a35,#1a2535)}
-.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:130px;height:130px;background:rgba(124,111,247,0.08);border-radius:50%}
-.balance-label{font-size:10px;font-weight:600;opacity:.7;text-transform:uppercase;letter-spacing:1px;position:relative}
-.balance-amount{font-size:34px;font-weight:600;position:relative;line-height:1.1;margin:4px 0 2px;letter-spacing:-.3px}
-.balance-sub{font-size:12px;opacity:.65;position:relative}
-.balance-actions{display:flex;gap:8px;margin-top:12px;position:relative}
-.balance-btn{flex:1;padding:8px;border-radius:var(--r2);background:rgba(255,255,255,0.12);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
-
-/* FORMS */
-.form-group{margin-bottom:14px}
-.form-label{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;display:block}
-.form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:11px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
-.form-input:focus{border-color:var(--accent)}
-.form-input::placeholder{color:var(--text3)}
-textarea.form-input{resize:none;height:78px}
-select.form-input{appearance:none;cursor:pointer}
-
-/* BUTTONS */
-.btn{width:100%;padding:13px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn:active{transform:scale(.98)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-secondary{background:var(--card2);border:1px solid var(--border2);color:var(--text)}
-.btn-danger{background:rgba(226,75,74,.12);border:1px solid rgba(226,75,74,.25);color:var(--red)}
-.btn-sm{padding:7px 13px;font-size:12px;border-radius:var(--r2);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600}
-.btn-sm-primary{background:var(--accent);color:#fff}
-.btn-sm-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
-
-/* TABS */
-.tabs{display:flex;gap:6px;padding:0 14px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all .15s}
-.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-
-/* EMPTY */
-.empty{text-align:center;padding:30px 20px;color:var(--text3);font-size:13px}
-.empty-icon{font-size:36px;margin-bottom:8px}
-
-/* MODALS */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-overlay.open{opacity:1;pointer-events:all}
-.modal{background:var(--bg2);border-radius:18px 18px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
-.modal-overlay.open .modal{transform:translateY(0)}
-.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-weight:600;font-size:17px;margin-bottom:16px}
-
-/* CODES */
-.code-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.code-val{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--accent2)}
-.code-copy{font-size:12px;color:var(--accent);font-weight:500;cursor:pointer}
-
-/* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(25,25,35,.97);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 20px;font-size:13px;font-weight:500;z-index:200;opacity:0;transition:all .25s;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* ANIM */
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{animation:fadeUp .2s ease both}
-
-/* ROLE SCREEN */
-.role-screen{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:28px 20px;background:var(--bg)}
-.role-logo{text-align:center;margin-bottom:36px}
-.role-logo-icon{font-size:52px;margin-bottom:10px}
-.role-logo-name{font-weight:700;font-size:26px;color:var(--text)}
-.role-logo-sub{font-size:13px;color:var(--text2);margin-top:4px}
-.role-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s;width:100%}
-.role-card:active{background:var(--card2)}
-.role-emoji{font-size:28px;line-height:1;flex-shrink:0}
-.role-card-title{font-weight:600;font-size:15px;color:var(--text)}
-.role-card-sub{font-size:11px;color:var(--text2);margin-top:2px}
-.role-card .chevron{margin-left:auto;flex-shrink:0}
-
-/* LIST ITEMS */
-.list-item{display:flex;align-items:center;gap:11px}
-.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
-.item-info{flex:1;min-width:0}
-.item-name{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item-sub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chevron{color:var(--text3);font-size:15px}
-.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
-.badge-green{background:rgba(92,224,216,.12);color:var(--green)}
-.badge-red{background:rgba(226,75,74,.12);color:var(--red)}
-.link-icon{width:34px;height:34px;border-radius:var(--r2);background:rgba(124,111,247,.12);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-</style>
-</head>
-<body>
-
-<!-- ROLE SELECTION -->
-<div id="screen-role" class="screen active">
-  <div class="screen-body">
-    <div class="role-screen">
-      <div class="role-logo">
-        <div class="role-logo-icon">📚</div>
-        <div class="role-logo-name">TutorApp</div>
-        <div class="role-logo-sub">Оберіть свою роль</div>
-      </div>
-      <div class="role-card" onclick="setRole('teacher')">
-        <div class="role-emoji">👨‍🏫</div>
-        <div><div class="role-card-title">Я вчитель</div><div class="role-card-sub">Керування учнями та заняттями</div></div>
-        <div class="chevron">›</div>
-      </div>
-      <div class="role-card" onclick="setRole('student')">
-        <div class="role-emoji">🎓</div>
-        <div><div class="role-card-title">Я учень</div><div class="role-card-sub">Розклад, ДЗ та матеріали</div></div>
-        <div class="chevron">›</div>
-      </div>
-      <div class="role-card" onclick="setRole('parent')">
-        <div class="role-emoji">👨‍👩‍👦</div>
-        <div><div class="role-card-title">Я батько / мати</div><div class="role-card-sub">Розклад дитини та баланс</div></div>
-        <div class="chevron">›</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TEACHER REG -->
-<div id="screen-teacher-reg" class="screen">
-  <div class="header">
-    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
-    <div class="header-title">Реєстрація вчителя</div>
-  </div>
-  <div class="screen-body" style="padding:20px">
-    <div class="form-group"><label class="form-label">Ваше ім'я та по батькові</label><input class="form-input" id="reg-name" placeholder="Іван Петрович"></div>
-    <div class="form-group"><label class="form-label">Предмет</label><input class="form-input" id="reg-subject" placeholder="Математика"></div>
-    <button class="btn btn-primary" onclick="registerTeacher()">Зареєструватись</button>
-  </div>
-</div>
-
-<!-- AUTH -->
-<div id="screen-auth" class="screen">
-  <div class="header">
-    <button class="header-back" onclick="showScreen('screen-role')">‹</button>
-    <div class="header-title">Вхід</div>
-  </div>
-  <div class="screen-body" style="padding:20px">
-    <div style="text-align:center;padding:20px 0 28px">
-      <div style="font-size:44px;margin-bottom:10px">🔑</div>
-      <div style="font-weight:600;font-size:18px;margin-bottom:6px">Введіть код доступу</div>
-      <div style="font-size:13px;color:var(--text2)">Код надає ваш вчитель</div>
-    </div>
-    <div class="form-group"><input class="form-input" id="auth-code" placeholder="0000" type="number" style="text-align:center;font-size:26px;font-weight:700;letter-spacing:6px"></div>
-    <button class="btn btn-primary" onclick="authWithCode()">Увійти</button>
-  </div>
-</div>
-
-<!-- TEACHER APP -->
-<div id="screen-teacher" class="screen">
-  <!-- HOME TAB -->
-  <div id="t-home" style="display:flex;flex-direction:column;min-height:100vh">
-    <div class="t-app-header">
-      <div><div class="t-app-name" id="t-teacher-name">Кабінет вчителя</div><div class="t-app-sub" id="t-teacher-sub"></div></div>
-      <button class="add-pill" onclick="showAddStudent()">+ Учень</button>
-    </div>
-    <div class="screen-body">
-      <div class="metrics-grid">
-        <div class="metric-card"><div class="metric-val" id="t-stat-students">0</div><div class="metric-lbl">Учнів</div></div>
-        <div class="metric-card"><div class="metric-val" id="t-stat-today">0</div><div class="metric-lbl">Занять сьогодні</div></div>
-        <div class="metric-card"><div class="metric-val" id="t-stat-income" style="font-size:18px">0₴</div><div class="metric-lbl">Дохід за поточний місяць</div></div>
-        <div class="metric-card"><div class="metric-val" id="t-stat-debts">0</div><div class="metric-lbl">Боргів</div></div>
-      </div>
-      <div style="padding:0 14px">
-        <div class="sec-header"><div class="sec-title">Розклад · 3 дні</div><div class="sec-action" onclick="showTeacherTab('schedule')">Весь →</div></div>
-        <div id="t-schedule-preview"></div>
-        <div class="sec-header"><div class="sec-title">Учні</div><div class="sec-action" onclick="showTeacherTab('students')">Всі →</div></div>
-        <div id="t-students-preview">
-          <div class="empty" style="padding:16px 0;font-size:12px">Завантаження...</div>
-        </div>
-      </div>
-    </div>
-    <nav class="bottom-nav">
-      <button class="nav-btn active" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- STUDENTS TAB -->
-  <div id="t-students" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Учні</div><button class="add-pill" onclick="showAddStudent()">+ Додати</button></div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="t-students-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn active" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- SCHEDULE TAB -->
-  <div id="t-schedule" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Розклад на тиждень</div></div>
-    <div class="screen-body" style="padding:14px"><div id="t-week-schedule"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
-      <button class="nav-btn active" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- LESSONS TAB -->
-  <div id="t-lessons" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Заняття</div></div>
-    <div class="screen-body" style="padding:0 14px 14px">
-      <div class="sec-header" style="margin-top:4px"><div class="sec-title">Дії</div></div>
-      <div class="action-card" onclick="showMarkLesson()">
-        <div class="action-icon" style="background:#1a2a1a"><svg viewBox="0 0 24 24" stroke="#5ce0d8" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div><div class="action-label">Відмітити заняття</div><div class="action-sub">Тема, матеріали, баланс</div></div>
-        <div class="chevron-r">›</div>
-      </div>
-      <div class="action-card" onclick="showSendHw()">
-        <div class="action-icon" style="background:#1a1a2a"><svg viewBox="0 0 24 24" stroke="#7c6ff7" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-        <div><div class="action-label">Надіслати ДЗ</div><div class="action-sub">Текст або файли</div></div>
-        <div class="chevron-r">›</div>
-      </div>
-      <div class="sec-header"><div class="sec-title">Статистика занять</div></div>
-      <div id="t-journal-list"></div>
-    </div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Учні</span></button>
-      <button class="nav-btn" onclick="showTeacherTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn active" onclick="showTeacherTab('lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Заняття</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-</div>
-
-<!-- STUDENT CARD (teacher view) -->
-<div id="screen-student-card" class="screen">
-  <div class="header"><button class="header-back" onclick="goBack()">‹</button><div class="header-title" id="sc-name">Учень</div><div class="header-action" onclick="showDeleteStudent()">Видалити</div></div>
-  <div class="screen-body" style="padding:14px">
-    <div class="balance-hero" id="sc-balance-hero" style="margin:0 0 14px">
-      <div class="balance-label">Баланс</div>
-      <div class="balance-amount" id="sc-balance">0₴</div>
-      <div class="balance-sub" id="sc-price">Ціна: 0₴/заняття</div>
-      <div class="balance-actions">
-        <button class="balance-btn" onclick="showAddBalance()">+ Поповнити</button>
-        <button class="balance-btn" onclick="showSubBalance()">− Списати</button>
-      </div>
-    </div>
-    <div class="sec-header"><div class="sec-title">Статистика</div></div>
-    <div id="sc-stats" style="margin-bottom:14px"></div>
-    <div class="sec-header"><div class="sec-title">Розклад</div></div>
-    <div id="sc-sessions" style="margin-bottom:6px"></div>
-    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="showEditSchedule()">✏️ Змінити розклад</button>
-    <div class="sec-header"><div class="sec-title">Журнал занять</div></div>
-    <div id="sc-journal" style="margin-bottom:14px"></div>
-    <div class="sec-header"><div class="sec-title">Коди доступу</div></div>
-    <div id="sc-codes" style="margin-bottom:6px"></div>
-    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="resetCodes()">🔄 Оновити коди</button>
-    <div class="sec-header"><div class="sec-title">Корисні посилання</div></div>
-    <div id="sc-links" style="margin-bottom:6px"></div>
-    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="showAddLink()">+ Додати посилання</button>
-    <div class="sec-header"><div class="sec-title">Налаштування</div></div>
-    <div class="card clickable" onclick="showEditPrice()"><div class="list-item"><div class="item-info"><div class="item-name">Змінити ціну заняття</div></div><div class="chevron">›</div></div></div>
-  </div>
-</div>
-
-<!-- STUDENT APP -->
-<div id="screen-student" class="screen">
-  <!-- HOME -->
-  <div id="s-home" style="display:flex;flex-direction:column;min-height:100vh">
-    <div class="s-app-header">
-      <div class="s-greeting" id="s-student-name">Мій кабінет</div>
-      <div class="s-av">👤</div>
-    </div>
-    <div class="screen-body" style="padding:0 14px 8px">
-      <div class="balance-hero" id="s-balance-hero" style="margin:0 0 10px">
-        <div class="balance-label">Баланс</div>
-        <div class="balance-amount" id="s-balance">—₴</div>
-        <div class="balance-sub" id="s-price-sub">Ціна заняття: —₴</div>
-        <div class="balance-actions" id="s-balance-actions"></div>
-      </div>
-      <div class="sec-header"><div class="sec-title">Наступне заняття</div></div>
-      <div id="s-next-lesson"></div>
-      <div class="sec-header" id="s-hw-preview-section"><div class="sec-title">Нові домашні завдання</div></div>
-      <div id="s-hw-preview"></div>
-      <div class="sec-header"><div class="sec-title">Корисні посилання</div></div>
-      <div id="s-links-preview"></div>
-    </div>
-    <nav class="bottom-nav">
-      <button class="nav-btn active" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- SCHEDULE -->
-  <div id="s-schedule" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Мій розклад</div></div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="s-schedule-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn active" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- HW -->
-  <div id="s-hw" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Домашні завдання</div></div>
-    <div class="tabs" style="margin-top:10px">
-      <div class="tab active" onclick="filterHw('all',this)">Всі</div>
-      <div class="tab" onclick="filterHw('pending',this)">Не виконані</div>
-      <div class="tab" onclick="filterHw('done',this)">Виконані</div>
-    </div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="s-hw-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn active s-nav-hw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn s-nav-journal" onclick="showStudentTab('journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-  <!-- JOURNAL -->
-  <div id="s-journal" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Журнал занять</div></div>
-    <div class="screen-body" style="padding:0 14px 14px"><div id="s-journal-list"></div></div>
-    <nav class="bottom-nav">
-      <button class="nav-btn" onclick="showStudentTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
-      <button class="nav-btn" onclick="showStudentTab('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Розклад</span></button>
-      <button class="nav-btn s-nav-hw" onclick="showStudentTab('hw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>ДЗ</span></button>
-      <button class="nav-btn active s-nav-journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg><span>Журнал</span></button>
-      <button class="nav-btn" onclick="showNotes()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Нотатки</span></button>
-    </nav>
-  </div>
-</div>
-
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-add-student">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Новий учень</div>
-    <div class="form-group"><label class="form-label">Ім'я учня</label><input class="form-input" id="new-student-name" placeholder="Іван Петренко"></div>
-    <div class="form-group"><label class="form-label">Ціна заняття (₴)</label><input class="form-input" id="new-student-price" placeholder="500" type="number"></div>
-    <div class="form-group"><label class="form-label">Дні занять</label><div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div><div id="day-times"></div></div>
-    <button class="btn btn-primary" onclick="addStudent()">Додати учня</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-student')">Скасувати</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-mark-lesson">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Відмітити заняття</div>
-    <div class="form-group"><label class="form-label">Учень</label><select class="form-input" id="mark-student"></select></div>
-    <div class="form-group"><label class="form-label">Тема заняття</label><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
-    <div class="form-group"><label class="form-label">Дія</label>
-      <select class="form-input" id="mark-action">
-        <option value="done">✅ Проведено (списати баланс)</option>
-        <option value="cancel">❌ Скасовано (без списання)</option>
-        <option value="reschedule">🔄 Перенесено</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Матеріали (необов'язково)</label>
-      <input type="file" id="lesson-file-input" accept="image/*,application/pdf,video/*" multiple style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
-      <div id="lesson-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
-    </div>
-    <button class="btn btn-primary" onclick="markLesson()">Підтвердити</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-mark-lesson')">Скасувати</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-send-hw">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Домашнє завдання</div>
-    <div class="form-group"><label class="form-label">Учень</label><select class="form-input" id="hw-student"></select></div>
-    <div class="form-group"><label class="form-label">Текст завдання</label><textarea class="form-input" id="hw-text" placeholder="Виконати вправи 5.1 — 5.8..."></textarea></div>
-    <div class="form-group">
-      <label class="form-label">Файл (необов'язково)</label>
-      <input type="file" id="hw-file-input" accept="image/*,application/pdf,video/*" multiple style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
-      <div id="hw-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
-    </div>
-    <button class="btn btn-primary" onclick="sendHw()">Надіслати ДЗ</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-send-hw')">Скасувати</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-balance-add">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Поповнити баланс</div><div class="form-group"><label class="form-label">Сума (₴)</label><input class="form-input" id="balance-add-amount" placeholder="500" type="number"></div><button class="btn btn-primary" onclick="addBalance()">Поповнити</button><button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-add')">Скасувати</button></div>
-</div>
-<div class="modal-overlay" id="modal-balance-sub">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Списати з балансу</div><div class="form-group"><label class="form-label">Сума (₴)</label><input class="form-input" id="balance-sub-amount" placeholder="500" type="number"></div><button class="btn btn-danger" onclick="subBalance()">Списати</button><button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-balance-sub')">Скасувати</button></div>
-</div>
-<div class="modal-overlay" id="modal-edit-price">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Змінити ціну</div><div class="form-group"><label class="form-label">Нова ціна (₴)</label><input class="form-input" id="edit-price-val" type="number"></div><button class="btn btn-primary" onclick="editPrice()">Зберегти</button><button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-price')">Скасувати</button></div>
-</div>
-<div class="modal-overlay" id="modal-add-link">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Корисне посилання</div><div class="form-group"><label class="form-label">Назва</label><input class="form-input" id="link-label" placeholder="Посилання на конференцію"></div><div class="form-group"><label class="form-label">URL</label><input class="form-input" id="link-url" placeholder="https://meet.google.com/..." type="url"></div><button class="btn btn-primary" onclick="addLink()">Додати</button><button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-link')">Скасувати</button></div>
-</div>
-<div class="modal-overlay" id="modal-edit-schedule">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Змінити розклад</div><div class="form-group"><label class="form-label">Дні занять</label><div id="edit-days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div></div><div class="form-group"><label class="form-label">Час</label><input class="form-input" id="edit-schedule-time" type="time"></div><button class="btn btn-primary" onclick="saveSchedule()">Зберегти</button><button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit-schedule')">Скасувати</button></div>
-</div>
-
-<div class="modal-overlay" id="modal-pay">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Поповнити баланс</div>
-    <div class="form-group"><label class="form-label">Сума (₴)</label><input class="form-input" id="pay-amount" placeholder="500" type="number"></div>
-    <div class="form-group">
-      <label class="form-label">Фото або документ чеку</label>
-      <input type="file" id="pay-file-input" accept="image/*,application/pdf" style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
-      <div id="pay-file-label" style="color:var(--green);font-size:12px;margin-top:4px"></div>
-    </div>
-    <button class="btn btn-primary" onclick="submitPay()">Надіслати запит</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-pay')">Скасувати</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-journal-detail">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="jd-title">Заняття</div>
-    <div style="color:var(--text2);font-size:13px;margin-bottom:16px" id="jd-date"></div>
-    <div id="jd-materials"></div>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-journal-detail')">Закрити</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-hw-detail">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="hwd-title">Домашнє завдання</div>
-    <div style="color:var(--text2);font-size:13px;margin-bottom:8px" id="hwd-date"></div>
-    <div style="background:var(--card2);border-radius:var(--r2);padding:12px;margin-bottom:16px;font-size:14px;line-height:1.5" id="hwd-text"></div>
-    <div id="hwd-status" style="margin-bottom:16px"></div>
-    <div id="hwd-feedback" style="margin-bottom:16px"></div>
-    <div id="hwd-reply-form">
-      <div class="form-group"><label class="form-label">Ваша відповідь</label><textarea class="form-input" id="hwd-reply-text" placeholder="Напишіть відповідь або коментар..."></textarea></div>
-      <div class="form-group">
-        <label class="form-label">Файл (необов'язково)</label>
-        <input type="file" id="hwd-reply-file" accept="image/*,application/pdf,video/*" multiple style="width:100%;padding:10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px">
-      </div>
-      <button class="btn btn-primary" onclick="submitHwReply()" style="margin-bottom:8px">📤 Надіслати відповідь</button>
-      <button class="btn btn-secondary" onclick="markHwDoneFromModal()">✅ Просто відмітити як виконане</button>
-    </div>
-    <div id="hwd-done-msg" style="display:none;text-align:center;padding:10px 0;color:var(--green);font-weight:600">✅ ДЗ виконано!</div>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-hw-detail')">Закрити</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-student-links">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">🔗 Мої посилання</div>
-    <div id="student-links-list" style="margin-bottom:14px"></div>
-    <div class="form-group"><label class="form-label">Назва</label><input class="form-input" id="s-link-label" placeholder="Зошит, Google Drive..."></div>
-    <div class="form-group"><label class="form-label">Посилання або текст</label><input class="form-input" id="s-link-url" placeholder="https://... або просто текст"></div>
-    <button class="btn btn-primary" onclick="addStudentOwnLink()">+ Додати</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-student-links')">Закрити</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-notes">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">📌 Мої нотатки</div>
-    <div id="notes-list" style="margin-bottom:14px;max-height:300px;overflow-y:auto"></div>
-    <div class="form-group">
-      <textarea class="form-input" id="note-input" placeholder="Текст нотатки або посилання..."></textarea>
-    </div>
-    <button class="btn btn-primary" onclick="addNote()">+ Додати</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-notes')">Закрити</button>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-const tg=window.Telegram?.WebApp;
-if(tg)tg.expand();
-
-const API='';
-const DAYS=['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
-const DAY_SHORT=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-const MONTHS=['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-const COLORS=['linear-gradient(135deg,#7c6ff7,#f07090)','linear-gradient(135deg,#60c0f0,#5df0a0)','linear-gradient(135deg,#f0d060,#f09060)','linear-gradient(135deg,#f07060,#f09060)','linear-gradient(135deg,#5df0a0,#60c0f0)'];
-
-let appData=null,currentStudent=null,screenStack=[],hwFilter='all';
-
-const params=new URLSearchParams(location.search);
-const urlRole=params.get('role'),urlTid=params.get('tid'),urlName=params.get('name');
-
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
-function avatarColor(n){let h=0;for(let c of n)h+=c.charCodeAt(0);return COLORS[h%COLORS.length]}
-function today(){const d=new Date().getDay();return DAYS[d===0?6:d-1]}
-function fmtBal(b){return(b>=0?'+':'')+b+'₴'}
-function monthShort(m){return MONTHS[parseInt(m)]||m}
-
-function toast(msg,ms=2500){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),ms);
-}
-
-async function api(path,method='GET',body=null){
-  const opts={method,headers:{'Content-Type':'application/json'}};
-  if(body)opts.body=JSON.stringify(body);
-  const r=await fetch(API+path,opts);
-  return r.json();
-}
-
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-  screenStack=[];
-}
-
-function pushScreen(id){
-  const cur=document.querySelector('.screen.active');
-  if(cur)screenStack.push(cur.id);
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-}
-
-function goBack(){
-  const prev=screenStack.pop();
-  if(prev){
-    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById(prev)?.classList.add('active');
-  } else {showScreen('screen-teacher');showTeacherTab('home');}
-}
-
-function openModal(id){document.getElementById(id)?.classList.add('open')}
-function closeModal(id){document.getElementById(id)?.classList.remove('open')}
-
-function setRole(role){
-  if(role==='teacher'){
-    if(urlTid)loadTeacher(urlTid);
-    else showScreen('screen-teacher-reg');
-  } else showScreen('screen-auth');
-}
-
-window.addEventListener('load',()=>{
-  if(urlRole==='admin'&&urlTid){loadTeacher(urlTid);return}
-  if((urlRole==='student'||urlRole==='super'||urlRole==='parent')&&urlTid&&urlName){loadStudent(urlTid,urlName,urlRole);return}
-});
-
-async function registerTeacher(){
-  const name=document.getElementById('reg-name').value.trim();
-  const subject=document.getElementById('reg-subject').value.trim();
-  if(!name||!subject){toast('Заповніть всі поля');return}
-  const tid=tg?.initDataUnsafe?.user?.id||Math.floor(Math.random()*1e9);
-  const res=await api('/api/register-teacher','POST',{tid,name,subject});
-  if(res.ok)loadTeacher(tid);
-  else toast('Помилка реєстрації');
-}
-
-async function loadTeacher(tid){
-  try{
-    const data=await api(`/api/teacher/${tid}`);
-    appData=data;appData.tid=String(tid);
-    renderTeacher();showScreen('screen-teacher');showTeacherTab('home');
-  }catch(e){toast('Помилка завантаження')}
-}
-
-function studentColor(name){
-  const COLORS=[
-    '#7c6ff7','#5ce0d8','#ef9f27','#e24b4a','#639922','#378add',
-    '#f07060','#60c0f0','#d4a0ff','#ff9f6a','#6affb3','#ffcc5c',
-    '#5cb8ff','#ff6ab0','#a8ff78','#ffd166','#06d6a0','#ef476f',
-    '#118ab2','#ffd60a','#8338ec','#3a86ff','#fb5607','#ff006e'
-  ];
-  const COLORS_BG=[
-    'rgba(124,111,247,.1)','rgba(92,224,216,.1)','rgba(239,159,39,.1)','rgba(226,75,74,.1)',
-    'rgba(99,153,34,.1)','rgba(55,138,221,.1)','rgba(240,112,96,.1)','rgba(96,192,240,.1)',
-    'rgba(212,160,255,.1)','rgba(255,159,106,.1)','rgba(106,255,179,.1)','rgba(255,204,92,.1)',
-    'rgba(92,184,255,.1)','rgba(255,106,176,.1)','rgba(168,255,120,.1)','rgba(255,209,102,.1)',
-    'rgba(6,214,160,.1)','rgba(239,71,111,.1)','rgba(17,138,178,.1)','rgba(255,214,10,.1)',
-    'rgba(131,56,236,.1)','rgba(58,134,255,.1)','rgba(251,86,7,.1)','rgba(255,0,110,.1)'
-  ];
-  let h=0;for(let c of name)h=(h*31+c.charCodeAt(0))%COLORS.length;
-  return {color:COLORS[h],bg:COLORS_BG[h]};
-}
-
-function shortName(name){
-  const parts=name.trim().split(' ');
-  if(parts.length===1)return parts[0];
-  return parts[0]+' '+parts[1]; // Ім'я + Прізвище
-}
-
-function renderTeacher(){
-  const students=appData.students||[];
-  const t=today();
-  document.getElementById('t-teacher-name').textContent=appData.name||'Кабінет вчителя';
-  document.getElementById('t-teacher-sub').textContent=(appData.subject||'')+(students.length?' · '+students.length+' учнів':'');
-
-  // Stats
-  const todayL=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===t).map(x=>({...x,name:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
-  const debts=students.filter(s=>s.balance<0);
-  document.getElementById('t-stat-students').textContent=students.length;
-  document.getElementById('t-stat-today').textContent=todayL.length;
-  document.getElementById('t-stat-debts').textContent=debts.length;
-  document.getElementById('t-stat-debts').className='metric-val'+(debts.length>0?' red':'');
-
-  // Income: sum from journal entries this calendar month
-  const now=new Date();
-  const thisMonth=now.getMonth()+1;
-  const thisYear=now.getFullYear();
-  let monthIncome=0;
-  for(const s of students){
-    for(const e of (s.journal||[])){
-      const parts=e.date.split('.');
-      const d=parseInt(parts[0]),m=parseInt(parts[1]),y=parseInt(parts[2])||thisYear;
-      if(m===thisMonth&&y===thisYear) monthIncome+=s.price||0;
-    }
-  }
-  const incomeEl=document.getElementById('t-stat-income');
-  if(incomeEl){
-    incomeEl.textContent=monthIncome>0?monthIncome+'₴':'0₴';
-    incomeEl.style.fontSize=monthIncome>=10000?'16px':monthIncome>=1000?'18px':'22px';
-  }
-
-  // 3-day schedule preview
-  const days3=[t];
-  const tIdx=DAYS.indexOf(t);
-  for(let i=1;i<7&&days3.length<3;i++){
-    const d=DAYS[(tIdx+i)%7];
-    if(students.some(s=>(s.sessions||[]).some(x=>x.day===d)))days3.push(d);
-  }
-
-  let schedHTML='';
-  for(const day of days3){
-    const ls=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
-    if(!ls.length)continue;
-    const isToday=day===t;
-    schedHTML+=`<div class="day-block">
-      <div class="day-head${isToday?' today':''}">${isToday?'<div class="day-dot"></div>':''}${day}${isToday?' · сьогодні':''}</div>
-      ${ls.map(l=>{
-        const sc=studentColor(l.sname);
-        const balStr=l.bal<0?`<span class="lesson-bal debt">${l.bal}₴</span>`:`<span class="lesson-bal ok">0₴</span>`;
-        return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname}</span>${balStr}</div>`;
-      }).join('')}
-    </div>`;
-  }
-  document.getElementById('t-schedule-preview').innerHTML=schedHTML||'<div class="empty" style="padding:20px 0">Занять немає</div>';
-
-  // Students list
-  document.getElementById('t-students-list').innerHTML=students.length?students.map(s=>{
-    const sc=studentColor(s.name);
-    const bal=s.balance;
-    const balHTML=bal<0?`<div class="s-badge debt">${bal}₴</div>`:`<div class="s-badge zero">0₴</div>`;
-    const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
-    return`<div class="student-card" onclick="openStudentCard('${s.name}')">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
-      <div class="s-avatar" style="background:${sc.bg};color:${sc.color}">${initials(s.name)}</div>
-      <div class="s-info"><div class="s-name">${s.name}</div><div class="s-sched">${sched||'Розклад не встановлено'}</div></div>
-      ${balHTML}
-    </div>`;
-  }).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
-
-  // Students preview (first 3 for home tab)
-  const previewEl=document.getElementById('t-students-preview');
-  if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
-
-  // Pie chart attendance for lessons tab
-  const nowS=new Date();
-  const thisMS=nowS.getMonth()+1,thisYS=nowS.getFullYear();
-  let conducted=0,cancelled=0,rescheduled=0;
-  for(const s of students){
-    for(const e of (s.journal||[])){
-      const p=e.date.split('.');
-      const m=parseInt(p[1]),y=parseInt(p[2])||thisYS;
-      if(m===thisMS&&y===thisYS){
-        const topic=(e.topic||'').toLowerCase();
-        if(topic.includes('скасов')||topic.includes('cancel'))cancelled++;
-        else if(topic.includes('перенес')||topic.includes('reschedule'))rescheduled++;
-        else conducted++;
-      }
-    }
-  }
-  const totalM2=conducted+cancelled+rescheduled;
-  const totalAll2=students.flatMap(s=>s.journal||[]).length;
-
-  function pieSlice2(cx,cy,r,startA,endA,color){
-    if(endA-startA>=359.99)return`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
-    const s1=startA*Math.PI/180,e1=endA*Math.PI/180;
-    const x1=cx+r*Math.cos(s1),y1=cy+r*Math.sin(s1);
-    const x2=cx+r*Math.cos(e1),y2=cy+r*Math.sin(e1);
-    return`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${endA-startA>180?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`;
-  }
-
-  let pieSVG2='';
-  if(totalM2>0){
-    let a=-90;
-    const slices=[[conducted,'#5ce0d8'],[cancelled,'#e24b4a'],[rescheduled,'#4a4a5a']];
-    for(const [cnt,col] of slices){
-      if(!cnt)continue;
-      const ang=cnt/totalM2*360;
-      pieSVG2+=pieSlice2(60,60,50,a,a+ang,col);
-      a+=ang;
-    }
-    pieSVG2+=`<circle cx="60" cy="60" r="28" fill="var(--bg2)"/>`;
-    pieSVG2+=`<text x="60" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="500">${totalM2}</text>`;
-    pieSVG2+=`<text x="60" y="70" text-anchor="middle" fill="var(--text2)" font-size="9">цей місяць</text>`;
-  } else {
-    pieSVG2=`<circle cx="60" cy="60" r="50" fill="#1e1e2a"/><circle cx="60" cy="60" r="28" fill="var(--bg2)"/><text x="60" y="64" text-anchor="middle" fill="var(--text3)" font-size="10">Немає</text>`;
-  }
-
-  const pct=(n)=>totalM2>0?Math.round(n/totalM2*100):0;
-
-  document.getElementById('t-journal-list').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-      <div class="metric-card"><div class="metric-val">${totalAll2}</div><div class="metric-lbl">Занять всього</div></div>
-      <div class="metric-card"><div class="metric-val">${totalM2}</div><div class="metric-lbl">За цей місяць</div></div>
-    </div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Відвідуваність за поточний місяць</div>
-      <div style="display:flex;align-items:center;justify-content:space-around;gap:12px">
-        <svg width="120" height="120" viewBox="0 0 120 120">${pieSVG2}</svg>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#5ce0d8;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Проведено</div><div style="font-size:11px;color:var(--text2)">${conducted} · ${pct(conducted)}%</div></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#e24b4a;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Скасовано</div><div style="font-size:11px;color:var(--text2)">${cancelled} · ${pct(cancelled)}%</div></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#4a4a5a;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Перенесено</div><div style="font-size:11px;color:var(--text2)">${rescheduled} · ${pct(rescheduled)}%</div></div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-
-  ['mark-student','hw-student'].forEach(id=>{
-    const sel=document.getElementById(id);
-    if(sel)sel.innerHTML=students.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-  });
-}
-
-function studentCardHTML(s){
-  const sc=studentColor(s.name);
-  const bal=s.balance;
-  const balHTML=bal<0?`<div class="s-badge debt">${bal}₴</div>`:`<div class="s-badge zero">0₴</div>`;
-  const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
-  return`<div class="student-card" onclick="openStudentCard('${s.name}')">
-    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
-    <div class="s-avatar" style="background:${sc.bg};color:${sc.color}">${initials(s.name)}</div>
-    <div class="s-info"><div class="s-name">${s.name}</div><div class="s-sched">${sched||'Розклад не встановлено'}</div></div>
-    ${balHTML}
-  </div>`;
-}
-
-function renderWeekSchedule(students){
-  const t=today();
-  const tIdx=DAYS.indexOf(t);
-  const ordered=[...DAYS.slice(tIdx),...DAYS.slice(0,tIdx)];
-  const activeDays=ordered.filter(day=>students.some(s=>(s.sessions||[]).some(x=>x.day===day)));
-  if(!activeDays.length){
-    document.getElementById('t-week-schedule').innerHTML='<div class="empty"><div class="empty-icon">📅</div>Розклад порожній</div>';
-    return;
-  }
-  document.getElementById('t-week-schedule').innerHTML=activeDays.map(day=>{
-    const ls=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
-    const isToday=day===t;
-    return`<div style="margin-bottom:18px">
-      <div style="font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:${isToday?'var(--accent)':'var(--text2)'};display:flex;align-items:center;gap:6px;margin-bottom:10px">
-        ${isToday?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>':''}
-        ${day}${isToday?' · сьогодні':''}
-      </div>
-      ${ls.map(l=>{
-        const sc=studentColor(l.sname);
-        const balStr=l.bal<0?l.bal+'₴':'0₴';
-        const balColor=l.bal<0?'var(--red)':'var(--text3)';
-        return`<div style="background:var(--bg2);border:1px solid ${isToday?'rgba(124,111,247,.25)':'var(--border)'};border-radius:14px;padding:16px 18px;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="font-size:26px;font-weight:500;color:${isToday?'var(--accent)':'var(--green)'};min-width:60px">${l.time}</div>
-            <div style="width:9px;height:9px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
-            <div style="flex:1;font-size:14px;color:var(--text)">${l.sname}</div>
-            <div style="font-size:12px;font-weight:500;color:${balColor}">${balStr}</div>
-          </div>
-          ${isToday?`<div style="margin-top:10px;background:rgba(124,111,247,.06);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--accent)">Сьогодні 📚</div>`:''}
-        </div>`;
-      }).join('')}
-    </div>`;
-  }).join('');
-}
-
-function openStudentCard(name){
-  const s=(appData.students||[]).find(x=>x.name===name);
-  if(!s)return;
-  currentStudent=s;
-  const sc=studentColor(name);
-  document.getElementById('sc-name').textContent=s.name;
-  const bal=s.balance;
-  document.getElementById('sc-balance').textContent=fmtBal(bal);
-  document.getElementById('sc-price').textContent='Ціна: '+s.price+'₴/заняття';
-  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#e24b4a,#f07060)':('linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)');
-  document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length
-    ?(s.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
-    :'<div style="color:var(--text3);font-size:13px;padding:8px 0">Розклад не встановлено</div>';
-  document.getElementById('sc-codes').innerHTML=`
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Учень</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Батьки</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Супер-учень</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
-  const journal=s.journal||[];
-  const hw=s.homework||[];
-  const totalL=journal.length;
-  const hwDone=hw.filter(h=>h.status==='done').length;
-  const hwTotal=hw.length;
-  const hwPct=hwTotal>0?Math.round(hwDone/hwTotal*100):0;
-  const hwColor=hwPct>=70?'#5ce0d8':hwPct>=40?'#ef9f27':'#e24b4a';
-  function svgRing(pct,color,size=72){
-    const r=28,circ=2*Math.PI*r;
-    const dash=circ*(pct/100),gap=circ-dash;
-    return`<svg width="${size}" height="${size}" viewBox="0 0 72 72" style="transform:rotate(-90deg)">
-      <circle cx="36" cy="36" r="${r}" fill="none" stroke="#1e1e2a" stroke-width="7"/>
-      <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="7"
-        stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round"/>
-    </svg>`;
-  }
-  const statsEl=document.getElementById('sc-stats');
-  if(statsEl)statsEl.innerHTML=`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 16px">
-      <div style="display:flex;justify-content:space-around;align-items:center">
-        <div style="text-align:center">
-          <div style="position:relative;display:inline-block">
-            ${svgRing(hwTotal>0?hwPct:0,hwColor)}
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${hwColor}">${hwPct}%</div>
-          </div>
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Виконання ДЗ</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${hwDone}/${hwTotal}</div>
-        </div>
-        <div style="width:1px;height:70px;background:var(--border)"></div>
-        <div style="text-align:center">
-          <div style="position:relative;display:inline-block">
-            ${svgRing(totalL>0?100:0,sc.color)}
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:${sc.color}">${totalL}</div>
-          </div>
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Занять всього</div>
-        </div>
-      </div>
-    </div>`;
-  renderStudentCardJournal(s);
-  renderStudentCardLinks();
-  pushScreen('screen-student-card');
-}
-
-function renderStudentCardJournal(s){
-  const journal=(s.journal||[]).slice().reverse();
-  const el=document.getElementById('sc-journal');
-  if(!el)return;
-  if(!journal.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Занять ще не проводилось</div>';return;}
-  el.innerHTML=journal.slice(0,20).map((e,i)=>{
-    const p=e.date.split('.');
-    const matCount=(e.materials||[]).length;
-    const realIdx=(s.journal||[]).length-1-i;
-    return`<div class="journal-card fade-up" ${matCount>0?`onclick="showTeacherJournalDetail('${s.name}',${realIdx})" style="cursor:pointer"`:''}">
-      <div class="j-top">
-        <div class="j-date-box"><div class="j-day">${p[0]}</div><div class="j-mon">${monthShort(p[1])}</div></div>
-        <div class="j-info">
-          <div class="j-topic">${e.topic}</div>
-          <div class="j-meta">${matCount?`<div class="j-tag teal">📎 ${matCount} ${matCount===1?'файл':'файли'}</div>`:'<div class="j-tag muted">Без матеріалів</div>'}</div>
-        </div>
-        <span onclick="event.stopPropagation();deleteJournalEntryFromCard('${s.name}',${realIdx})" class="j-del">🗑</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function showTeacherJournalDetail(studentName,idx){
-  const s=(appData.students||[]).find(x=>x.name===studentName);
-  if(!s)return;
-  const entry=(s.journal||[])[idx];
-  if(!entry)return;
-  document.getElementById('jd-title').textContent=entry.topic;
-  document.getElementById('jd-date').textContent='📅 '+entry.date+' · '+studentName;
-  const materials=entry.materials||[];
-  const matEl=document.getElementById('jd-materials');
-  if(!materials.length){matEl.innerHTML='<div class="empty" style="padding:20px 0">Матеріалів немає</div>';openModal('modal-journal-detail');return;}
-  matEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:10px 0">⏳ Завантаження...</div>';
-  openModal('modal-journal-detail');
-  const items=await Promise.all(materials.map(async m=>{
-    try{
-      const res=await fetch('/api/get-file-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_id:m.file_id})});
-      const data=await res.json();
-      return{...m,url:data.ok?data.url:null};
-    }catch(e){return{...m,url:null}}
-  }));
-  matEl.innerHTML=items.map(m=>{
-    if(m.type==='photo')return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block"></div>`:'<div class="card"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото</div></div></div></div>';
-    return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent)">↓</div></div></div>`:'<div class="card"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div></div></div>';
-  }).join('')+`<button class="btn btn-secondary" style="margin-top:12px" onclick="sendMaterialsToStudent('${studentName}',${idx})">📨 Надіслати учню в бота</button>`;
-}
-
-async function sendMaterialsToStudent(studentName,idx){
-  const s=(appData.students||[]).find(x=>x.name===studentName);
-  if(!s)return;
-  const uid=s.u_id||s.su_id;
-  try{
-    const res=await fetch('/api/resend-materials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tid:appData.tid,name:studentName,idx,uid:uid||0})});
-    const data=await res.json();
-    if(data.ok)toast('✅ Матеріали надіслано!',3000);
-    else toast('Помилка: '+(data.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-async function deleteJournalEntryFromCard(studentName,idx){
-  if(!confirm('Видалити запис?'))return;
-  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
-  if(res.ok){
-    const s=(appData.students||[]).find(x=>x.name===studentName);
-    if(s&&s.journal)s.journal.splice(idx,1);
-    renderStudentCardJournal(s);
-    renderTeacher();
-    toast('🗑 Видалено');
-  }
-}
-
-
-function renderStudentCardLinks(){
-  const links=currentStudent.links||{};
-  document.getElementById('sc-links').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
-    <div class="card"><div class="list-item"><div class="link-icon">🔗</div><div class="item-info"><div class="item-name">${k}</div><div class="item-sub">${v}</div></div><span style="color:var(--red);cursor:pointer;font-size:18px" onclick="deleteLink('${k}')">×</span></div></div>`).join(''):'<div style="color:var(--text3);font-size:14px">Посилань немає</div>';
-}
-
-function copyCode(code){navigator.clipboard?.writeText(code);toast('Код скопійовано: '+code)}
-
-async function deleteJournalEntry(studentName,idx){
-  if(!confirm('Видалити запис із журналу?'))return;
-  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
-  if(res.ok){
-    const s=(appData.students||[]).find(x=>x.name===studentName);
-    if(s&&s.journal)s.journal.splice(idx,1);
-    renderTeacher();toast('🗑 Запис видалено');
-  }
-}
-
-// ADD STUDENT
-function showAddStudent(){
-  document.getElementById('new-student-name').value='';
-  document.getElementById('new-student-price').value='';
-  document.getElementById('days-picker').innerHTML=DAYS.map((d,i)=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
-  document.getElementById('day-times').innerHTML='';
-  openModal('modal-add-student');
-}
-
-function toggleDay(btn){
-  btn.classList.toggle('btn-sm-primary');
-  btn.classList.toggle('btn-sm-ghost');
-  const day=btn.dataset.day;
-  const timesEl=document.getElementById('day-times');
-  const existing=document.getElementById('time-row-'+day);
-  if(btn.classList.contains('btn-sm-primary')){
-    const row=document.createElement('div');
-    row.id='time-row-'+day;
-    row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:8px';
-    const di=DAYS.indexOf(day);
-    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:28px">${DAY_SHORT[di]}</div><input class="form-input" id="time-input-${day}" type="text" placeholder="16:00" maxlength="5" oninput="formatTimeInput(this)" style="flex:1;padding:10px 12px">`;
-    timesEl.appendChild(row);
-    document.getElementById('time-input-'+day).focus();
-  } else {
-    if(existing)existing.remove();
-  }
-}
-
-function formatTimeInput(input){
-  let v=input.value.replace(/\D/g,'');
-  if(v.length>2)v=v.slice(0,2)+':'+v.slice(2,4);
-  input.value=v;
-}
-
-async function addStudent(){
-  const name=document.getElementById('new-student-name').value.trim();
-  const price=parseInt(document.getElementById('new-student-price').value)||0;
-  if(!name){toast('Введіть ім\'я');return}
-  const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
-  if(!selectedDays.length){toast('Оберіть хоча б один день');return}
-  const sessions=[];
-  for(const day of selectedDays){
-    const timeVal=(document.getElementById('time-input-'+day)?.value||'').trim();
-    if(!timeVal||!/^\d{1,2}:\d{2}$/.test(timeVal)){toast(`Введіть час для ${day}`);return}
-    sessions.push({day,time:timeVal});
-  }
-  try{
-    const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
-    if(res.ok||res.student){
-      if(!appData.students)appData.students=[];
-      appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
-      renderTeacher();closeModal('modal-add-student');toast('✅ '+name+' доданий!');
-    } else toast('Помилка: '+(res.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-// MARK LESSON
-function showMarkLesson(){
-  document.getElementById('mark-topic').value='';
-  document.getElementById('mark-action').value='done';
-  document.getElementById('lesson-file-label').textContent='';
-  document.getElementById('lesson-file-input').value='';
-  openModal('modal-mark-lesson');
-}
-
-async function markLesson(){
-  const name=document.getElementById('mark-student').value;
-  const topic=document.getElementById('mark-topic').value.trim();
-  const action=document.getElementById('mark-action').value;
-  if(!topic){toast('Введіть тему');return}
-
-  // Читаємо файли ДО будь-яких запитів і зберігаємо в FormData одразу
-  const lessonInput=document.getElementById('lesson-file-input');
-  const files=lessonInput?Array.from(lessonInput.files||[]):[];
-  // Готуємо FormData одразу поки файли ще доступні
-  let materialsFormData=null;
-  if(files.length>0){
-    materialsFormData=new FormData();
-    materialsFormData.append('tid',String(appData.tid));
-    materialsFormData.append('name',name);
-    materialsFormData.append('topic',topic);
-    for(const file of files)materialsFormData.append('files',file,file.name);
-  }
-
-  // Спочатку відмічаємо заняття — щоб запис в журналі існував
-  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
-  if(!res.ok){toast('Помилка');return}
-
-  // Надсилаємо матеріали (журнал вже є, FormData вже готова)
-  let materialsSent=false;
-  if(materialsFormData){
-    try{
-      const matRes=await fetch('/api/send-materials',{method:'POST',body:materialsFormData});
-      const matData=await matRes.json();
-      console.log('[MATERIALS]',matData);
-      if(matData.ok&&matData.sent>0)materialsSent=true;
-    }catch(e){console.error('[MATERIALS ERROR]',e)}
-  }
-
-  const s=(appData.students||[]).find(x=>x.name===name);
-  if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
-  renderTeacher();closeModal('modal-mark-lesson');
-  toast(materialsSent?'✅ Заняття відмічено! Матеріали надіслано учню.':'✅ Заняття відмічено!');
-}
-
-// SEND HW
-function showSendHw(){
-  document.getElementById('hw-text').value='';
-  document.getElementById('hw-file-label').textContent='';
-  document.getElementById('hw-file-input').value='';
-  openModal('modal-send-hw');
-}
-
-async function sendHw(){
-  const name=document.getElementById('hw-student').value;
-  const text=document.getElementById('hw-text').value.trim();
-  const hwInput=document.getElementById('hw-file-input');
-  const hwFile=hwInput&&hwInput.files[0];
-  if(!text&&!hwFile){toast('Введіть текст або додайте файл');return}
-  const hwFiles=hwInput?Array.from(hwInput.files||[]):[];
-  if(hwFiles.length>0){
-    const formData=new FormData();
-    formData.append('tid',appData.tid);
-    formData.append('name',name);
-    formData.append('text',text||'Дивись файли');
-    for(const f of hwFiles)formData.append('files',f,f.name);
-    try{
-      const res=await fetch('/api/send-hw-file',{method:'POST',body:formData});
-      const data=await res.json();
-      if(data.ok){closeModal('modal-send-hw');document.getElementById('hw-text').value='';toast('✅ ДЗ надіслано '+name+'!');}
-      else toast('Помилка: '+(data.error||'невідома'));
-    }catch(e){toast('Помилка зʼєднання')}
-  } else {
-    const res=await api('/api/send-hw','POST',{tid:appData.tid,name,text});
-    if(res.ok){closeModal('modal-send-hw');document.getElementById('hw-text').value='';toast('✅ ДЗ надіслано '+name+'!');}
-    else toast('Помилка');
-  }
-}
-
-// BALANCE
-function showAddBalance(){document.getElementById('balance-add-amount').value='';openModal('modal-balance-add')}
-function showSubBalance(){document.getElementById('balance-sub-amount').value='';openModal('modal-balance-sub')}
-
-async function addBalance(){
-  const amount=parseInt(document.getElementById('balance-add-amount').value)||0;
-  if(!amount){toast('Введіть суму');return}
-  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount});
-  if(res.ok){currentStudent.balance+=amount;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-balance-add');toast('✅ +'+amount+'₴');}
-  else toast('Помилка');
-}
-
-async function subBalance(){
-  const amount=parseInt(document.getElementById('balance-sub-amount').value)||0;
-  if(!amount){toast('Введіть суму');return}
-  const res=await api('/api/update-balance','POST',{tid:appData.tid,name:currentStudent.name,amount:-amount});
-  if(res.ok){currentStudent.balance-=amount;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-balance-sub');toast('✅ -'+amount+'₴');}
-  else toast('Помилка');
-}
-
-function showEditPrice(){document.getElementById('edit-price-val').value=currentStudent.price;openModal('modal-edit-price')}
-async function editPrice(){
-  const price=parseInt(document.getElementById('edit-price-val').value)||0;
-  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,price});
-  if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
-  else toast('Помилка');
-}
-
-function showAddLink(){openModal('modal-add-link')}
-async function addLink(){
-  const label=document.getElementById('link-label').value.trim();
-  const url=document.getElementById('link-url').value.trim();
-  if(!label||!url){toast('Заповніть всі поля');return}
-  const res=await api('/api/add-student-link','POST',{tid:appData.tid,name:currentStudent.name,label,url});
-  if(res.ok){if(!currentStudent.links)currentStudent.links={};currentStudent.links[label]=url;renderStudentCardLinks();closeModal('modal-add-link');document.getElementById('link-label').value='';document.getElementById('link-url').value='';toast('✅ Посилання додано');}
-  else toast('Помилка');
-}
-
-async function deleteLink(label){
-  const res=await api('/api/delete-student-link','POST',{tid:appData.tid,name:currentStudent.name,label});
-  if(res.ok){delete currentStudent.links[label];renderStudentCardLinks();toast('🗑 Видалено')}
-}
-
-function showEditSchedule(){
-  const dp=document.getElementById('edit-days-picker');
-  const selectedDays=(currentStudent.sessions||[]).map(s=>s.day);
-  dp.innerHTML=DAYS.map((d,i)=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
-  const time=(currentStudent.sessions||[])[0]?.time||'16:00';
-  document.getElementById('edit-schedule-time').value=time;
-  openModal('modal-edit-schedule');
-}
-
-async function saveSchedule(){
-  const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
-  const time=document.getElementById('edit-schedule-time').value;
-  const sessions=days.map(day=>({day,time}));
-  const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,sessions});
-  if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
-  else toast('Помилка');
-}
-
-async function resetCodes(){
-  const res=await api('/api/reset-codes','POST',{tid:appData.tid,name:currentStudent.name});
-  if(res.ok){Object.assign(currentStudent,{u_code:res.u_code,p_code:res.p_code,su_code:res.su_code,u_id:null,p_id:null,su_id:null});openStudentCard(currentStudent.name);toast('🔄 Коди оновлено')}
-}
-
-function showDeleteStudent(){if(confirm('Видалити '+currentStudent.name+'?'))doDeleteStudent()}
-async function doDeleteStudent(){
-  const res=await api('/api/delete-student','POST',{tid:appData.tid,name:currentStudent.name});
-  if(res.ok){appData.students=(appData.students||[]).filter(s=>s.name!==currentStudent.name);renderTeacher();goBack();toast('🗑 Видалений')}
-}
-
-function showTeacherTab(tab){
-  ['home','students','schedule','lessons'].forEach(t=>{
-    const el=document.getElementById('t-'+t);
-    if(el)el.style.display=t===tab?'flex':'none';
-  });
-  if(tab==='schedule'&&appData)renderWeekSchedule(appData.students||[]);
-  if(tab==='students'&&appData){
-    const el=document.getElementById('t-students-list');
-    if(el)el.innerHTML=(appData.students||[]).length?(appData.students||[]).map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
-  }
-}
-
-// STUDENT VIEW
-async function loadStudent(tid,name,role){
-  try{
-    const data=await api(`/api/student/${tid}/${encodeURIComponent(name)}`);
-    appData={...data,tid,name,role};renderStudent();showScreen('screen-student');showStudentTab('home');
-  }catch(e){console.error(e)}
-}
-
-async function authWithCode(){
-  const code=document.getElementById('auth-code').value.trim();
-  if(!code){toast('Введіть код');return}
-  try{
-    const res=await api('/api/auth','POST',{code,uid:tg?.initDataUnsafe?.user?.id||0});
-    if(res.ok){appData={...res.student,tid:res.tid,name:res.name,role:res.role};renderStudent();showScreen('screen-student');showStudentTab('home');}
-    else toast('❌ Код не знайдено');
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-function renderStudent(){
-  const d=appData,role=d.role||'student';
-  document.getElementById('s-student-name').textContent=d.name||'Мій кабінет';
-
-  const heroEl=document.getElementById('s-balance-hero');
-  const canBal=role==='parent'||role==='super';
-  if(canBal){
-    heroEl.style.display='';
-    const bal=d.balance??0;
-    document.getElementById('s-balance').textContent=fmtBal(bal);
-    document.getElementById('s-price-sub').textContent='Ціна заняття: '+(d.price||'—')+'₴';
-    if(bal<0)heroEl.style.background='linear-gradient(135deg,#e24b4a,#f07060)';
-    document.getElementById('s-balance-actions').innerHTML=
-      (role==='parent'||role==='super'?'<button class="balance-btn" onclick="showPayModal()">💳 Поповнити</button>':'')+
-      (role!=='parent'?'<button class="balance-btn" onclick="showStudentTab(\'hw\')">📚 ДЗ</button>':'')+
-      '<button class="balance-btn" onclick="showStudentTab(\'journal\')">📒 Журнал</button>';
-  } else {
-    heroEl.style.display='none';
-  }
-
-  const t=today(),tIdx=DAYS.indexOf(t);
-  let next=null;
-  for(let i=0;i<7;i++){
-    const day=DAYS[(tIdx+i)%7];
-    const found=(d.sessions||[]).find(s=>s.day===day);
-    if(found){next={...found,isToday:i===0};break}
-  }
-  document.getElementById('s-next-lesson').innerHTML=next?`
-    <div class="next-card">
-      <div class="next-lbl">Наступне заняття</div>
-      <div class="next-subj">${d.subject||'Заняття'}</div>
-      <div class="next-teacher"><div class="tdot"></div>${d.teacherName||'Вчитель'}</div>
-      <div class="chips">
-        <div class="chip acc">${next.time}</div>
-        <div class="chip neu">${next.isToday?'Сьогодні':next.day}</div>
-      </div>
-    </div>`:'<div class="empty" style="padding:20px 0">Розклад не встановлено</div>';
-
-  const hwPrev=document.getElementById('s-hw-preview-section');
-  if(role==='parent'){if(hwPrev)hwPrev.style.display='none';}
-  else{
-    if(hwPrev)hwPrev.style.display='';
-    const pending=(d.homework||[]).filter(h=>h.status!=='done').slice().reverse().slice(0,3);
-    document.getElementById('s-hw-preview').innerHTML=pending.length?pending.map(h=>hwItemHTML(h)).join(''):'<div class="empty"><div class="empty-icon">🎉</div>Всі завдання виконані!</div>';
-  }
-
-  const links=d.links||{};
-  const ownLinks=d.own_links||[];
-  const allLinks=[...Object.entries(links).map(([k,v])=>({label:k,url:v,own:false})),...ownLinks.map(l=>({label:l.label,url:l.url,id:l.id,own:true}))];
-  const LINK_COLORS=['#378add','#639922','#ef9f27','#7c6ff7','#5ce0d8','#e24b4a'];
-  const LINK_BGS=['rgba(55,138,221,.1)','rgba(99,153,34,.1)','rgba(239,159,39,.1)','rgba(124,111,247,.1)','rgba(92,224,216,.1)','rgba(226,75,74,.1)'];
-  document.getElementById('s-links-preview').innerHTML=
-    allLinks.map((l,i)=>{
-      const lc=LINK_COLORS[i%LINK_COLORS.length];
-      const lb=LINK_BGS[i%LINK_BGS.length];
-      return`<div class="link-card" onclick="window.open('${l.url}','_blank')">
-        <div class="link-icon-sq" style="background:${lb}">
-          <svg width="15" height="15" viewBox="0 0 24 24" stroke="${lc}" fill="none" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-        </div>
-        <div class="link-body"><div class="link-name">${l.label}</div><div class="link-url">${l.url}</div></div>
-        ${l.own?`<span onclick="event.stopPropagation();deleteStudentOwnLink('${l.id}')" style="color:#4a4a5a;font-size:18px;cursor:pointer;padding:0 4px;margin-left:auto">×</span>`:'<span class="link-arr">›</span>'}
-      </div>`;
-    }).join('')+
-    '<button class="add-dashed" onclick="showStudentLinksModal()">+ Додати посилання</button>';
-
-  document.querySelectorAll('.s-nav-hw').forEach(el=>el.style.display=role==='parent'?'none':'');
-  document.querySelectorAll('.s-nav-journal').forEach(el=>el.style.display=role==='parent'?'none':'');
-
-  renderStudentSchedule();
-  if(role!=='parent')renderHwList();
-  renderStudentJournal();
-
-}
-
-
-function renderStudentSchedule(){
-  const d=appData,t=today();
-  const tIdx=DAYS.indexOf(t);
-  // Sort days starting from today
-  const sortedDays=DAYS.slice(tIdx).concat(DAYS.slice(0,tIdx));
-  const activeDays=sortedDays.filter(day=>(d.sessions||[]).some(s=>s.day===day));
-  if(!activeDays.length){
-    document.getElementById('s-schedule-list').innerHTML='<div class="empty"><div class="empty-icon">📅</div>Розклад не встановлено</div>';
-    return;
-  }
-  document.getElementById('s-schedule-list').innerHTML=activeDays.map(day=>{
-    const sessions=(d.sessions||[]).filter(s=>s.day===day).sort((a,b)=>a.time.localeCompare(b.time));
-    const isToday=day===t;
-    return`<div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:${isToday?'var(--accent)':'var(--text2)'};padding:5px 0;margin-bottom:8px;${isToday?'':''}display:flex;align-items:center;gap:6px">
-        ${isToday?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>':''}
-        ${day}${isToday?' · сьогодні':''}
-      </div>
-      ${sessions.map(s=>`
-        <div style="background:var(--bg2);border:1px solid ${isToday?'rgba(124,111,247,.3)':'var(--border)'};border-radius:14px;padding:18px 20px;margin-bottom:8px;${isToday?'box-shadow:0 0 0 1px rgba(124,111,247,.1)':''}">
-          <div style="font-size:32px;font-weight:600;color:${isToday?'var(--accent)':'var(--green)'};letter-spacing:-.5px;line-height:1;margin-bottom:6px">${s.time}</div>
-          <div style="font-size:13px;color:var(--text2);font-weight:500">Заняття${isToday?' · <span style="color:var(--accent)">Сьогодні</span>':''}</div>
-          ${isToday?'<div style="margin-top:10px;background:rgba(124,111,247,.08);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent);font-weight:500">Приготуйся до заняття 📚</div>':''}
-        </div>`).join('')}
-    </div>`;
-  }).join('');
-}
-
-function hwItemHTML(h){
-  const done=h.status==='done';
-  const textPreview=h.text.slice(0,50)+(h.text.length>50?'…':'');
-  const stripeColor=done?'#2a2a3a':'#7c6ff7';
-  const dueEl=done
-    ?'<span class="due-lbl" style="color:#3a3a4a">Виконано</span>'
-    :'<span class="due-lbl" style="color:#6b6b7a">'+h.date+'</span>';
-  return`<div class="hw-item-card fade-up" onclick="showHwDetail('${h.id}')" style="${done?'opacity:.6':''}">
-    <div class="hw-check${done?' done':''}">${done?'<svg width="10" height="10" viewBox="0 0 12 12" stroke="#fff" fill="none" stroke-width="2"><polyline points="2,6 5,9 10,3"/></svg>':''}</div>
-    <div class="hw-stripe" style="background:${stripeColor}"></div>
-    <div class="hw-body">
-      <div class="hw-title">${textPreview}</div>
-      <div class="hw-due"><div class="due-dot" style="background:${done?'#2a2a3a':'#6b6b7a'}"></div>${dueEl}</div>
-    </div>
-    <div style="color:#2e2e40;font-size:16px;margin-left:auto">›</div>
-  </div>`;
-}
-
-function filterHw(f,el){
-  hwFilter=f;
-  document.querySelectorAll('#s-hw .tabs .tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderHwList();
-}
-
-function renderHwList(){
-  const hw=(appData.homework||[]).slice().reverse();
-  const filtered=hwFilter==='all'?hw:hwFilter==='done'?hw.filter(h=>h.status==='done'):hw.filter(h=>h.status!=='done');
-  document.getElementById('s-hw-list').innerHTML=filtered.length?filtered.map(h=>hwItemHTML(h)).join(''):'<div class="empty">Немає завдань</div>';
-}
-
-function renderStudentJournal(){
-  const journal=(appData.journal||[]).slice().reverse();
-  document.getElementById('s-journal-list').innerHTML=journal.length?journal.map((e,i)=>{
-    const p=e.date.split('.'),matCount=(e.materials||[]).length,idx=journal.length-1-i;
-    return`<div class="card clickable fade-up" onclick="showJournalDetail(${idx})"><div class="list-item">
-      <div class="journal-date-box"><div class="journal-day">${p[0]}</div><div class="journal-mon">${monthShort(p[1])}</div></div>
-      <div class="item-info"><div class="item-name">${e.topic}</div><div class="item-sub">${matCount?'📎 '+matCount+' файл(ів)':'Без матеріалів'}</div></div>
-      ${matCount?'<div style="color:var(--accent);font-size:18px">›</div>':''}
-    </div></div>`;
-  }).join(''):'<div class="empty"><div class="empty-icon">📒</div>Журнал порожній</div>';
-}
-
-async function showJournalDetail(idx){
-  const journal=appData.journal||[];
-  const entry=journal[idx];
-  if(!entry)return;
-  document.getElementById('jd-title').textContent=entry.topic;
-  document.getElementById('jd-date').textContent='📅 '+entry.date;
-  const materials=entry.materials||[];
-  const matEl=document.getElementById('jd-materials');
-  if(!materials.length){matEl.innerHTML='<div class="empty" style="padding:20px 0">Матеріалів немає</div>';openModal('modal-journal-detail');return}
-  matEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:10px 0">⏳ Завантаження...</div>';
-  openModal('modal-journal-detail');
-  const items=await Promise.all(materials.map(async m=>{
-    try{
-      const res=await fetch('/api/get-file-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_id:m.file_id})});
-      const data=await res.json();
-      return{...m,url:data.ok?data.url:null};
-    }catch(e){return{...m,url:null}}
-  }));
-  matEl.innerHTML=items.map(m=>{
-    if(m.type==='photo'){
-      return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block">${m.caption?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${m.caption}</div>`:''}</div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото</div></div></div></div>';
-    }else{
-      return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent);font-size:13px;font-weight:600">↓</div></div></div>`:'<div class="card" style="margin-bottom:8px"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div></div></div>';
-    }
-  }).join('')+`<button class="btn btn-secondary" style="margin-top:12px" onclick="resendMaterials(${idx})">📨 Надіслати в бота</button>`;
-}
-
-async function resendMaterials(idx){
-  try{
-    const res=await fetch('/api/resend-materials',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tid:appData.tid,name:appData.name,idx,uid:window.Telegram?.WebApp?.initDataUnsafe?.user?.id||0})
-    });
-    const data=await res.json();
-    if(data.ok)toast('✅ Матеріали надіслано в бота!',3000);
-    else toast('Помилка: '+(data.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-function showHwDetail(hwId){
-  const hw=(appData.homework||[]).find(h=>h.id===hwId);
-  if(!hw)return;
-  window._currentHwId=hwId;
-
-  document.getElementById('hwd-title').textContent='📝 ДЗ від '+hw.date;
-  document.getElementById('hwd-date').textContent='';
-  document.getElementById('hwd-text').textContent=hw.text;
-  document.getElementById('hwd-reply-text').value='';
-  document.getElementById('hwd-reply-file').value='';
-
-  const done=hw.status==='done';
-  document.getElementById('hwd-status').innerHTML=done
-    ?'<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>'
-    :'<div style="color:var(--red);font-weight:600;margin-bottom:8px">🔴 Не виконано</div>';
-
-  // Показуємо фідбек вчителя якщо є
-  const feedback=hw.feedback;
-  const fbEl=document.getElementById('hwd-feedback');
-  if(feedback){
-    fbEl.innerHTML=`<div style="background:rgba(124,111,247,.1);border:1px solid rgba(124,111,247,.2);border-radius:var(--r2);padding:12px">
-      <div style="font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:6px">💬 Коментар вчителя</div>
-      <div style="font-size:14px">${feedback}</div>
-    </div>`;
-  } else {
-    fbEl.innerHTML='';
-  }
-
-  // Форма відповіді — показуємо тільки якщо не виконано
-  document.getElementById('hwd-reply-form').style.display=done?'none':'';
-  document.getElementById('hwd-done-msg').style.display=done?'block':'none';
-
-  openModal('modal-hw-detail');
-}
-
-async function submitHwReply(){
-  const hwId=window._currentHwId;
-  const hw=(appData.homework||[]).find(h=>h.id===hwId);
-  if(!hw)return;
-
-  const text=document.getElementById('hwd-reply-text').value.trim();
-  const fileInput=document.getElementById('hwd-reply-file');
-  const file=fileInput&&fileInput.files[0];
-
-  if(!text&&!file){toast('Напишіть відповідь або прикріпіть файл');return}
-
-  const replyFiles=fileInput?Array.from(fileInput.files||[]):[];
-  const formData=new FormData();
-  formData.append('tid',String(appData.tid));
-  formData.append('name',appData.name);
-  formData.append('hw_id',hwId);
-  formData.append('text',text||'');
-  for(const f of replyFiles)formData.append('files',f,f.name);
-
-  try{
-    const res=await fetch('/api/submit-hw-reply',{method:'POST',body:formData});
-    const data=await res.json();
-    if(data.ok){
-      hw.status='done';
-      hw.reply=text;
-      document.getElementById('hwd-reply-form').style.display='none';
-      document.getElementById('hwd-done-msg').style.display='block';
-      document.getElementById('hwd-status').innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>';
-      renderStudent();
-      toast('✅ Відповідь надіслано вчителю!',3000);
-    } else toast('Помилка: '+(data.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-async function markHwDoneFromModal(){
-  const hwId=window._currentHwId;
-  await markHwDone(hwId);
-  document.getElementById('hwd-reply-form').style.display='none';
-  document.getElementById('hwd-done-msg').style.display='block';
-  document.getElementById('hwd-status').innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:8px">✅ Виконано</div>';
-  closeModal('modal-hw-detail');
-}
-
-async function markHwDone(hwId){
-  try{await api('/api/mark-hw','POST',{tid:appData.tid,name:appData.name,hw_id:hwId})}catch(e){}
-  const hw=(appData.homework||[]).find(h=>h.id===hwId);
-  if(hw)hw.status='done';
-  renderStudent();toast('✅ ДЗ виконано!');
-}
-
-function showStudentTab(tab){
-  ['home','schedule','hw','journal'].forEach(t=>{
-    const el=document.getElementById('s-'+t);
-    if(el)el.style.display=t===tab?'flex':'none';
-  });
-}
-
-// PAY
-function showPayModal(){
-  document.getElementById('pay-amount').value='';
-  document.getElementById('pay-file-label').textContent='';
-  document.getElementById('pay-file-input').value='';
-  openModal('modal-pay');
-}
-
-async function submitPay(){
-  const amount=parseInt(document.getElementById('pay-amount').value)||0;
-  if(!amount){toast('Введіть суму');return}
-  const fileInput=document.getElementById('pay-file-input');
-  const file=fileInput.files[0];
-  if(!file){toast('Прикріпіть чек');return}
-  const formData=new FormData();
-  formData.append('amount',String(amount));
-  formData.append('tid',String(appData.tid));
-  formData.append('name',appData.name);
-  formData.append('file',file,file.name);
-  try{
-    const res=await fetch('/api/pay-request',{method:'POST',body:formData});
-    const data=await res.json();
-    if(data.ok){closeModal('modal-pay');toast('✅ Запит надіслано! Очікуйте підтвердження.',3000);}
-    else toast('Помилка: '+(data.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
-});
-
-// ── STUDENT OWN LINKS ──
-function showStudentLinksModal(){
-  document.getElementById('s-link-label').value='';
-  document.getElementById('s-link-url').value='';
-  renderStudentOwnLinks();
-  openModal('modal-student-links');
-}
-
-function renderStudentOwnLinks(){
-  const links=appData.own_links||[];
-  document.getElementById('student-links-list').innerHTML=links.length?links.map(l=>`
-    <div class="card" style="margin-bottom:8px"><div class="list-item">
-      <div class="link-icon">🔗</div>
-      <div class="item-info"><div class="item-name">${l.label}</div><div class="item-sub">${l.url}</div></div>
-      <span onclick="deleteStudentOwnLink('${l.id}')" style="color:var(--red);font-size:18px;cursor:pointer;padding:0 4px">×</span>
-    </div></div>`).join(''):'<div style="color:var(--text3);font-size:13px;margin-bottom:8px">Власних посилань немає</div>';
-}
-
-async function addStudentOwnLink(){
-  const label=document.getElementById('s-link-label').value.trim();
-  const url=document.getElementById('s-link-url').value.trim();
-  if(!label||!url){toast('Заповніть обидва поля');return}
-  try{
-    const res=await api('/api/add-student-own-link','POST',{tid:appData.tid,name:appData.name,role:appData.role,label,url});
-    if(res.ok){
-      if(!appData.own_links)appData.own_links=[];
-      appData.own_links.push(res.link);
-      document.getElementById('s-link-label').value='';
-      document.getElementById('s-link-url').value='';
-      renderStudentOwnLinks();
-      renderStudent();
-      toast('✅ Посилання додано');
-    } else toast('Помилка');
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-async function deleteStudentOwnLink(linkId){
-  try{
-    await api('/api/delete-student-own-link','POST',{tid:appData.tid,name:appData.name,role:appData.role,link_id:linkId});
-    appData.own_links=(appData.own_links||[]).filter(l=>l.id!==linkId);
-    renderStudentOwnLinks();
-    renderStudent();
-    toast('🗑 Видалено');
-  }catch(e){toast('Помилка')}
-}
-
-// ── NOTES ──
-let _notesRole = null;
-let _notes = [];
-
-async function showNotes(){
-  _notesRole = appData.role || 'teacher';
-  document.getElementById('note-input').value = '';
-  document.getElementById('notes-list').innerHTML = '<div style="color:var(--text3);font-size:13px">Завантаження...</div>';
-  openModal('modal-notes');
-
-  try{
-    const tid = appData.tid;
-    const role = _notesRole;
-    const name = appData.name || '';
-    const res = await fetch('/api/notes/' + tid + '?role=' + role + '&name=' + encodeURIComponent(name));
-    const data = await res.json();
-    _notes = data.notes || [];
-    renderNotes();
-  }catch(e){
-    document.getElementById('notes-list').innerHTML = '<div style="color:var(--red);font-size:13px">Помилка завантаження</div>';
-  }
-}
-
-function renderNotes(){
-  const el = document.getElementById('notes-list');
-  if(!_notes.length){
-    el.innerHTML = '<div class="empty" style="padding:16px 0">Нотаток немає</div>';
-    return;
-  }
-  el.innerHTML = _notes.map(n => {
-    const isUrl = n.text.startsWith('http');
-    return '<div class="card" style="margin-bottom:8px"><div class="list-item">' +
-      '<div class="item-info">' +
-        (isUrl
-          ? '<a href="' + n.text + '" target="_blank" style="color:var(--accent);font-size:14px;word-break:break-all">' + n.text + '</a>'
-          : '<div style="font-size:14px;word-break:break-all">' + n.text + '</div>'
-        ) +
-      '</div>' +
-      '<span onclick="deleteNote(\'' + n.id + '\')" style="color:var(--red);font-size:18px;cursor:pointer;flex-shrink:0;padding:0 4px">×</span>' +
-      '</div></div>';
-  }).join('');
-}
-
-async function addNote(){
-  const text = document.getElementById('note-input').value.trim();
-  if(!text){toast('Введіть текст');return}
-  try{
-    const res = await api('/api/add-note','POST',{
-      tid: appData.tid,
-      role: _notesRole,
-      name: appData.name || '',
-      text
-    });
-    if(res.ok){
-      _notes.push(res.note);
-      renderNotes();
-      document.getElementById('note-input').value = '';
-    } else toast('Помилка');
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-async function deleteNote(noteId){
-  try{
-    await api('/api/delete-note','POST',{
-      tid: appData.tid,
-      role: _notesRole,
-      name: appData.name || '',
-      note_id: noteId
-    });
-    _notes = _notes.filter(n => n.id !== noteId);
-    renderNotes();
-  }catch(e){toast('Помилка')}
-}
-
-
-
-
-
-
-</script>
-</body>
-</html>
+import asyncio
+import os
+import json
+import random
+import re
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.filters import CommandStart
+
+load_dotenv()
+
+TOKEN = os.environ["BOT_TOKEN"]
+DATA_FILE = "database.json"
+WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://mathkyrylo.com")
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+user_state = {}
+days = ["Понеділок", "Вівторок", "Середа", "Четвер", "Пʼятниця", "Субота", "Неділя"]
+
+
+# ─── БД ───────────────────────────────────────────────────────────────────────
+
+def load_db():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if "teachers" not in data:
+            data["teachers"] = {}
+        return data
+    return {"teachers": {}}
+
+def save_db(db):
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(db, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, DATA_FILE)
+
+def get_teacher(tid):
+    return load_db()["teachers"].get(str(tid))
+
+def get_students(tid):
+    t = get_teacher(tid)
+    return t["students"] if t else {}
+
+
+# ─── ДОПОМІЖНІ ────────────────────────────────────────────────────────────────
+
+def new_code(tid):
+    db = load_db()
+    existing = set()
+    for d in db["teachers"].get(str(tid), {}).get("students", {}).values():
+        for key in ("u_code", "p_code", "su_code"):
+            if d.get(key): existing.add(d[key])
+    while True:
+        code = str(random.randint(1000, 9999))
+        if code not in existing:
+            return code
+
+def new_hw_id():
+    return str(random.randint(10000, 99999))
+
+def find_teacher_by_code(code):
+    db = load_db()
+    for tid, tdata in db["teachers"].items():
+        for sname, sdata in tdata.get("students", {}).items():
+            for role_code, role_key, role_menu in [
+                ("su_code", "su_id", "super"),
+                ("u_code", "u_id", "student"),
+                ("p_code", "p_id", "parent")
+            ]:
+                if sdata.get(role_code) == code:
+                    return tid, sname, role_key, role_menu
+    return None, None, None, None
+
+def find_student_by_uid(uid):
+    db = load_db()
+    for tid, tdata in db["teachers"].items():
+        for sname, sdata in tdata.get("students", {}).items():
+            for role_key, role_menu in [("su_id", "super"), ("u_id", "student"), ("p_id", "parent")]:
+                if sdata.get(role_key) == uid:
+                    return tid, sname, sdata, role_menu
+    return None, None, None, None
+
+
+# ─── МЕНЮ ─────────────────────────────────────────────────────────────────────
+
+menu_teacher = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📅 Мій розклад")],
+    [KeyboardButton(text="🔗 Корисні посилання")],
+], resize_keyboard=True)
+
+menu_teacher_students = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="➕ Додати учня"), KeyboardButton(text="📋 Список учнів")],
+    [KeyboardButton(text="💳 Баланси")],
+    [KeyboardButton(text="⬅️ Назад")]
+], resize_keyboard=True)
+
+menu_teacher_lessons = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="✔️ Відмітити заняття")],
+    [KeyboardButton(text="📝 Відправити домашнє завдання")],
+    [KeyboardButton(text="📒 Журнал занять")],
+    [KeyboardButton(text="⬅️ Назад")]
+], resize_keyboard=True)
+
+menu_student = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📚 Матеріали")],
+    [KeyboardButton(text="🔗 Корисні посилання")],
+    [KeyboardButton(text="🚪 Вийти з кабінета")]
+], resize_keyboard=True)
+
+menu_student_lessons = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📚 Домашні завдання")],
+    [KeyboardButton(text="📒 Журнал занять")],
+    [KeyboardButton(text="⬅️ Назад")]
+], resize_keyboard=True)
+
+menu_parent = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="💳 Баланс дитини")],
+    [KeyboardButton(text="🔗 Корисні посилання")],
+    [KeyboardButton(text="🚪 Вийти з кабінета")]
+], resize_keyboard=True)
+
+menu_super = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
+    [KeyboardButton(text="🔗 Корисні посилання")],
+    [KeyboardButton(text="🚪 Вийти з кабінета")]
+], resize_keyboard=True)
+
+def get_student_menu(role):
+    if role == "super": return menu_super
+    if role == "parent": return menu_parent
+    return menu_student
+
+def get_webapp_menu(base_menu, url):
+    return ReplyKeyboardMarkup(
+        keyboard=[*base_menu.keyboard, [KeyboardButton(text="📱 Відкрити кабінет", web_app=WebAppInfo(url=url))]],
+        resize_keyboard=True
+    )
+
+
+# ─── НАГАДУВАННЯ ──────────────────────────────────────────────────────────────
+
+async def send_reminders():
+    while True:
+        await asyncio.sleep(60)
+        try:
+            now = datetime.now()
+            target = now + timedelta(hours=4)
+            target_day = days[target.weekday()]
+            target_time = target.strftime("%H:%M")
+            db = load_db()
+            for tid, tdata in db["teachers"].items():
+                for sname, sdata in tdata.get("students", {}).items():
+                    for session in sdata.get("sessions", []):
+                        if session["day"] == target_day and session["time"] == target_time:
+                            u_id = sdata.get("u_id") or sdata.get("su_id")
+                            if u_id:
+                                try:
+                                    await bot.send_message(u_id,
+                                        f"🔔 Нагадування!\nСьогодні о {target_time} у тебе заняття.\nНе забудь підготуватись! 📚")
+                                except Exception:
+                                    pass
+        except Exception as e:
+            print(f"Помилка в нагадуваннях: {e}")
+
+
+# ─── СТАРТ ────────────────────────────────────────────────────────────────────
+
+@dp.message(CommandStart())
+async def start(message: types.Message):
+    uid = message.from_user.id
+    tid_str = str(uid)
+    db = load_db()
+
+    if tid_str in db["teachers"]:
+        t = db["teachers"][tid_str]
+        url = f"{WEBAPP_URL}?role=admin&tid={tid_str}"
+        await message.answer(f"Вітаю, {t['name']}! Ваша панель керування:", reply_markup=get_webapp_menu(menu_teacher, url))
+        return
+
+    tid, sname, role_key, role_menu = find_student_by_uid(uid)
+    if tid:
+        url = f"{WEBAPP_URL}?role={role_menu}&tid={tid}&name={sname}"
+        greeting = f"Привіт, {sname}!" if role_menu != "parent" else f"Привіт! Кабінет учня {sname}:"
+        await message.answer(greeting, reply_markup=get_webapp_menu(get_student_menu(role_menu), url))
+        return
+
+    user_state[uid] = "waiting_role"
+    kb = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="👨‍🏫 Я вчитель")],
+        [KeyboardButton(text="🎓 Я учень / батьки")]
+    ], resize_keyboard=True)
+    await message.answer("Привіт! Ласкаво просимо до TutorBot 👋\n\nОберіть свою роль:", reply_markup=kb)
+
+
+# ─── РЕЄСТРАЦІЯ ───────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: user_state.get(m.from_user.id) == "waiting_role")
+async def choose_role(message: types.Message):
+    uid = message.from_user.id
+    if message.text == "👨‍🏫 Я вчитель":
+        user_state[uid] = "teacher_waiting_name"
+        await message.answer("Як вас звати?", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+    elif message.text == "🎓 Я учень / батьки":
+        user_state[uid] = "waiting_auth_code"
+        await message.answer("Введіть код доступу:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+
+@dp.message(lambda m: user_state.get(m.from_user.id) == "teacher_waiting_name")
+async def teacher_enter_name(message: types.Message):
+    uid = message.from_user.id
+    user_state[uid] = {"state": "teacher_waiting_subject", "name": message.text.strip()}
+    await message.answer("Який предмет викладаєте?")
+
+@dp.message(lambda m: isinstance(user_state.get(m.from_user.id), dict) and user_state[m.from_user.id].get("state") == "teacher_waiting_subject")
+async def teacher_enter_subject(message: types.Message):
+    uid = message.from_user.id
+    name = user_state[uid]["name"]
+    subject = message.text.strip()
+    db = load_db()
+    db["teachers"][str(uid)] = {"name": name, "subject": subject, "students": {}, "links": {}}
+    save_db(db)
+    user_state[uid] = None
+    url = f"{WEBAPP_URL}?role=admin&tid={uid}"
+    await message.answer(f"✅ Вітаємо, {name}!\nПредмет: {subject}\n\nВаш кабінет готовий!", reply_markup=get_webapp_menu(menu_teacher, url))
+
+
+# ─── АВТОРИЗАЦІЯ УЧНЯ ─────────────────────────────────────────────────────────
+
+@dp.message(lambda m: user_state.get(m.from_user.id) == "waiting_auth_code")
+async def auth(message: types.Message):
+    code = message.text.strip()
+    uid = message.from_user.id
+    tid, sname, role_key, role_menu = find_teacher_by_code(code)
+    if tid:
+        db = load_db()
+        db["teachers"][tid]["students"][sname][role_key] = uid
+        save_db(db)
+        user_state[uid] = None
+        url = f"{WEBAPP_URL}?role={role_menu}&tid={tid}&name={sname}"
+        kb = get_webapp_menu(get_student_menu(role_menu), url)
+        if role_menu == "parent":
+            await message.answer(f"✅ Вітаємо! Кабінет учня {sname}.", reply_markup=kb)
+        else:
+            await message.answer(f"✅ Вітаємо, {sname}!", reply_markup=kb)
+        return
+    await message.answer("❌ Код не знайдено. Спробуй ще раз.")
+
+
+# ─── МЕНЮ ВЧИТЕЛЯ ─────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "👥 Керування учнями")
+async def teacher_section_students(message: types.Message):
+    db = load_db()
+    if str(message.from_user.id) in db["teachers"]:
+        await message.answer("👥 Керування учнями:", reply_markup=menu_teacher_students)
+
+@dp.message(lambda m: m.text == "📖 Заняття і матеріали")
+async def section_lessons(message: types.Message):
+    db = load_db()
+    if str(message.from_user.id) in db["teachers"]:
+        await message.answer("📖 Заняття і матеріали:", reply_markup=menu_teacher_lessons)
+    else:
+        await message.answer("📖 Заняття і матеріали:", reply_markup=menu_student_lessons)
+
+@dp.message(lambda m: m.text == "📋 Список учнів")
+async def teacher_list(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    students = db["teachers"][tid].get("students", {})
+    if not students:
+        await message.answer("Учнів поки немає.", reply_markup=menu_teacher)
+        return
+    kb = [[KeyboardButton(text=f"Учень: {n}")] for n in students]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("Учень: "))
+async def manage_student(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    name = message.text.replace("Учень: ", "")
+    students = db["teachers"][tid].get("students", {})
+    if name not in students:
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+    s = students[name]
+    bal = s["balance"]
+    bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
+    u_status = "✅" if s.get("u_id") else f"🔑 {s.get('u_code','—')}"
+    p_status = "✅" if s.get("p_id") else f"🔑 {s.get('p_code','—')}"
+    su_status = "✅" if s.get("su_id") else f"🔑 {s.get('su_code','—')}"
+    text = f"👤 *{name}*\n💰 Ціна: {s['price']}₴ | Баланс: {bal_str}\n📱 Учень: {u_status} | 👨‍👩‍👦 Батьки: {p_status} | ⭐ Супер: {su_status}"
+    kb = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text=f"💳 Керування балансом {name}"), KeyboardButton(text=f"📅 Розклад {name}")],
+        [KeyboardButton(text=f"⚙️ Редагування {name}"), KeyboardButton(text=f"🔗 Посилання {name}")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ], resize_keyboard=True)
+    user_state[message.from_user.id] = {"state": "managing_student", "name": name, "tid": tid}
+    await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+
+# ─── РОЗКЛАД ──────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📅 Мій розклад")
+async def schedule_handler(message: types.Message):
+    uid = message.from_user.id
+    tid_str = str(uid)
+    db = load_db()
+    if tid_str in db["teachers"]:
+        students = db["teachers"][tid_str].get("students", {})
+        today = days[datetime.today().weekday()]
+        sessions = [(s["time"], n) for n, d in students.items() for s in d.get("sessions", []) if s["day"] == today]
+        sessions.sort()
+        text = f"📅 Сьогодні ({today}):\n\n" + ("\n".join([f"{n} — {t}" for t, n in sessions]) or "Немає занять")
+        await message.answer(text)
+    else:
+        tid, sname, sdata, role = find_student_by_uid(uid)
+        if sdata:
+            s = "\n".join([f"🔹 {s['day']} {s['time']}" for s in sdata.get("sessions", [])])
+            await message.answer(f"📅 Твій розклад:\n{s or 'Розклад ще не встановлено'}")
+
+@dp.message(lambda m: m.text == "📅 Розклад дитини")
+async def parent_schedule(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if sdata:
+        s = "\n".join([f"🔹 {s['day']} {s['time']}" for s in sdata.get("sessions", [])])
+        await message.answer(f"📅 Розклад {sname}:\n{s or 'Розклад ще не встановлено'}")
+
+@dp.message(lambda m: m.text == "🗓 Розклад на тиждень")
+async def teacher_week_schedule(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    students = db["teachers"][tid].get("students", {})
+    today = days[datetime.today().weekday()]
+    text = "🗓 *Розклад на тиждень:*\n"
+    for day in days:
+        day_sessions = [(s["time"], n) for n, d in students.items() for s in d.get("sessions", []) if s["day"] == day]
+        day_sessions.sort()
+        marker = " ← сьогодні" if day == today else ""
+        text += f"\n*{day}*{marker}\n─────────────\n"
+        text += "\n".join([f"  {t} — {n}" for t, n in day_sessions]) if day_sessions else "  Немає занять"
+        text += "\n"
+    await message.answer(text, parse_mode="Markdown")
+
+
+# ─── БАЛАНСИ ──────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "💳 Баланси")
+async def teacher_balances(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    students = db["teachers"][tid].get("students", {})
+    if not students:
+        await message.answer("Список учнів порожній.")
+        return
+    text = "💳 *Поточні баланси учнів:*\n\n"
+    total_debt = 0
+    for name, data in students.items():
+        bal = data.get("balance", 0)
+        status = "✅" if bal >= 0 else "⚠️ (борг)"
+        text += f"👤 {name}: {bal}₴ {status}\n"
+        if bal < 0: total_debt += bal
+    if total_debt < 0:
+        text += f"\nЗагальна заборгованість: {total_debt}₴"
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(lambda m: m.text and ("Мій баланс" in m.text or "Баланс дитини" in m.text))
+async def student_balance(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if sdata:
+        bal = sdata["balance"]
+        status = "✅" if bal >= 0 else "⚠️ (заборгованість)"
+        await message.answer(f"👤 {sname}, баланс: {bal}₴ {status}")
+
+
+# ─── ВІДМІТИТИ ЗАНЯТТЯ ────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "✔️ Відмітити заняття")
+async def mark_lesson_start(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    students = db["teachers"][tid].get("students", {})
+    if not students:
+        await message.answer("Учнів немає.")
+        return
+    kb = [[KeyboardButton(text=f"Заняття: {n}")] for n in students]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer("Оберіть учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("Заняття: "))
+async def mark_lesson_choose_action(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    name = message.text.replace("Заняття: ", "")
+    if name not in db["teachers"][tid].get("students", {}):
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+    user_state[message.from_user.id] = {"state": "mark_lesson_action", "name": name, "tid": tid}
+    kb = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="✅ Проведено"), KeyboardButton(text="❌ Скасовано")],
+        [KeyboardButton(text="🔄 Перенести заняття")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ], resize_keyboard=True)
+    await message.answer(f"Що сталось із заняттям у {name}?", reply_markup=kb)
+
+
+# ─── ДОМАШНЄ ЗАВДАННЯ ─────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📝 Відправити домашнє завдання")
+async def hw_choose_student(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    students = db["teachers"][tid].get("students", {})
+    if not students:
+        await message.answer("Учнів немає.", reply_markup=menu_teacher)
+        return
+    kb = [[KeyboardButton(text=f"ДЗ для: {n}")] for n in students]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("ДЗ для: "))
+async def hw_enter_text(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    name = message.text.replace("ДЗ для: ", "")
+    if name not in db["teachers"][tid].get("students", {}):
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+    user_state[message.from_user.id] = {"state": "hw_waiting_text", "name": name, "tid": tid}
+    await message.answer(f"📝 Введи текст ДЗ для {name} або надішли фото:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+
+
+# ─── ЖУРНАЛ ───────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📒 Журнал занять")
+async def journal_handler(message: types.Message):
+    uid = message.from_user.id
+    tid = str(uid)
+    db = load_db()
+    if tid in db["teachers"]:
+        students = db["teachers"][tid].get("students", {})
+        if not students:
+            await message.answer("Учнів немає.")
+            return
+        kb = [[KeyboardButton(text=f"Журнал: {n}")] for n in students]
+        kb.append([KeyboardButton(text="⬅️ Назад")])
+        await message.answer("Обери учня:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+    else:
+        tid2, sname, sdata, role = find_student_by_uid(uid)
+        if not sdata: return
+        journal = list(reversed(sdata.get("journal", [])))
+        if not journal:
+            await message.answer("📒 Журнал порожній.")
+            return
+        kb = [[KeyboardButton(text=f"📒 Заняття {len(journal)-i}: {e['date']}")] for i, e in enumerate(journal)]
+        kb.append([KeyboardButton(text="⬅️ Назад")])
+        text = "📒 *Журнал занять:*\n\n"
+        for e in journal:
+            mat_count = len(e.get("materials", []))
+            text += f"📅 {e['date']} — *{e['topic']}*{f' | 📎{mat_count}' if mat_count else ''}\n"
+        await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("Журнал: "))
+async def teacher_journal_list(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    name = message.text.replace("Журнал: ", "").strip()
+    students = db["teachers"][tid].get("students", {})
+    if name not in students:
+        await message.answer("Учня не знайдено.", reply_markup=menu_teacher)
+        return
+    journal = students[name].get("journal", [])
+    if not journal:
+        await message.answer(f"📒 У {name} ще немає занять.", reply_markup=menu_teacher)
+        return
+    kb = [[KeyboardButton(text=f"Т.Журнал {name} #{len(journal)-i}: {e['date']}")] for i, e in enumerate(reversed(journal))]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    text = f"📒 *Журнал — {name}:*\n\n"
+    for e in reversed(journal):
+        mat_count = len(e.get("materials", []))
+        text += f"📅 {e['date']} — *{e['topic']}*{f' | 📎{mat_count}' if mat_count else ''}\n"
+    await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("Т.Журнал "))
+async def teacher_journal_detail(message: types.Message):
+    tid = str(message.from_user.id)
+    db = load_db()
+    if tid not in db["teachers"]: return
+    try:
+        part = message.text.replace("Т.Журнал ", "")
+        name, rest = part.split(" #", 1)
+        idx = int(rest.split(":")[0].strip()) - 1
+        journal = db["teachers"][tid]["students"][name].get("journal", [])
+        entry = journal[idx]
+    except (ValueError, IndexError, KeyError):
+        await message.answer("Заняття не знайдено.")
+        return
+    materials = entry.get("materials", [])
+    await message.answer(
+        f"📒 *Заняття {idx+1} — {name}*\n📅 {entry['date']}\n📖 {entry['topic']}\n"
+        f"{'📎 ' + str(len(materials)) + ' файл(ів)' if materials else '📎 Матеріалів немає'}",
+        parse_mode="Markdown"
+    )
+    for mat in materials:
+        try:
+            if mat["type"] == "photo":
+                await message.answer_photo(mat["file_id"], caption=mat.get("caption") or None)
+            elif mat["type"] == "document":
+                await message.answer_document(mat["file_id"], caption=mat.get("caption") or None)
+        except Exception:
+            pass
+
+@dp.message(lambda m: m.text and m.text.startswith("📒 Заняття "))
+async def student_journal_detail(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata: return
+    try:
+        part = message.text.replace("📒 Заняття ", "")
+        idx = int(part.split(":")[0].strip()) - 1
+        entry = sdata.get("journal", [])[idx]
+    except (ValueError, IndexError):
+        await message.answer("Заняття не знайдено.")
+        return
+    materials = entry.get("materials", [])
+    await message.answer(
+        f"📒 *Заняття {idx+1}*\n📅 {entry['date']}\n📖 {entry['topic']}\n"
+        f"{'📎 ' + str(len(materials)) + ' файл(ів)' if materials else '📎 Матеріалів немає'}",
+        parse_mode="Markdown"
+    )
+    for mat in materials:
+        try:
+            if mat["type"] == "photo":
+                await message.answer_photo(mat["file_id"], caption=mat.get("caption") or None)
+            elif mat["type"] == "document":
+                await message.answer_document(mat["file_id"], caption=mat.get("caption") or None)
+        except Exception:
+            pass
+
+
+# ─── ПОСИЛАННЯ ────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "🔗 Корисні посилання")
+async def links_handler(message: types.Message):
+    uid = message.from_user.id
+    tid = str(uid)
+    db = load_db()
+    if tid in db["teachers"]:
+        links = db["teachers"][tid].get("links", {})
+        if not links:
+            user_state[uid] = {"state": "teacher_links_waiting_label", "tid": tid}
+            await message.answer("🔗 Посилань поки немає.\nЯк назвемо перше?",
+                reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+        else:
+            text = "🔗 *Корисні посилання:*\n\n" + "".join([f"• {k}: {v}\n" for k, v in links.items()])
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="➕ Додати посилання")],
+                [KeyboardButton(text="🗑 Видалити посилання")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True)
+            await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+    else:
+        tid2, sname, sdata, role = find_student_by_uid(uid)
+        if not sdata: return
+        links = sdata.get("links", {})
+        if not links:
+            await message.answer("🔗 Посилань поки немає. Зверніться до вчителя.")
+            return
+        text = "🔗 *Корисні посилання:*\n\n" + "".join([f"• [{k}]({v})\n" for k, v in links.items()])
+        await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
+
+
+# ─── ДЗ УЧНЯ ──────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📚 Матеріали")
+async def student_materials(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata: return
+    journal = list(reversed(sdata.get("journal", [])))
+    if not journal:
+        await message.answer("📒 Журнал занять порожній — матеріалів немає.")
+        return
+    # Show last 5 lessons with materials
+    with_materials = [e for e in journal if e.get("materials")]
+    if not with_materials:
+        await message.answer("📎 Матеріалів ще немає. Вчитель додасть їх після занять.")
+        return
+    await message.answer(f"📚 Матеріали занять ({len(with_materials)} з матеріалами):")
+    for entry in with_materials[:5]:
+        await message.answer(f"📖 {entry['topic']} · {entry['date']}")
+        for mat in entry.get("materials", []):
+            try:
+                if mat["type"] == "photo":
+                    await bot.send_photo(uid, mat["file_id"])
+                elif mat["type"] == "document":
+                    await bot.send_document(uid, mat["file_id"])
+            except Exception:
+                pass
+
+@dp.message(lambda m: m.text and "Домашні завдання" in m.text)
+async def student_hw_list(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata: return
+    homework = list(reversed(sdata.get("homework") or []))
+    if not homework:
+        await message.answer("📚 Домашніх завдань немає.")
+        return
+    kb = [[KeyboardButton(text=f"ДЗ {len(homework)-i}: {hw['date']} {'✅' if hw['status']=='done' else '🔴'}")] for i, hw in enumerate(homework)]
+    kb.append([KeyboardButton(text="⬅️ Назад")])
+    text = "📚 *Домашні завдання:*\n\n"
+    for hw in homework:
+        status = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
+        text += f"📅 {hw['date']} — {hw['text'][:40]}{'…' if len(hw['text'])>40 else ''}\n{status}\n\n"
+    await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+
+@dp.message(lambda m: m.text and m.text.startswith("ДЗ ") and ":" in (m.text or ""))
+async def student_hw_detail(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata: return
+    try:
+        part = message.text.split(":")[0].replace("ДЗ ", "").strip()
+        idx = int(part) - 1
+        hw = sdata.get("homework", [])[idx]
+    except (ValueError, IndexError):
+        await message.answer("ДЗ не знайдено.")
+        return
+    status_text = "✅ Виконано" if hw["status"] == "done" else "🔴 Не виконано"
+    text = f"📝 *ДЗ від {hw['date']}*\n\n{hw['text']}\n\nСтатус: {status_text}"
+    user_state[uid] = {"state": "viewing_hw", "hw_id": hw["id"], "tid": tid, "sname": sname}
+    if hw["status"] == "done":
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
+    else:
+        kb = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="✅ Відмітити як виконане")],
+            [KeyboardButton(text="📸 Надіслати фото виконання")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ], resize_keyboard=True)
+    if hw.get("photo_id"):
+        await message.answer_photo(hw["photo_id"], caption=text, parse_mode="Markdown", reply_markup=kb)
+    else:
+        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+
+# ─── ВИХІД ────────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "🚪 Вийти з кабінета")
+async def logout(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if sdata:
+        db = load_db()
+        for key in ("u_id", "p_id", "su_id"):
+            if db["teachers"][tid]["students"][sname].get(key) == uid:
+                db["teachers"][tid]["students"][sname][key] = None
+        save_db(db)
+        user_state[uid] = None
+        await message.answer(f"👋 Ти вийшов з кабінету {sname}.\nЩоб увійти знову — введи свій код після /start.",
+            reply_markup=types.ReplyKeyboardRemove())
+
+
+# ─── ОПЛАТА ───────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "💰 Поповнити баланс")
+async def pay_start(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata or role not in ("parent", "super"):
+        await message.answer("Доступ заборонено.")
+        return
+    user_state[uid] = {"state": "pay_sum", "tid": tid, "sname": sname}
+    await message.answer("Введіть суму поповнення (₴):")
+
+@dp.message(lambda m: isinstance(user_state.get(m.from_user.id), dict) and user_state[m.from_user.id].get("state") == "pay_sum")
+async def pay_sum(message: types.Message):
+    if not message.text or not message.text.isdigit():
+        await message.answer("Будь ласка, введіть число.")
+        return
+    uid = message.from_user.id
+    state = user_state[uid]
+    state["sum"] = int(message.text)
+    state["state"] = "pay_check"
+    await message.answer(
+        f"💰 Сума: *{message.text}₴*\n\nТепер надішліть фото або документ чеку:",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
+    )
+
+@dp.message(lambda m: isinstance(user_state.get(m.from_user.id), dict)
+    and user_state[m.from_user.id].get("state") == "pay_check"
+    and (m.photo is not None or m.document is not None))
+async def pay_check(message: types.Message):
+    uid = message.from_user.id
+    state = user_state[uid]
+    amount = state["sum"]
+    tid = state["tid"]
+    sname = state["sname"]
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Підтвердити", callback_data=f"confirm_{uid}_{amount}_{tid}_{sname}")],
+        [InlineKeyboardButton(text="❌ Відхилити", callback_data=f"reject_{uid}")]
+    ])
+    caption = f"💰 Заявка на поповнення!\nВід: {sname}\nСума: {amount}₴"
+
+    try:
+        if message.photo:
+            await bot.send_photo(int(tid), message.photo[-1].file_id, caption=caption, reply_markup=kb)
+        elif message.document:
+            await bot.send_document(int(tid), message.document.file_id, caption=caption, reply_markup=kb)
+    except Exception as e:
+        print(f"[PAY] Error: {e}")
+
+    user_state[uid] = None
+    db = load_db()
+    role = "parent"
+    for t, tdata in db["teachers"].items():
+        for s, sd in tdata.get("students", {}).items():
+            if s == sname and sd.get("su_id") == uid:
+                role = "super"
+    await message.answer("✅ Запит успішно надіслано!\n\nБаланс буде поповнений, щойно його підтвердить вчитель.",
+        reply_markup=get_student_menu(role))
+
+
+# ─── CALLBACKS ────────────────────────────────────────────────────────────────
+
+@dp.callback_query(F.data.startswith("hw_feedback_"))
+async def hw_feedback_start(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    hw_id = parts[2]
+    tid = parts[3]
+    sname = "_".join(parts[4:])
+    uid = callback.from_user.id
+    user_state[uid] = {"state": "hw_feedback_text", "hw_id": hw_id, "tid": tid, "sname": sname}
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await bot.send_message(uid,
+        f"💬 Напишіть коментар або надішліть фото з виправленнями для {sname}:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True)
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("confirm_"))
+async def confirm_pay(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    if parts[1] == "webapp":
+        amount = int(parts[2])
+        tid = parts[3]
+        sname = "_".join(parts[4:])
+        payer_id = None
+    else:
+        payer_id = int(parts[1])
+        amount = int(parts[2])
+        tid = parts[3]
+        sname = "_".join(parts[4:])
+
+    db = load_db()
+    if tid in db["teachers"] and sname in db["teachers"][tid]["students"]:
+        db["teachers"][tid]["students"][sname]["balance"] += amount
+        save_db(db)
+        sdata = db["teachers"][tid]["students"][sname]
+        new_balance = sdata["balance"]
+        notify = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
+        for nid in notify:
+            try:
+                await bot.send_message(nid, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {new_balance}₴")
+            except Exception:
+                pass
+        if payer_id:
+            try:
+                await bot.send_message(payer_id, f"✅ Поповнення {amount}₴ підтверджено!\n💳 Баланс: {new_balance}₴")
+            except Exception:
+                pass
+        try:
+            await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n✅ ПІДТВЕРДЖЕНО")
+        except Exception:
+            pass
+    await callback.answer("✅ Баланс поповнено!")
+
+@dp.callback_query(F.data.startswith("reject_"))
+async def reject_pay(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    if parts[1] == "webapp":
+        sname = parts[2]
+        tid = parts[3] if len(parts) > 3 else None
+        if tid:
+            db = load_db()
+            sdata = db["teachers"].get(tid, {}).get("students", {}).get(sname, {})
+            notify = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
+            for nid in notify:
+                try:
+                    await bot.send_message(nid, "❌ Поповнення відхилено. Зверніться до вчителя.")
+                except Exception:
+                    pass
+    else:
+        payer_id = int(parts[1])
+        try:
+            await bot.send_message(payer_id, "❌ Поповнення відхилено. Зверніться до вчителя.")
+        except Exception:
+            pass
+    try:
+        await callback.message.edit_caption(caption=(callback.message.caption or "") + "\n\n❌ ВІДХИЛЕНО")
+    except Exception:
+        pass
+    await callback.answer("❌ Відхилено")
+
+
+# ─── ПОМИЛКИ ──────────────────────────────────────────────────────────────────
+
+@dp.errors()
+async def error_handler(event: types.ErrorEvent):
+    print(f"[ERROR] {event.exception.__class__.__name__}: {event.exception}")
+    import traceback
+    traceback.print_exc()
+
+
+# ─── ГОЛОВНИЙ ХЕНДЛЕР ─────────────────────────────────────────────────────────
+
+@dp.message()
+async def handle(message: types.Message):
+    uid = message.from_user.id
+    state = user_state.get(uid)
+
+    # Ігноруємо стікери, голосові тощо
+    is_file_state = isinstance(state, dict) and state.get("state") in ("pay_check", "lesson_send_materials", "hw_done_photo", "hw_waiting_text", "waiting_materials")
+    if not message.text and not message.photo and not message.document:
+        if not is_file_state:
+            return
+
+    db = load_db()
+    tid_str = str(uid)
+    is_teacher = tid_str in db["teachers"]
+
+    print(f"[HANDLE] uid={uid} state={state} text={message.text!r} photo={bool(message.photo)} doc={bool(message.document)}")
+
+    # ── Матеріали до заняття ──
+    if isinstance(state, dict) and state.get("state") == "lesson_send_materials":
+        if message.photo:
+            state["materials"].append({"type": "photo", "file_id": message.photo[-1].file_id, "caption": message.caption or ""})
+            await message.answer(f"🖼 Фото {len(state['materials'])} додано. Ще або *Готово*.", parse_mode="Markdown")
+            return
+        if message.document:
+            state["materials"].append({"type": "document", "file_id": message.document.file_id, "caption": message.caption or "", "name": message.document.file_name or "файл"})
+            await message.answer(f"📎 {message.document.file_name} ({len(state['materials'])}) додано. Ще або *Готово*.", parse_mode="Markdown")
+            return
+
+    # ── Назад ──
+    if message.text == "⬅️ Назад":
+        user_state[uid] = None
+        if is_teacher:
+            url = f"{WEBAPP_URL}?role=admin&tid={tid_str}"
+            await message.answer("Головне меню", reply_markup=get_webapp_menu(menu_teacher, url))
+        else:
+            ftid, sname, sdata, role = find_student_by_uid(uid)
+            if sdata:
+                url = f"{WEBAPP_URL}?role={role}&tid={ftid}&name={sname}"
+                await message.answer("Головне меню", reply_markup=get_webapp_menu(get_student_menu(role), url))
+        return
+
+    # ── Додавання посилань вчителя ──
+    if message.text in ("➕ Додати посилання", "🗑 Видалити посилання") and is_teacher:
+        links = db["teachers"][tid_str].get("links", {})
+        if message.text == "➕ Додати посилання":
+            user_state[uid] = {"state": "teacher_links_waiting_label", "tid": tid_str}
+            await message.answer("Як назвемо посилання?", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+        else:
+            if not links:
+                await message.answer("Посилань немає.")
+                return
+            kb = [[KeyboardButton(text=f"🗑 {label}")] for label in links]
+            kb.append([KeyboardButton(text="⬅️ Назад")])
+            user_state[uid] = {"state": "teacher_links_waiting_delete", "tid": tid_str}
+            await message.answer("Оберіть для видалення:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+        return
+
+    if message.text == "🗓 Розклад на тиждень" and is_teacher:
+        await teacher_week_schedule(message)
+        return
+
+    # ── Стани ──
+
+    # Додавання учня
+    if isinstance(state, dict) and state.get("state") == "waiting_name":
+        user_state[uid] = {"state": "waiting_price", "name": message.text, "tid": state["tid"]}
+        await message.answer("Введи ціну заняття (₴):")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "waiting_price":
+        try:
+            price = int(message.text)
+            user_state[uid] = {"state": "waiting_day", "name": state["name"], "price": price, "sessions": [], "tid": state["tid"]}
+            await message.answer("Обери день:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=d)] for d in days], resize_keyboard=True))
+        except ValueError:
+            await message.answer("Введи число")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "waiting_day":
+        if message.text not in days:
+            await message.answer("Обери день кнопкою")
+            return
+        state["current_day"] = message.text
+        state["state"] = "waiting_time"
+        await message.answer(f"Введи час для {message.text} (наприклад 18:00):")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "waiting_time":
+        if not re.match(r"^\d{1,2}:\d{2}$", message.text):
+            await message.answer("Формат: 18:00")
+            return
+        state["sessions"].append({"day": state["current_day"], "time": message.text})
+        state["state"] = "confirm_more_days"
+        await message.answer(
+            f"Додано: {state['current_day']} {message.text}\nДодати ще день?",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="➕ Додати ще день")], [KeyboardButton(text="✅ Готово")]], resize_keyboard=True)
+        )
+        return
+
+    if isinstance(state, dict) and state.get("state") == "confirm_more_days":
+        if message.text == "➕ Додати ще день":
+            state["state"] = "waiting_day"
+            await message.answer("Обери ще один день:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=d)] for d in days], resize_keyboard=True))
+        elif message.text == "✅ Готово":
+            tid = state["tid"]
+            name = state["name"]
+            if state.get("editing"):
+                db2 = load_db()
+                db2["teachers"][tid]["students"][name]["sessions"] = state["sessions"]
+                save_db(db2)
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(f"✅ Розклад {name} оновлено!\n{sessions_text}", reply_markup=menu_teacher)
+                u_id = db2["teachers"][tid]["students"][name].get("u_id") or db2["teachers"][tid]["students"][name].get("su_id")
+                if u_id:
+                    try:
+                        await bot.send_message(u_id, f"📅 Твій розклад оновлено!\n{sessions_text}")
+                    except Exception:
+                        pass
+            else:
+                u_code = new_code(tid)
+                p_code = new_code(tid)
+                su_code = new_code(tid)
+                db2 = load_db()
+                db2["teachers"][tid]["students"][name] = {
+                    "price": state["price"], "balance": 0,
+                    "sessions": state["sessions"], "homework": [], "journal": [], "links": {},
+                    "u_code": u_code, "u_id": None,
+                    "p_code": p_code, "p_id": None,
+                    "su_code": su_code, "su_id": None
+                }
+                save_db(db2)
+                user_state[uid] = None
+                sessions_text = "\n".join([f"  {s['day']} {s['time']}" for s in state["sessions"]])
+                await message.answer(
+                    f"✅ {name} доданий!\n💰 {state['price']}₴\n📅\n{sessions_text}\n\n"
+                    f"🔑 Код учня: {u_code}\n👨‍👩‍👦 Код батьків: {p_code}\n⭐ Код супер-учня: {su_code}",
+                    reply_markup=menu_teacher
+                )
+        return
+
+    # Керування учнем
+    if isinstance(state, dict) and state.get("state") == "managing_student":
+        tid = state["tid"]
+        name = state["name"]
+        db2 = load_db()
+        students = db2["teachers"].get(tid, {}).get("students", {})
+
+        if message.text == f"💳 Керування балансом {name}":
+            bal = students[name]["balance"]
+            bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
+            await message.answer(f"💳 Баланс {name}: *{bal_str}*", parse_mode="Markdown",
+                reply_markup=ReplyKeyboardMarkup(keyboard=[
+                    [KeyboardButton(text=f"💰 Поповнити {name}"), KeyboardButton(text=f"➖ Списати {name}")],
+                    [KeyboardButton(text=f"👁 Баланс {name}")],
+                    [KeyboardButton(text="⬅️ Назад")]
+                ], resize_keyboard=True))
+            return
+
+        if message.text == f"💰 Поповнити {name}":
+            user_state[uid] = {"state": "balance_add", "name": name, "tid": tid}
+            await message.answer("Введи суму поповнення (₴):")
+            return
+
+        if message.text == f"➖ Списати {name}":
+            user_state[uid] = {"state": "balance_sub", "name": name, "tid": tid}
+            await message.answer("Введи суму для списання (₴):")
+            return
+
+        if message.text == f"👁 Баланс {name}":
+            bal = students[name]["balance"]
+            bal_str = f"+{bal}₴" if bal > 0 else f"{bal}₴"
+            await message.answer(f"💳 {name}: *{bal_str}*\n💲 Ціна: {students[name]['price']}₴", parse_mode="Markdown")
+            return
+
+        if message.text == f"📅 Розклад {name}":
+            sessions = students[name].get("sessions", [])
+            text = f"📅 *Розклад {name}:*\n\n" + "\n".join([f"🔹 {s['day']} {s['time']}" for s in sessions]) if sessions else "Розклад не встановлено"
+            await message.answer(text, parse_mode="Markdown")
+            return
+
+        if message.text == f"⚙️ Редагування {name}":
+            await message.answer(f"⚙️ Редагування {name}:", reply_markup=ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text=f"📅 Змінити розклад {name}"), KeyboardButton(text=f"💲 Змінити ціну {name}")],
+                [KeyboardButton(text=f"🔑 Оновити коди {name}"), KeyboardButton(text=f"❌ Видалити {name}")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True))
+            return
+
+        if message.text == f"💲 Змінити ціну {name}":
+            user_state[uid] = {"state": "edit_price", "name": name, "tid": tid}
+            await message.answer(f"Поточна ціна: {students[name]['price']}₴\nВведи нову:")
+            return
+
+        if message.text == f"📅 Змінити розклад {name}":
+            user_state[uid] = {"state": "waiting_day", "name": name, "price": students[name]["price"], "sessions": [], "tid": tid, "editing": True}
+            await message.answer("Обери новий перший день:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=d)] for d in days], resize_keyboard=True))
+            return
+
+        if message.text == f"❌ Видалити {name}":
+            db2 = load_db()
+            del db2["teachers"][tid]["students"][name]
+            save_db(db2)
+            user_state[uid] = None
+            await message.answer(f"🗑 {name} видалений.", reply_markup=menu_teacher)
+            return
+
+        if message.text == f"🔑 Оновити коди {name}":
+            db2 = load_db()
+            s = db2["teachers"][tid]["students"][name]
+            s["u_code"] = new_code(tid); s["u_id"] = None
+            s["p_code"] = new_code(tid); s["p_id"] = None
+            s["su_code"] = new_code(tid); s["su_id"] = None
+            save_db(db2)
+            await message.answer(f"🔑 Нові коди для {name}:\nУчень: {s['u_code']}\nБатьки: {s['p_code']}\n⭐ Супер: {s['su_code']}")
+            return
+
+        if message.text == f"🔗 Посилання {name}":
+            links = students[name].get("links", {})
+            text = f"🔗 *Посилання {name}:*\n\n" + "\n".join([f"• {k}: {v}" for k, v in links.items()]) if links else f"🔗 У {name} посилань немає."
+            await message.answer(text, parse_mode="Markdown", reply_markup=ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text=f"➕ Посилання учню {name}")],
+                [KeyboardButton(text=f"🗑л Посилання учня {name}")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ], resize_keyboard=True))
+            return
+
+        if message.text == f"➕ Посилання учню {name}":
+            user_state[uid] = {"state": "student_links_label", "name": name, "tid": tid}
+            await message.answer("Як назвемо посилання?")
+            return
+
+        if message.text == f"🗑л Посилання учня {name}":
+            links = students[name].get("links", {})
+            if not links:
+                await message.answer("Посилань немає.")
+                return
+            kb = [[KeyboardButton(text=f"🗑л {k}")] for k in links]
+            kb.append([KeyboardButton(text="⬅️ Назад")])
+            user_state[uid] = {"state": "student_links_delete", "name": name, "tid": tid}
+            await message.answer("Оберіть для видалення:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+            return
+
+    # Баланс
+    if isinstance(state, dict) and state.get("state") == "balance_add":
+        try:
+            amount = int(message.text)
+            tid = state["tid"]; name = state["name"]
+            db2 = load_db()
+            db2["teachers"][tid]["students"][name]["balance"] += amount
+            save_db(db2)
+            bal = db2["teachers"][tid]["students"][name]["balance"]
+            user_state[uid] = None
+            await message.answer(f"✅ +{amount}₴ до балансу {name}\n💳 Баланс: {'+' if bal>=0 else ''}{bal}₴", reply_markup=menu_teacher)
+        except ValueError:
+            await message.answer("Введи число")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "balance_sub":
+        try:
+            amount = int(message.text)
+            tid = state["tid"]; name = state["name"]
+            db2 = load_db()
+            db2["teachers"][tid]["students"][name]["balance"] -= amount
+            save_db(db2)
+            bal = db2["teachers"][tid]["students"][name]["balance"]
+            user_state[uid] = None
+            await message.answer(f"✅ -{amount}₴ з балансу {name}\n💳 Баланс: {'+' if bal>=0 else ''}{bal}₴", reply_markup=menu_teacher)
+            if bal < 0:
+                sdata = db2["teachers"][tid]["students"][name]
+                for nid in [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]:
+                    try:
+                        await bot.send_message(nid, f"⚠️ Баланс від'ємний!\n💳 {bal}₴\nПоповніть баланс.")
+                    except Exception:
+                        pass
+        except ValueError:
+            await message.answer("Введи число")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "edit_price":
+        try:
+            price = int(message.text)
+            tid = state["tid"]; name = state["name"]
+            db2 = load_db()
+            old = db2["teachers"][tid]["students"][name]["price"]
+            db2["teachers"][tid]["students"][name]["price"] = price
+            save_db(db2)
+            user_state[uid] = None
+            await message.answer(f"✅ Ціна {name}: {old}₴ → {price}₴", reply_markup=menu_teacher)
+        except ValueError:
+            await message.answer("Введи число")
+        return
+
+    # Відмітити заняття
+    if isinstance(state, dict) and state.get("state") == "mark_lesson_action":
+        tid = state["tid"]; name = state["name"]
+        if message.text == "✅ Проведено":
+            user_state[uid] = {"state": "lesson_enter_topic", "name": name, "tid": tid}
+            await message.answer("Введіть тему заняття:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+            return
+        if message.text == "❌ Скасовано":
+            user_state[uid] = {"state": "cancel_enter_date", "name": name, "tid": tid}
+            await message.answer("Введіть дату заняття, яке скасовуєте:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+            return
+        if message.text == "🔄 Перенести заняття":
+            user_state[uid] = {"state": "reschedule_enter_date", "name": name, "tid": tid}
+            await message.answer("Введіть дату заняття, яке переносите:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+            return
+
+    if isinstance(state, dict) and state.get("state") == "lesson_enter_topic":
+        topic = message.text.strip()
+        user_state[uid] = {"state": "lesson_send_materials", "name": state["name"], "tid": state["tid"], "topic": topic, "date": datetime.now().strftime("%d.%m.%Y"), "materials": []}
+        await message.answer(
+            f"✏️ Тема: *{topic}*\n\nНадішліть матеріали або натисніть Готово.",
+            parse_mode="Markdown",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="✅ Готово")], [KeyboardButton(text="✅ Готово (без матеріалів)")]], resize_keyboard=True)
+        )
+        return
+
+    if isinstance(state, dict) and state.get("state") == "lesson_send_materials" and message.text in ("✅ Готово", "✅ Готово (без матеріалів)"):
+        tid = state["tid"]; name = state["name"]; topic = state["topic"]
+        date_str = state["date"]; materials = state["materials"]
+        user_state[uid] = None
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
+        price = sdata["price"]
+        sdata["balance"] -= price
+        sdata.setdefault("journal", []).append({"date": date_str, "topic": topic, "materials": materials})
+        save_db(db2)
+        new_balance = sdata["balance"]
+        await message.answer(
+            f"✅ Заняття відмічено!\n👤 {name} | 📖 {topic}\nСписано {price}₴. Залишок: {new_balance}₴",
+            reply_markup=menu_teacher
+        )
+        notify_pay = [i for i in [sdata.get("p_id"), sdata.get("su_id")] if i]
+        notify_student = [i for i in [sdata.get("u_id"), sdata.get("su_id")] if i]
+        for nid in notify_pay:
+            try:
+                await bot.send_message(nid, f"🔔 Заняття проведено.\n📖 Тема: {topic}\nСписано: {price}₴\nБаланс: {new_balance}₴")
+            except Exception:
+                pass
+        if new_balance < 0:
+            for nid in notify_pay:
+                try:
+                    await bot.send_message(nid, f"⚠️ Баланс від'ємний!\n💳 {new_balance}₴\nПоповніть баланс.")
+                except Exception:
+                    pass
+        if materials:
+            for nid in notify_student:
+                try:
+                    await bot.send_message(nid, f"📚 Матеріали до заняття *{topic}* ({date_str}):", parse_mode="Markdown")
+                    for mat in materials:
+                        if mat["type"] == "photo":
+                            await bot.send_photo(nid, mat["file_id"], caption=mat.get("caption") or None)
+                        elif mat["type"] == "document":
+                            await bot.send_document(nid, mat["file_id"], caption=mat.get("caption") or None)
+                except Exception:
+                    pass
+        return
+
+    if isinstance(state, dict) and state.get("state") == "cancel_enter_date":
+        date = message.text.strip(); name = state["name"]; tid = state["tid"]
+        user_state[uid] = None
+        await message.answer(f"❌ Заняття {name} {date} скасовано.", reply_markup=menu_teacher)
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
+        for nid in [i for i in [sdata.get("u_id"), sdata.get("su_id"), sdata.get("p_id")] if i]:
+            try:
+                await bot.send_message(nid, f"❌ Заняття {date} скасовано. Баланс не змінювався.")
+            except Exception:
+                pass
+        return
+
+    if isinstance(state, dict) and state.get("state") == "reschedule_enter_date":
+        state["old_date"] = message.text.strip()
+        state["state"] = "reschedule_enter_new_date"
+        await message.answer("На яку дату переносимо?")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "reschedule_enter_new_date":
+        new_date = message.text.strip(); old_date = state["old_date"]
+        name = state["name"]; tid = state["tid"]
+        user_state[uid] = None
+        await message.answer(f"🔄 Заняття {name} перенесено з {old_date} на {new_date}.", reply_markup=menu_teacher)
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
+        for nid in [i for i in [sdata.get("u_id"), sdata.get("su_id"), sdata.get("p_id")] if i]:
+            try:
+                await bot.send_message(nid, f"🔄 Заняття перенесено!\nБуло: {old_date}\nСтало: {new_date}")
+            except Exception:
+                pass
+        return
+
+    # ДЗ від вчителя
+    if isinstance(state, dict) and state.get("state") == "hw_waiting_text":
+        tid = state["tid"]; name = state["name"]
+        date_str = datetime.now().strftime("%d.%m.%Y")
+        hw_id = new_hw_id()
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][name]
+        if message.photo:
+            sdata.setdefault("homework", []).append({"id": hw_id, "text": message.caption or "Дивись фото", "photo_id": message.photo[-1].file_id, "date": date_str, "status": "new"})
+            save_db(db2)
+            user_state[uid] = None
+            await message.answer(f"✅ ДЗ надіслано {name}!", reply_markup=menu_teacher)
+            u_id = sdata.get("u_id") or sdata.get("su_id")
+            if u_id:
+                try:
+                    await bot.send_photo(u_id, message.photo[-1].file_id, caption=f"📝 Нове ДЗ!\n📅 {date_str}\n{message.caption or ''}")
+                except Exception:
+                    pass
+        elif message.text:
+            sdata.setdefault("homework", []).append({"id": hw_id, "text": message.text, "photo_id": None, "date": date_str, "status": "new"})
+            save_db(db2)
+            user_state[uid] = None
+            await message.answer(f"✅ ДЗ надіслано {name}!", reply_markup=menu_teacher)
+            u_id = sdata.get("u_id") or sdata.get("su_id")
+            if u_id:
+                try:
+                    await bot.send_message(u_id, f"📝 Нове ДЗ!\n📅 {date_str}\n\n{message.text}")
+                except Exception:
+                    pass
+        return
+
+    # Виконання ДЗ учнем
+    if isinstance(state, dict) and state.get("state") == "viewing_hw":
+        tid = state["tid"]; sname = state["sname"]; hw_id = state["hw_id"]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][sname]
+        if message.text == "✅ Відмітити як виконане":
+            for hw in sdata.get("homework", []):
+                if hw["id"] == hw_id:
+                    hw["status"] = "done"
+                    break
+            save_db(db2)
+            user_state[uid] = None
+            await message.answer("✅ ДЗ відмічено як виконане!", reply_markup=get_student_menu("student"))
+            try:
+                await bot.send_message(int(tid), f"✅ {sname} відмітив ДЗ як виконане.")
+            except Exception:
+                pass
+            return
+        if message.text == "📸 Надіслати фото виконання":
+            user_state[uid] = {"state": "hw_done_photo", "hw_id": hw_id, "tid": tid, "sname": sname}
+            await message.answer("📸 Надішли фото виконаного ДЗ:", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True))
+            return
+
+    if isinstance(state, dict) and state.get("state") == "hw_done_photo" and message.photo:
+        tid = state["tid"]; sname = state["sname"]; hw_id = state["hw_id"]
+        db2 = load_db()
+        sdata = db2["teachers"][tid]["students"][sname]
+        hw_date = "?"
+        for hw in sdata.get("homework", []):
+            if hw["id"] == hw_id:
+                hw["status"] = "done"
+                hw_date = hw["date"]
+                break
+        save_db(db2)
+        user_state[uid] = None
+        await message.answer("✅ Фото надіслано! ДЗ виконане.", reply_markup=get_student_menu("student"))
+        try:
+            await bot.send_photo(int(tid), message.photo[-1].file_id, caption=f"📸 {sname} виконав ДЗ від {hw_date}\n{message.caption or ''}")
+        except Exception:
+            pass
+        return
+
+    # Посилання вчителя
+    if isinstance(state, dict) and state.get("state") == "teacher_links_waiting_label":
+        user_state[uid] = {"state": "teacher_links_waiting_url", "tid": state["tid"], "label": message.text.strip()}
+        await message.answer(f"Вставте посилання для *{message.text.strip()}*:", parse_mode="Markdown")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "teacher_links_waiting_url":
+        url = message.text.strip()
+        if not url.startswith("http"):
+            await message.answer("Посилання повинно починатись з http://")
+            return
+        tid = state["tid"]; label = state["label"]
+        db2 = load_db()
+        db2["teachers"][tid].setdefault("links", {})[label] = url
+        save_db(db2)
+        user_state[uid] = None
+        await message.answer(f"✅ Посилання *{label}* збережено!", parse_mode="Markdown", reply_markup=menu_teacher)
+        return
+
+    if isinstance(state, dict) and state.get("state") == "teacher_links_waiting_delete" and message.text and message.text.startswith("🗑 "):
+        label = message.text.replace("🗑 ", "").strip()
+        tid = state["tid"]
+        db2 = load_db()
+        links = db2["teachers"][tid].get("links", {})
+        if label in links:
+            del links[label]
+            save_db(db2)
+            await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
+        user_state[uid] = None
+        return
+
+    # Посилання учня
+    if isinstance(state, dict) and state.get("state") == "student_links_label":
+        user_state[uid] = {"state": "student_links_url", "name": state["name"], "tid": state["tid"], "label": message.text.strip()}
+        await message.answer(f"Вставте посилання для *{message.text.strip()}*:", parse_mode="Markdown")
+        return
+
+    if isinstance(state, dict) and state.get("state") == "student_links_url":
+        url = message.text.strip()
+        if not url.startswith("http"):
+            await message.answer("Посилання повинно починатись з http://")
+            return
+        tid = state["tid"]; name = state["name"]
+        db2 = load_db()
+        db2["teachers"][tid]["students"][name].setdefault("links", {})[state["label"]] = url
+        save_db(db2)
+        user_state[uid] = None
+        await message.answer(f"✅ Посилання додано для {name}!", reply_markup=menu_teacher)
+        return
+
+    if isinstance(state, dict) and state.get("state") == "student_links_delete" and message.text and message.text.startswith("🗑л "):
+        label = message.text.replace("🗑л ", "").strip()
+        tid = state["tid"]; name = state["name"]
+        db2 = load_db()
+        links = db2["teachers"][tid]["students"][name].get("links", {})
+        if label in links:
+            del links[label]
+            save_db(db2)
+            await message.answer(f"🗑 Посилання *{label}* видалено.", parse_mode="Markdown", reply_markup=menu_teacher)
+        user_state[uid] = None
+        return
+
+    # Додавання учня — стан waiting_name
+    if isinstance(state, dict) and state.get("state") == "managing_student":
+        pass  # вже оброблено вище
+
+
+# ─── ЗАПУСК ───────────────────────────────────────────────────────────────────
+
+async def main():
+    print("Бот запущено...")
+    asyncio.create_task(send_reminders())
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
