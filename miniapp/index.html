@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>TutorApp</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 *{pointer-events:auto}
@@ -14,12 +14,12 @@ button *,a *{pointer-events:none}
   --bg:#0c0c0f;--bg2:#111118;--bg3:#1a1a25;
   --card:rgba(255,255,255,0.04);--card2:rgba(255,255,255,0.07);
   --border:#1e1e2a;--border2:#2a2a3a;
-  --text:#e8e8f0;--text2:#6b6b7a;--text3:#3a3a4a;
+  --text:#dddde8;--text2:#7a7a8a;--text3:#3a3a4a;
   --accent:#7c6ff7;--accent2:#a599ff;
   --green:#5ce0d8;--red:#e24b4a;--yellow:#ef9f27;--blue:#378add;
   --r:12px;--r2:9px;
 }
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;width:100%;margin:0;padding:0;min-height:100vh;-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;width:100%;margin:0;padding:0;min-height:100vh;-webkit-font-smoothing:antialiased}
 .screen{display:none;flex-direction:column;min-height:100vh}
 .screen.active{display:flex}
 .screen-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -28,12 +28,12 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 /* HEADER */
 .header{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;background:var(--bg)}
 .header-back{width:34px;height:34px;border-radius:50%;background:var(--card2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.header-title{font-weight:600;font-size:16px;flex:1}
+.header-title{font-weight:500;font-size:16px;flex:1}
 .header-action{font-size:13px;color:var(--accent);font-weight:500;cursor:pointer;white-space:nowrap}
 
 /* NAV */
 .bottom-nav{display:flex;border-top:1px solid var(--border);background:rgba(12,12,15,0.95);backdrop-filter:blur(20px);position:sticky;bottom:0;z-index:10}
-.nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'DM Sans',sans-serif;position:relative}
+.nav-btn{flex:1;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text3);cursor:pointer;transition:color .15s;font-family:'Inter',sans-serif;position:relative}
 .nav-btn.active{color:var(--accent)}
 .nav-btn.active::after{content:'';position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:16px;height:2px;background:var(--accent);border-radius:1px}
 .nav-btn svg{width:21px;height:21px}
@@ -52,14 +52,14 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 
 /* TEACHER SPECIFIC */
 .t-app-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.t-app-name{font-size:15px;font-weight:600;color:var(--text)}
+.t-app-name{font-size:15px;font-weight:500;color:var(--text)}
 .t-app-sub{font-size:11px;color:var(--text2);margin-top:1px;font-weight:400}
-.add-pill{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--accent);cursor:pointer;border:none;font-family:'DM Sans',sans-serif}
+.add-pill{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--accent);cursor:pointer;border:none;font-family:'Inter',sans-serif}
 
 /* METRICS */
 .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding:0 14px}
 .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-.metric-val{font-size:26px;font-weight:600;color:var(--text);line-height:1;letter-spacing:-.3px}
+.metric-val{font-size:26px;font-weight:500;color:var(--text);line-height:1;letter-spacing:-.3px}
 .metric-val.red{color:var(--red)}
 .metric-lbl{font-size:10px;font-weight:500;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
 
@@ -71,7 +71,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .lesson-row{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:5px}
 .lesson-time{font-size:13px;font-weight:500;color:var(--green);min-width:44px}
 .sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.lesson-name{font-size:13px;font-weight:500;color:var(--text)}
+.lesson-name{font-size:13px;font-weight:400;color:var(--text)}
 .lesson-bal{margin-left:auto;font-size:12px;font-weight:500}
 .lesson-bal.ok{color:var(--text3)}
 .lesson-bal.debt{color:var(--red)}
@@ -80,7 +80,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .student-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden;cursor:pointer}
 .s-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .s-info{flex:1;min-width:0}
-.s-name{font-size:14px;font-weight:500;color:var(--text)}
+.s-name{font-size:14px;font-weight:400;color:var(--text)}
 .s-sched{font-size:11px;color:var(--text2);margin-top:2px}
 .s-badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0}
 .s-badge.debt{background:rgba(226,75,74,.1);color:var(--red);border:1px solid rgba(226,75,74,.2)}
@@ -93,7 +93,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .j-day{font-size:18px;font-weight:600;color:#a0a0c0;line-height:1}
 .j-mon{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 .j-info{flex:1;min-width:0}
-.j-topic{font-size:13px;font-weight:500;color:var(--text)}
+.j-topic{font-size:13px;font-weight:400;color:var(--text)}
 .j-meta{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center}
 .j-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
 .j-tag.muted{background:var(--bg3);color:var(--text2)}
@@ -104,7 +104,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .action-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer}
 .action-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .action-icon svg{width:16px;height:16px}
-.action-label{font-size:14px;font-weight:500;color:var(--text)}
+.action-label{font-size:14px;font-weight:400;color:var(--text)}
 .action-sub{font-size:11px;color:var(--text2);margin-top:1px}
 .chevron-r{margin-left:auto;color:var(--text3);font-size:18px}
 
@@ -117,7 +117,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .next-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:16px;margin-bottom:10px;position:relative;overflow:hidden}
 .next-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--green))}
 .next-lbl{font-size:10px;font-weight:600;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
-.next-subj{font-size:19px;font-weight:600;color:var(--text);letter-spacing:-.2px;margin-bottom:3px}
+.next-subj{font-size:19px;font-weight:500;color:var(--text);letter-spacing:-.2px;margin-bottom:3px}
 .next-teacher{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px;margin-bottom:12px}
 .tdot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -131,7 +131,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .hw-check.done{background:var(--accent);border-color:var(--accent)}
 .hw-stripe{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
 .hw-body{flex:1;min-width:0}
-.hw-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hw-title{font-size:13px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hw-due{display:flex;align-items:center;gap:4px;margin-top:3px}
 .due-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
 .due-lbl{font-size:11px;font-weight:500}
@@ -140,10 +140,10 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .link-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .link-icon-sq{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .link-body{flex:1;min-width:0}
-.link-name{font-size:13px;font-weight:500;color:var(--text)}
+.link-name{font-size:13px;font-weight:400;color:var(--text)}
 .link-url{font-size:10px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .link-arr{color:var(--text3);font-size:16px;margin-left:auto;flex-shrink:0}
-.add-dashed{width:100%;background:transparent;border:1px dashed var(--border2);border-radius:var(--r2);padding:11px;font-size:12px;color:var(--text2);font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:4px}
+.add-dashed{width:100%;background:transparent;border:1px dashed var(--border2);border-radius:var(--r2);padding:11px;font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:4px}
 
 /* BALANCE HERO */
 .balance-hero{margin:14px;border-radius:var(--r);padding:18px;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a35,#1a2535)}
@@ -152,24 +152,24 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .balance-amount{font-size:34px;font-weight:600;position:relative;line-height:1.1;margin:4px 0 2px;letter-spacing:-.3px}
 .balance-sub{font-size:12px;opacity:.65;position:relative}
 .balance-actions{display:flex;gap:8px;margin-top:12px;position:relative}
-.balance-btn{flex:1;padding:8px;border-radius:var(--r2);background:rgba(255,255,255,0.12);border:none;color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
+.balance-btn{flex:1;padding:8px;border-radius:var(--r2);background:rgba(255,255,255,0.12);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
 
 /* FORMS */
 .form-group{margin-bottom:14px}
 .form-label{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;display:block}
-.form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:11px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.form-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:11px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
 .form-input:focus{border-color:var(--accent)}
 .form-input::placeholder{color:var(--text3)}
 textarea.form-input{resize:none;height:78px}
 select.form-input{appearance:none;cursor:pointer}
 
 /* BUTTONS */
-.btn{width:100%;padding:13px;border-radius:var(--r2);border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn{width:100%;padding:13px;border-radius:var(--r2);border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn:active{transform:scale(.98)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-secondary{background:var(--card2);border:1px solid var(--border2);color:var(--text)}
 .btn-danger{background:rgba(226,75,74,.12);border:1px solid rgba(226,75,74,.25);color:var(--red)}
-.btn-sm{padding:7px 13px;font-size:12px;border-radius:var(--r2);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:var(--r2);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600}
 .btn-sm-primary{background:var(--accent);color:#fff}
 .btn-sm-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
 
@@ -1083,6 +1083,11 @@ function showTeacherTab(tab){
     const el=document.getElementById('t-'+t);
     if(el)el.style.display=t===tab?'flex':'none';
   });
+  if(tab==='schedule'&&appData)renderWeekSchedule(appData.students||[]);
+  if(tab==='students'&&appData){
+    const el=document.getElementById('t-students-list');
+    if(el)el.innerHTML=(appData.students||[]).length?(appData.students||[]).map(s=>studentCardHTML(s)).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
+  }
 }
 
 // STUDENT VIEW
