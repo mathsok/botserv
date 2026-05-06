@@ -859,7 +859,7 @@ function renderTeacher(){
       <div class="metric-card"><div class="metric-val">${totalM2}</div><div class="metric-lbl">За цей місяць</div></div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Посещаемість за місяць</div>
+      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Відвідуваність за поточний місяць</div>
       <div style="display:flex;align-items:center;justify-content:space-around;gap:12px">
         <svg width="120" height="120" viewBox="0 0 120 120">${pieSVG2}</svg>
         <div style="display:flex;flex-direction:column;gap:10px">
@@ -932,6 +932,138 @@ function renderWeekSchedule(students){
     </div>`;
   }).join('');
 }
+
+function openStudentCard(name){
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(!s)return;
+  currentStudent=s;
+  const sc=studentColor(name);
+  document.getElementById('sc-name').textContent=s.name;
+  const bal=s.balance;
+  document.getElementById('sc-balance').textContent=fmtBal(bal);
+  document.getElementById('sc-price').textContent='Ціна: '+s.price+'₴/заняття';
+  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#e24b4a,#f07060)':('linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)');
+  document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length
+    ?(s.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
+    :'<div style="color:var(--text3);font-size:13px;padding:8px 0">Розклад не встановлено</div>';
+  document.getElementById('sc-codes').innerHTML=`
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Учень</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Батьки</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Супер-учень</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
+  const journal=s.journal||[];
+  const hw=s.homework||[];
+  const totalL=journal.length;
+  const hwDone=hw.filter(h=>h.status==='done').length;
+  const hwTotal=hw.length;
+  const hwPct=hwTotal>0?Math.round(hwDone/hwTotal*100):0;
+  const hwColor=hwPct>=70?'#5ce0d8':hwPct>=40?'#ef9f27':'#e24b4a';
+  function svgRing(pct,color,size=72){
+    const r=28,circ=2*Math.PI*r;
+    const dash=circ*(pct/100),gap=circ-dash;
+    return`<svg width="${size}" height="${size}" viewBox="0 0 72 72" style="transform:rotate(-90deg)">
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="#1e1e2a" stroke-width="7"/>
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="7"
+        stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round"/>
+    </svg>`;
+  }
+  const statsEl=document.getElementById('sc-stats');
+  if(statsEl)statsEl.innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 16px">
+      <div style="display:flex;justify-content:space-around;align-items:center">
+        <div style="text-align:center">
+          <div style="position:relative;display:inline-block">
+            ${svgRing(hwTotal>0?hwPct:0,hwColor)}
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${hwColor}">${hwPct}%</div>
+          </div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Виконання ДЗ</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${hwDone}/${hwTotal}</div>
+        </div>
+        <div style="width:1px;height:70px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="position:relative;display:inline-block">
+            ${svgRing(totalL>0?100:0,sc.color)}
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:${sc.color}">${totalL}</div>
+          </div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Занять всього</div>
+        </div>
+      </div>
+    </div>`;
+  renderStudentCardJournal(s);
+  renderStudentCardLinks();
+  pushScreen('screen-student-card');
+}
+
+function renderStudentCardJournal(s){
+  const journal=(s.journal||[]).slice().reverse();
+  const el=document.getElementById('sc-journal');
+  if(!el)return;
+  if(!journal.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Занять ще не проводилось</div>';return;}
+  el.innerHTML=journal.slice(0,20).map((e,i)=>{
+    const p=e.date.split('.');
+    const matCount=(e.materials||[]).length;
+    const realIdx=(s.journal||[]).length-1-i;
+    return`<div class="journal-card fade-up" ${matCount>0?`onclick="showTeacherJournalDetail('${s.name}',${realIdx})" style="cursor:pointer"`:''}">
+      <div class="j-top">
+        <div class="j-date-box"><div class="j-day">${p[0]}</div><div class="j-mon">${monthShort(p[1])}</div></div>
+        <div class="j-info">
+          <div class="j-topic">${e.topic}</div>
+          <div class="j-meta">${matCount?`<div class="j-tag teal">📎 ${matCount} ${matCount===1?'файл':'файли'}</div>`:'<div class="j-tag muted">Без матеріалів</div>'}</div>
+        </div>
+        <span onclick="event.stopPropagation();deleteJournalEntryFromCard('${s.name}',${realIdx})" class="j-del">🗑</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function showTeacherJournalDetail(studentName,idx){
+  const s=(appData.students||[]).find(x=>x.name===studentName);
+  if(!s)return;
+  const entry=(s.journal||[])[idx];
+  if(!entry)return;
+  document.getElementById('jd-title').textContent=entry.topic;
+  document.getElementById('jd-date').textContent='📅 '+entry.date+' · '+studentName;
+  const materials=entry.materials||[];
+  const matEl=document.getElementById('jd-materials');
+  if(!materials.length){matEl.innerHTML='<div class="empty" style="padding:20px 0">Матеріалів немає</div>';openModal('modal-journal-detail');return;}
+  matEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:10px 0">⏳ Завантаження...</div>';
+  openModal('modal-journal-detail');
+  const items=await Promise.all(materials.map(async m=>{
+    try{
+      const res=await fetch('/api/get-file-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_id:m.file_id})});
+      const data=await res.json();
+      return{...m,url:data.ok?data.url:null};
+    }catch(e){return{...m,url:null}}
+  }));
+  matEl.innerHTML=items.map(m=>{
+    if(m.type==='photo')return m.url?`<div style="margin-bottom:12px"><img src="${m.url}" style="width:100%;border-radius:var(--r2);display:block"></div>`:'<div class="card"><div class="list-item"><div style="font-size:24px">🖼</div><div class="item-info"><div class="item-name">Фото</div></div></div></div>';
+    return m.url?`<div class="card clickable" style="margin-bottom:8px" onclick="window.open('${m.url}','_blank')"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div><div style="color:var(--accent)">↓</div></div></div>`:'<div class="card"><div class="list-item"><div style="font-size:24px">📄</div><div class="item-info"><div class="item-name">${m.caption||m.name||"Документ"}</div></div></div></div>';
+  }).join('')+`<button class="btn btn-secondary" style="margin-top:12px" onclick="sendMaterialsToStudent('${studentName}',${idx})">📨 Надіслати учню в бота</button>`;
+}
+
+async function sendMaterialsToStudent(studentName,idx){
+  const s=(appData.students||[]).find(x=>x.name===studentName);
+  if(!s)return;
+  const uid=s.u_id||s.su_id;
+  try{
+    const res=await fetch('/api/resend-materials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tid:appData.tid,name:studentName,idx,uid:uid||0})});
+    const data=await res.json();
+    if(data.ok)toast('✅ Матеріали надіслано!',3000);
+    else toast('Помилка: '+(data.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+async function deleteJournalEntryFromCard(studentName,idx){
+  if(!confirm('Видалити запис?'))return;
+  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
+  if(res.ok){
+    const s=(appData.students||[]).find(x=>x.name===studentName);
+    if(s&&s.journal)s.journal.splice(idx,1);
+    renderStudentCardJournal(s);
+    renderTeacher();
+    toast('🗑 Видалено');
+  }
+}
+
 
 function renderStudentCardLinks(){
   const links=currentStudent.links||{};
@@ -1620,6 +1752,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
