@@ -808,34 +808,50 @@ function renderTeacher(){
   if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
   // Attendance stats for lessons tab
-  const allJ=students.flatMap(s=>(s.journal||[]).map(e=>({...e,studentName:s.name})));
-  const totalLessons=allJ.length;
-  const now2=new Date();
-  const thisM2=now2.getMonth()+1,thisY2=now2.getFullYear();
-  const monthL=allJ.filter(e=>{const p=e.date.split('.');return parseInt(p[1])===thisM2&&(parseInt(p[2])||thisY2)===thisY2;}).length;
-  let statsHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-  statsHTML+=`<div class="metric-card"><div class="metric-val">${totalLessons}</div><div class="metric-lbl">Занять всього</div></div>`;
-  statsHTML+=`<div class="metric-card"><div class="metric-val">${monthL}</div><div class="metric-lbl">За цей місяць</div></div>`;
-  statsHTML+='</div>';
-  if(students.length>0){
-    for(const s of students){
-      const sc=studentColor(s.name);
-      const cnt=(s.journal||[]).length;
-      const hw=s.homework||[];
-      const hwPct=hw.length>0?Math.round(hw.filter(h=>h.status==='done').length/hw.length*100):0;
-      statsHTML+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openStudentCard('${s.name}')">
-        <div style="width:8px;height:8px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
-        <div style="flex:1;font-size:13px;color:var(--text)">${s.name}</div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:500;color:${sc.color}">${cnt} зан.</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:1px">ДЗ ${hwPct}%</div>
-        </div>
-      </div>`;
-    }
-  } else {
-    statsHTML+='<div class="empty" style="padding:20px 0">Занять ще немає</div>';
+  const allJ2=students.flatMap(s=>(s.journal||[]).map(e=>({...e,sname:s.name})));
+  const totalLess=allJ2.length;
+  const nowS=new Date();
+  const thisMS=nowS.getMonth()+1,thisYS=nowS.getFullYear();
+  const monthLess=allJ2.filter(e=>{const p=e.date.split('.');return parseInt(p[1])===thisMS&&(parseInt(p[2])||thisYS)===thisYS;}).length;
+
+  // Build last 8 weeks bar chart data
+  const weekMap={};
+  for(const e of allJ2){
+    const p=e.date.split('.');
+    if(p.length<3)continue;
+    const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    // Week number (ISO-ish)
+    const msPerWeek=7*24*3600*1000;
+    const weekKey=Math.floor(d.getTime()/msPerWeek);
+    weekMap[weekKey]=(weekMap[weekKey]||0)+1;
   }
-  document.getElementById('t-journal-list').innerHTML=statsHTML;
+  const weekKeys=Object.keys(weekMap).map(Number).sort((a,b)=>a-b).slice(-8);
+  const weekCounts=weekKeys.map(k=>weekMap[k]||0);
+  const maxWC=Math.max(...weekCounts,1);
+
+  // SVG bar chart
+  const barW=28,barGap=8,chartH=60,chartW=weekKeys.length*(barW+barGap)-barGap;
+  let barsHTML='';
+  weekKeys.forEach((k,i)=>{
+    const h=Math.max(4,Math.round((weekCounts[i]/maxWC)*chartH));
+    const x=i*(barW+barGap);
+    const isLast=i===weekKeys.length-1;
+    barsHTML+=`<rect x="${x}" y="${chartH-h}" width="${barW}" height="${h}" rx="4" fill="${isLast?'var(--accent)':'rgba(124,111,247,.35)'}"/>`;
+    barsHTML+=`<text x="${x+barW/2}" y="${chartH+14}" text-anchor="middle" fill="var(--text3)" font-size="9">${weekCounts[i]}</text>`;
+  });
+  const svgChart=weekKeys.length>0?`<svg width="${chartW}" height="${chartH+20}" viewBox="0 0 ${chartW} ${chartH+20}" style="overflow:visible">${barsHTML}</svg>`:'';
+
+  let statsHtml=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="metric-card"><div class="metric-val">${totalLess}</div><div class="metric-lbl">Занять всього</div></div>
+      <div class="metric-card"><div class="metric-val">${monthLess}</div><div class="metric-lbl">За цей місяць</div></div>
+    </div>
+    ${svgChart?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Заняття по тижнях</div>
+      <div style="overflow-x:auto;display:flex;justify-content:center">${svgChart}</div>
+    </div>`:''}`;
+
+  document.getElementById('t-journal-list').innerHTML=statsHtml||'<div class="empty">Занять ще немає</div>';
 
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
@@ -873,20 +889,111 @@ function openStudentCard(name){
   const s=(appData.students||[]).find(x=>x.name===name);
   if(!s)return;
   currentStudent=s;
+  const sc=studentColor(name);
+
   document.getElementById('sc-name').textContent=s.name;
   const bal=s.balance;
   document.getElementById('sc-balance').textContent=fmtBal(bal);
-  document.getElementById('sc-price').textContent=`Ціна: ${s.price}₴/заняття`;
-  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#f07060,#f09060)':'linear-gradient(135deg,#7c6ff7,#f07090)';
-  document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length?(s.sessions||[]).map(x=>`<div class="card"><div class="list-item"><div class="lesson-time">${x.time}</div><div class="item-info"><div class="item-name">${x.day}</div></div></div></div>`).join(''):'<div style="color:var(--text3);font-size:14px">Розклад не встановлено</div>';
+  document.getElementById('sc-price').textContent='Ціна: '+s.price+'₴/заняття';
+  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#e24b4a,#f07060)':('linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)');
+
+  // Schedule
+  document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length
+    ?(s.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
+    :'<div style="color:var(--text3);font-size:13px;padding:8px 0">Розклад не встановлено</div>';
+
+  // Codes
   document.getElementById('sc-codes').innerHTML=`
-    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">📱 Код учня</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">👨‍👩‍👦 Код батьків</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">⭐ Код супер-учня</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅ Прив\'язано</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Учень</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Батьки</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
+    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Супер-учень</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
+
+  // Ring charts stats
+  const journal=s.journal||[];
+  const hw=s.homework||[];
+  const totalL=journal.length;
+  const hwDone=hw.filter(h=>h.status==='done').length;
+  const hwTotal=hw.length;
+  const hwPct=hwTotal>0?Math.round(hwDone/hwTotal*100):0;
+  const hwColor=hwPct>=70?'#5ce0d8':hwPct>=40?'#ef9f27':'#e24b4a';
+
+  function svgRing(pct,color,size=72){
+    const r=28,circ=2*Math.PI*r;
+    const dash=circ*(pct/100),gap=circ-dash;
+    return`<svg width="${size}" height="${size}" viewBox="0 0 72 72" style="transform:rotate(-90deg)">
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="#1e1e2a" stroke-width="7"/>
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="7"
+        stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  const statsEl=document.getElementById('sc-stats');
+  if(statsEl) statsEl.innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 16px">
+      <div style="display:flex;justify-content:space-around;align-items:center">
+        <div style="text-align:center">
+          <div style="position:relative;display:inline-block">
+            ${svgRing(hwTotal>0?hwPct:0,hwColor)}
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${hwColor}">${hwPct}%</div>
+          </div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Виконання ДЗ</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${hwDone}/${hwTotal}</div>
+        </div>
+        <div style="width:1px;height:70px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="position:relative;display:inline-block">
+            ${svgRing(totalL>0?100:0,sc.color)}
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:${sc.color}">${totalL}</div>
+          </div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Занять всього</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Journal
+  renderStudentCardJournal(s);
   renderStudentCardLinks();
   pushScreen('screen-student-card');
 }
 
+function renderStudentCardJournal(s){
+  const journal=(s.journal||[]).slice().reverse();
+  const el=document.getElementById('sc-journal');
+  if(!el)return;
+  if(!journal.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Занять ще не проводилось</div>';
+    return;
+  }
+  el.innerHTML=journal.slice(0,20).map((e,i)=>{
+    const p=e.date.split('.');
+    const matCount=(e.materials||[]).length;
+    const realIdx=(s.journal||[]).length-1-i;
+    return`<div class="journal-card fade-up">
+      <div class="j-top">
+        <div class="j-date-box"><div class="j-day">${p[0]}</div><div class="j-mon">${monthShort(p[1])}</div></div>
+        <div class="j-info">
+          <div class="j-topic">${e.topic}</div>
+          <div class="j-meta">
+            ${matCount?`<div class="j-tag teal">📎 ${matCount} ${matCount===1?'файл':'файли'}</div>`:'<div class="j-tag muted">Без матеріалів</div>'}
+          </div>
+        </div>
+        <span onclick="deleteJournalEntryFromCard('${s.name}',${realIdx})" class="j-del">🗑</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteJournalEntryFromCard(studentName,idx){
+  if(!confirm('Видалити запис?'))return;
+  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
+  if(res.ok){
+    const s=(appData.students||[]).find(x=>x.name===studentName);
+    if(s&&s.journal)s.journal.splice(idx,1);
+    renderStudentCardJournal(s);
+    renderTeacher();
+    toast('🗑 Видалено');
+  }
+}
 function renderStudentCardLinks(){
   const links=currentStudent.links||{};
   document.getElementById('sc-links').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
@@ -1574,6 +1681,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 </script>
 </body>
