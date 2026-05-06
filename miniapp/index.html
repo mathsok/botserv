@@ -783,7 +783,7 @@ function renderTeacher(){
       ${ls.map(l=>{
         const sc=studentColor(l.sname);
         const balStr=l.bal<0?`<span class="lesson-bal debt">${l.bal}₴</span>`:`<span class="lesson-bal ok">0₴</span>`;
-        return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname.split(' ')[0]} ${l.sname.split(' ')[1]?.[0]||''}.</span>${balStr}</div>`;
+        return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname}</span>${balStr}</div>`;
       }).join('')}
     </div>`;
   }
@@ -807,51 +807,77 @@ function renderTeacher(){
   const previewEl=document.getElementById('t-students-preview');
   if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
-  // Attendance stats for lessons tab
-  const allJ2=students.flatMap(s=>(s.journal||[]).map(e=>({...e,sname:s.name})));
-  const totalLess=allJ2.length;
+  // Pie chart attendance for lessons tab
   const nowS=new Date();
   const thisMS=nowS.getMonth()+1,thisYS=nowS.getFullYear();
-  const monthLess=allJ2.filter(e=>{const p=e.date.split('.');return parseInt(p[1])===thisMS&&(parseInt(p[2])||thisYS)===thisYS;}).length;
-
-  // Build last 8 weeks bar chart data
-  const weekMap={};
-  for(const e of allJ2){
-    const p=e.date.split('.');
-    if(p.length<3)continue;
-    const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-    // Week number (ISO-ish)
-    const msPerWeek=7*24*3600*1000;
-    const weekKey=Math.floor(d.getTime()/msPerWeek);
-    weekMap[weekKey]=(weekMap[weekKey]||0)+1;
+  let conducted=0,cancelled=0,rescheduled=0;
+  for(const s of students){
+    for(const e of (s.journal||[])){
+      const p=e.date.split('.');
+      const m=parseInt(p[1]),y=parseInt(p[2])||thisYS;
+      if(m===thisMS&&y===thisYS){
+        const topic=(e.topic||'').toLowerCase();
+        if(topic.includes('скасов')||topic.includes('cancel'))cancelled++;
+        else if(topic.includes('перенес')||topic.includes('reschedule'))rescheduled++;
+        else conducted++;
+      }
+    }
   }
-  const weekKeys=Object.keys(weekMap).map(Number).sort((a,b)=>a-b).slice(-8);
-  const weekCounts=weekKeys.map(k=>weekMap[k]||0);
-  const maxWC=Math.max(...weekCounts,1);
+  const totalM2=conducted+cancelled+rescheduled;
+  const totalAll2=students.flatMap(s=>s.journal||[]).length;
 
-  // SVG bar chart
-  const barW=28,barGap=8,chartH=60,chartW=weekKeys.length*(barW+barGap)-barGap;
-  let barsHTML='';
-  weekKeys.forEach((k,i)=>{
-    const h=Math.max(4,Math.round((weekCounts[i]/maxWC)*chartH));
-    const x=i*(barW+barGap);
-    const isLast=i===weekKeys.length-1;
-    barsHTML+=`<rect x="${x}" y="${chartH-h}" width="${barW}" height="${h}" rx="4" fill="${isLast?'var(--accent)':'rgba(124,111,247,.35)'}"/>`;
-    barsHTML+=`<text x="${x+barW/2}" y="${chartH+14}" text-anchor="middle" fill="var(--text3)" font-size="9">${weekCounts[i]}</text>`;
-  });
-  const svgChart=weekKeys.length>0?`<svg width="${chartW}" height="${chartH+20}" viewBox="0 0 ${chartW} ${chartH+20}" style="overflow:visible">${barsHTML}</svg>`:'';
+  function pieSlice2(cx,cy,r,startA,endA,color){
+    if(endA-startA>=359.99)return`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
+    const s1=startA*Math.PI/180,e1=endA*Math.PI/180;
+    const x1=cx+r*Math.cos(s1),y1=cy+r*Math.sin(s1);
+    const x2=cx+r*Math.cos(e1),y2=cy+r*Math.sin(e1);
+    return`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${endA-startA>180?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`;
+  }
 
-  let statsHtml=`
+  let pieSVG2='';
+  if(totalM2>0){
+    let a=-90;
+    const slices=[[conducted,'#5ce0d8'],[cancelled,'#e24b4a'],[rescheduled,'#4a4a5a']];
+    for(const [cnt,col] of slices){
+      if(!cnt)continue;
+      const ang=cnt/totalM2*360;
+      pieSVG2+=pieSlice2(60,60,50,a,a+ang,col);
+      a+=ang;
+    }
+    pieSVG2+=`<circle cx="60" cy="60" r="28" fill="var(--bg2)"/>`;
+    pieSVG2+=`<text x="60" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="500">${totalM2}</text>`;
+    pieSVG2+=`<text x="60" y="70" text-anchor="middle" fill="var(--text2)" font-size="9">цей місяць</text>`;
+  } else {
+    pieSVG2=`<circle cx="60" cy="60" r="50" fill="#1e1e2a"/><circle cx="60" cy="60" r="28" fill="var(--bg2)"/><text x="60" y="64" text-anchor="middle" fill="var(--text3)" font-size="10">Немає</text>`;
+  }
+
+  const pct=(n)=>totalM2>0?Math.round(n/totalM2*100):0;
+
+  document.getElementById('t-journal-list').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-      <div class="metric-card"><div class="metric-val">${totalLess}</div><div class="metric-lbl">Занять всього</div></div>
-      <div class="metric-card"><div class="metric-val">${monthLess}</div><div class="metric-lbl">За цей місяць</div></div>
+      <div class="metric-card"><div class="metric-val">${totalAll2}</div><div class="metric-lbl">Занять всього</div></div>
+      <div class="metric-card"><div class="metric-val">${totalM2}</div><div class="metric-lbl">За цей місяць</div></div>
     </div>
-    ${svgChart?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
-      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Заняття по тижнях</div>
-      <div style="overflow-x:auto;display:flex;justify-content:center">${svgChart}</div>
-    </div>`:''}`;
-
-  document.getElementById('t-journal-list').innerHTML=statsHtml||'<div class="empty">Занять ще немає</div>';
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
+      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Посещаемість за місяць</div>
+      <div style="display:flex;align-items:center;justify-content:space-around;gap:12px">
+        <svg width="120" height="120" viewBox="0 0 120 120">${pieSVG2}</svg>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#5ce0d8;flex-shrink:0"></div>
+            <div><div style="font-size:13px;color:var(--text)">Проведено</div><div style="font-size:11px;color:var(--text2)">${conducted} · ${pct(conducted)}%</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#e24b4a;flex-shrink:0"></div>
+            <div><div style="font-size:13px;color:var(--text)">Скасовано</div><div style="font-size:11px;color:var(--text2)">${cancelled} · ${pct(cancelled)}%</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#4a4a5a;flex-shrink:0"></div>
+            <div><div style="font-size:13px;color:var(--text)">Перенесено</div><div style="font-size:11px;color:var(--text2)">${rescheduled} · ${pct(rescheduled)}%</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
@@ -874,126 +900,39 @@ function studentCardHTML(s){
 
 function renderWeekSchedule(students){
   const t=today();
-  document.getElementById('t-week-schedule').innerHTML=DAYS.map(day=>{
-    const ls=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
-    const isToday=day===t;
-    return`<div class="day-block"><div class="day-head${isToday?' today':''}">${isToday?'<div class="day-dot"></div>':''}${day}${isToday?' · сьогодні':''}</div>${ls.length?ls.map(l=>{
-      const sc=studentColor(l.sname);
-      const balHtml=l.bal<0?`<span class="lesson-bal debt">${l.bal}₴</span>`:`<span class="lesson-bal ok">0₴</span>`;
-      return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname.split(' ')[0]} ${l.sname.split(' ')[1]?.[0]||''}.</span>${balHtml}</div>`;
-    }).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">Немає занять</div>'}</div>`;
-  }).join('');
-}
-
-function openStudentCard(name){
-  const s=(appData.students||[]).find(x=>x.name===name);
-  if(!s)return;
-  currentStudent=s;
-  const sc=studentColor(name);
-
-  document.getElementById('sc-name').textContent=s.name;
-  const bal=s.balance;
-  document.getElementById('sc-balance').textContent=fmtBal(bal);
-  document.getElementById('sc-price').textContent='Ціна: '+s.price+'₴/заняття';
-  document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#e24b4a,#f07060)':('linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)');
-
-  // Schedule
-  document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length
-    ?(s.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
-    :'<div style="color:var(--text3);font-size:13px;padding:8px 0">Розклад не встановлено</div>';
-
-  // Codes
-  document.getElementById('sc-codes').innerHTML=`
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Учень</div><div class="code-val">${s.u_code||'—'}</div></div>${s.u_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.u_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Батьки</div><div class="code-val">${s.p_code||'—'}</div></div>${s.p_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.p_code}')">Копіювати</span>`}</div>
-    <div class="code-box"><div><div style="font-size:10px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">Супер-учень</div><div class="code-val">${s.su_code||'—'}</div></div>${s.su_id?'<span class="badge badge-green">✅</span>':`<span class="code-copy" onclick="copyCode('${s.su_code}')">Копіювати</span>`}</div>`;
-
-  // Ring charts stats
-  const journal=s.journal||[];
-  const hw=s.homework||[];
-  const totalL=journal.length;
-  const hwDone=hw.filter(h=>h.status==='done').length;
-  const hwTotal=hw.length;
-  const hwPct=hwTotal>0?Math.round(hwDone/hwTotal*100):0;
-  const hwColor=hwPct>=70?'#5ce0d8':hwPct>=40?'#ef9f27':'#e24b4a';
-
-  function svgRing(pct,color,size=72){
-    const r=28,circ=2*Math.PI*r;
-    const dash=circ*(pct/100),gap=circ-dash;
-    return`<svg width="${size}" height="${size}" viewBox="0 0 72 72" style="transform:rotate(-90deg)">
-      <circle cx="36" cy="36" r="${r}" fill="none" stroke="#1e1e2a" stroke-width="7"/>
-      <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="7"
-        stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round"/>
-    </svg>`;
-  }
-
-  const statsEl=document.getElementById('sc-stats');
-  if(statsEl) statsEl.innerHTML=`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 16px">
-      <div style="display:flex;justify-content:space-around;align-items:center">
-        <div style="text-align:center">
-          <div style="position:relative;display:inline-block">
-            ${svgRing(hwTotal>0?hwPct:0,hwColor)}
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${hwColor}">${hwPct}%</div>
-          </div>
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Виконання ДЗ</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${hwDone}/${hwTotal}</div>
-        </div>
-        <div style="width:1px;height:70px;background:var(--border)"></div>
-        <div style="text-align:center">
-          <div style="position:relative;display:inline-block">
-            ${svgRing(totalL>0?100:0,sc.color)}
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:${sc.color}">${totalL}</div>
-          </div>
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Занять всього</div>
-        </div>
-      </div>
-    </div>`;
-
-  // Journal
-  renderStudentCardJournal(s);
-  renderStudentCardLinks();
-  pushScreen('screen-student-card');
-}
-
-function renderStudentCardJournal(s){
-  const journal=(s.journal||[]).slice().reverse();
-  const el=document.getElementById('sc-journal');
-  if(!el)return;
-  if(!journal.length){
-    el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Занять ще не проводилось</div>';
+  const tIdx=DAYS.indexOf(t);
+  const ordered=[...DAYS.slice(tIdx),...DAYS.slice(0,tIdx)];
+  const activeDays=ordered.filter(day=>students.some(s=>(s.sessions||[]).some(x=>x.day===day)));
+  if(!activeDays.length){
+    document.getElementById('t-week-schedule').innerHTML='<div class="empty"><div class="empty-icon">📅</div>Розклад порожній</div>';
     return;
   }
-  el.innerHTML=journal.slice(0,20).map((e,i)=>{
-    const p=e.date.split('.');
-    const matCount=(e.materials||[]).length;
-    const realIdx=(s.journal||[]).length-1-i;
-    return`<div class="journal-card fade-up">
-      <div class="j-top">
-        <div class="j-date-box"><div class="j-day">${p[0]}</div><div class="j-mon">${monthShort(p[1])}</div></div>
-        <div class="j-info">
-          <div class="j-topic">${e.topic}</div>
-          <div class="j-meta">
-            ${matCount?`<div class="j-tag teal">📎 ${matCount} ${matCount===1?'файл':'файли'}</div>`:'<div class="j-tag muted">Без матеріалів</div>'}
-          </div>
-        </div>
-        <span onclick="deleteJournalEntryFromCard('${s.name}',${realIdx})" class="j-del">🗑</span>
+  document.getElementById('t-week-schedule').innerHTML=activeDays.map(day=>{
+    const ls=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
+    const isToday=day===t;
+    return`<div style="margin-bottom:18px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:${isToday?'var(--accent)':'var(--text2)'};display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        ${isToday?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>':''}
+        ${day}${isToday?' · сьогодні':''}
       </div>
+      ${ls.map(l=>{
+        const sc=studentColor(l.sname);
+        const balStr=l.bal<0?l.bal+'₴':'0₴';
+        const balColor=l.bal<0?'var(--red)':'var(--text3)';
+        return`<div style="background:var(--bg2);border:1px solid ${isToday?'rgba(124,111,247,.25)':'var(--border)'};border-radius:14px;padding:16px 18px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:26px;font-weight:500;color:${isToday?'var(--accent)':'var(--green)'};min-width:60px">${l.time}</div>
+            <div style="width:9px;height:9px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
+            <div style="flex:1;font-size:14px;color:var(--text)">${l.sname}</div>
+            <div style="font-size:12px;font-weight:500;color:${balColor}">${balStr}</div>
+          </div>
+          ${isToday?`<div style="margin-top:10px;background:rgba(124,111,247,.06);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--accent)">Сьогодні 📚</div>`:''}
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('');
 }
 
-async function deleteJournalEntryFromCard(studentName,idx){
-  if(!confirm('Видалити запис?'))return;
-  const res=await api('/api/delete-journal-entry','POST',{tid:appData.tid,name:studentName,idx});
-  if(res.ok){
-    const s=(appData.students||[]).find(x=>x.name===studentName);
-    if(s&&s.journal)s.journal.splice(idx,1);
-    renderStudentCardJournal(s);
-    renderTeacher();
-    toast('🗑 Видалено');
-  }
-}
 function renderStudentCardLinks(){
   const links=currentStudent.links||{};
   document.getElementById('sc-links').innerHTML=Object.keys(links).length?Object.entries(links).map(([k,v])=>`
@@ -1681,6 +1620,9 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
+
 
 
 </script>
