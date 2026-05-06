@@ -88,9 +88,7 @@ def find_student_by_uid(uid):
 # ─── МЕНЮ ─────────────────────────────────────────────────────────────────────
 
 menu_teacher = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="👥 Керування учнями")],
-    [KeyboardButton(text="📖 Заняття і матеріали")],
-    [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="🗓 Розклад на тиждень")],
+    [KeyboardButton(text="📅 Мій розклад")],
     [KeyboardButton(text="🔗 Корисні посилання")],
 ], resize_keyboard=True)
 
@@ -108,8 +106,7 @@ menu_teacher_lessons = ReplyKeyboardMarkup(keyboard=[
 ], resize_keyboard=True)
 
 menu_student = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-    [KeyboardButton(text="📖 Заняття і матеріали")],
+    [KeyboardButton(text="📚 Матеріали")],
     [KeyboardButton(text="🔗 Корисні посилання")],
     [KeyboardButton(text="🚪 Вийти з кабінета")]
 ], resize_keyboard=True)
@@ -121,15 +118,13 @@ menu_student_lessons = ReplyKeyboardMarkup(keyboard=[
 ], resize_keyboard=True)
 
 menu_parent = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📅 Розклад дитини"), KeyboardButton(text="💳 Баланс дитини")],
-    [KeyboardButton(text="💰 Поповнити баланс")],
+    [KeyboardButton(text="💳 Баланс дитини")],
     [KeyboardButton(text="🔗 Корисні посилання")],
     [KeyboardButton(text="🚪 Вийти з кабінета")]
 ], resize_keyboard=True)
 
 menu_super = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📅 Мій розклад"), KeyboardButton(text="💳 Мій баланс")],
-    [KeyboardButton(text="📖 Заняття і матеріали"), KeyboardButton(text="💰 Поповнити баланс")],
     [KeyboardButton(text="🔗 Корисні посилання")],
     [KeyboardButton(text="🚪 Вийти з кабінета")]
 ], resize_keyboard=True)
@@ -591,6 +586,32 @@ async def links_handler(message: types.Message):
 
 
 # ─── ДЗ УЧНЯ ──────────────────────────────────────────────────────────────────
+
+@dp.message(lambda m: m.text == "📚 Матеріали")
+async def student_materials(message: types.Message):
+    uid = message.from_user.id
+    tid, sname, sdata, role = find_student_by_uid(uid)
+    if not sdata: return
+    journal = list(reversed(sdata.get("journal", [])))
+    if not journal:
+        await message.answer("📒 Журнал занять порожній — матеріалів немає.")
+        return
+    # Show last 5 lessons with materials
+    with_materials = [e for e in journal if e.get("materials")]
+    if not with_materials:
+        await message.answer("📎 Матеріалів ще немає. Вчитель додасть їх після занять.")
+        return
+    await message.answer(f"📚 Матеріали занять ({len(with_materials)} з матеріалами):")
+    for entry in with_materials[:5]:
+        await message.answer(f"📖 {entry['topic']} · {entry['date']}")
+        for mat in entry.get("materials", []):
+            try:
+                if mat["type"] == "photo":
+                    await bot.send_photo(uid, mat["file_id"])
+                elif mat["type"] == "document":
+                    await bot.send_document(uid, mat["file_id"])
+            except Exception:
+                pass
 
 @dp.message(lambda m: m.text and "Домашні завдання" in m.text)
 async def student_hw_list(message: types.Message):
