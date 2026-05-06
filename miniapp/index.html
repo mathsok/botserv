@@ -361,7 +361,7 @@ select.form-input{appearance:none;cursor:pointer}
         <div><div class="action-label">Надіслати ДЗ</div><div class="action-sub">Текст або файли</div></div>
         <div class="chevron-r">›</div>
       </div>
-      <div class="sec-header"><div class="sec-title">Журнал</div></div>
+      <div class="sec-header"><div class="sec-title">Статистика занять</div></div>
       <div id="t-journal-list"></div>
     </div>
     <nav class="bottom-nav">
@@ -378,7 +378,7 @@ select.form-input{appearance:none;cursor:pointer}
 <div id="screen-student-card" class="screen">
   <div class="header"><button class="header-back" onclick="goBack()">‹</button><div class="header-title" id="sc-name">Учень</div><div class="header-action" onclick="showDeleteStudent()">Видалити</div></div>
   <div class="screen-body" style="padding:14px">
-    <div class="balance-hero" id="sc-balance-hero">
+    <div class="balance-hero" id="sc-balance-hero" style="margin:0 0 14px">
       <div class="balance-label">Баланс</div>
       <div class="balance-amount" id="sc-balance">0₴</div>
       <div class="balance-sub" id="sc-price">Ціна: 0₴/заняття</div>
@@ -387,10 +387,21 @@ select.form-input{appearance:none;cursor:pointer}
         <button class="balance-btn" onclick="showSubBalance()">− Списати</button>
       </div>
     </div>
-    <div class="section"><div class="sec-header"><div class="sec-title">Розклад</div></div><div id="sc-sessions"></div><button class="btn btn-secondary" style="margin-top:6px" onclick="showEditSchedule()">✏️ Змінити розклад</button></div>
-    <div class="section"><div class="sec-header"><div class="sec-title">Коди доступу</div></div><div id="sc-codes"></div><button class="btn btn-secondary" style="margin-top:6px" onclick="resetCodes()">🔄 Оновити коди</button></div>
-    <div class="section"><div class="sec-header"><div class="sec-title">Корисні посилання</div></div><div id="sc-links"></div><button class="btn btn-secondary" style="margin-top:6px" onclick="showAddLink()">+ Додати посилання</button></div>
-    <div class="section"><div class="sec-header"><div class="sec-title">Налаштування</div></div><div class="card clickable" onclick="showEditPrice()"><div class="list-item"><div class="item-info"><div class="item-name">Змінити ціну заняття</div></div><div class="chevron">›</div></div></div></div>
+    <div class="sec-header"><div class="sec-title">Статистика</div></div>
+    <div id="sc-stats" style="margin-bottom:14px"></div>
+    <div class="sec-header"><div class="sec-title">Розклад</div></div>
+    <div id="sc-sessions" style="margin-bottom:6px"></div>
+    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="showEditSchedule()">✏️ Змінити розклад</button>
+    <div class="sec-header"><div class="sec-title">Журнал занять</div></div>
+    <div id="sc-journal" style="margin-bottom:14px"></div>
+    <div class="sec-header"><div class="sec-title">Коди доступу</div></div>
+    <div id="sc-codes" style="margin-bottom:6px"></div>
+    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="resetCodes()">🔄 Оновити коди</button>
+    <div class="sec-header"><div class="sec-title">Корисні посилання</div></div>
+    <div id="sc-links" style="margin-bottom:6px"></div>
+    <button class="btn btn-secondary" style="margin-bottom:14px" onclick="showAddLink()">+ Додати посилання</button>
+    <div class="sec-header"><div class="sec-title">Налаштування</div></div>
+    <div class="card clickable" onclick="showEditPrice()"><div class="list-item"><div class="item-info"><div class="item-name">Змінити ціну заняття</div></div><div class="chevron">›</div></div></div>
   </div>
 </div>
 
@@ -698,10 +709,28 @@ async function loadTeacher(tid){
 }
 
 function studentColor(name){
-  const COLORS=['#7c6ff7','#5ce0d8','#ef9f27','#e24b4a','#639922','#378add','#f07060','#60c0f0'];
-  const COLORS_BG=['rgba(124,111,247,.1)','rgba(92,224,216,.1)','rgba(239,159,39,.1)','rgba(226,75,74,.1)','rgba(99,153,34,.1)','rgba(55,138,221,.1)','rgba(240,112,96,.1)','rgba(96,192,240,.1)'];
+  const COLORS=[
+    '#7c6ff7','#5ce0d8','#ef9f27','#e24b4a','#639922','#378add',
+    '#f07060','#60c0f0','#d4a0ff','#ff9f6a','#6affb3','#ffcc5c',
+    '#5cb8ff','#ff6ab0','#a8ff78','#ffd166','#06d6a0','#ef476f',
+    '#118ab2','#ffd60a','#8338ec','#3a86ff','#fb5607','#ff006e'
+  ];
+  const COLORS_BG=[
+    'rgba(124,111,247,.1)','rgba(92,224,216,.1)','rgba(239,159,39,.1)','rgba(226,75,74,.1)',
+    'rgba(99,153,34,.1)','rgba(55,138,221,.1)','rgba(240,112,96,.1)','rgba(96,192,240,.1)',
+    'rgba(212,160,255,.1)','rgba(255,159,106,.1)','rgba(106,255,179,.1)','rgba(255,204,92,.1)',
+    'rgba(92,184,255,.1)','rgba(255,106,176,.1)','rgba(168,255,120,.1)','rgba(255,209,102,.1)',
+    'rgba(6,214,160,.1)','rgba(239,71,111,.1)','rgba(17,138,178,.1)','rgba(255,214,10,.1)',
+    'rgba(131,56,236,.1)','rgba(58,134,255,.1)','rgba(251,86,7,.1)','rgba(255,0,110,.1)'
+  ];
   let h=0;for(let c of name)h=(h*31+c.charCodeAt(0))%COLORS.length;
   return {color:COLORS[h],bg:COLORS_BG[h]};
+}
+
+function shortName(name){
+  const parts=name.trim().split(' ');
+  if(parts.length===1)return parts[0];
+  return parts[0]+' '+parts[1]; // Ім'я + Прізвище
 }
 
 function renderTeacher(){
@@ -778,26 +807,35 @@ function renderTeacher(){
   const previewEl=document.getElementById('t-students-preview');
   if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
-  // Journal
-  const allJ=students.flatMap(s=>(s.journal||[]).map((e,i)=>({...e,studentName:s.name,sIdx:i}))).sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('t-journal-list').innerHTML=allJ.slice(0,20).map(e=>{
-    const p=e.date.split('.');
-    const sc=studentColor(e.studentName);
-    const matCount=e.materials?.length||0;
-    return`<div class="journal-card fade-up">
-      <div class="j-top">
-        <div class="j-date-box"><div class="j-day">${p[0]}</div><div class="j-mon">${monthShort(p[1])}</div></div>
-        <div class="j-info">
-          <div class="j-topic">${e.topic}</div>
-          <div class="j-meta">
-            <div style="display:flex;align-items:center;gap:4px"><div class="sdot" style="background:${sc.color};width:6px;height:6px"></div><span style="font-size:11px;color:#6b6b7a">${e.studentName.split(' ')[0]} ${e.studentName.split(' ')[1]?.[0]||''}.</span></div>
-            ${matCount?`<div class="j-tag teal">📎 ${matCount} ${matCount===1?'файл':'файли'}</div>`:'<div class="j-tag muted">Без матеріалів</div>'}
-          </div>
+  // Attendance stats for lessons tab
+  const allJ=students.flatMap(s=>(s.journal||[]).map(e=>({...e,studentName:s.name})));
+  const totalLessons=allJ.length;
+  const now2=new Date();
+  const thisM2=now2.getMonth()+1,thisY2=now2.getFullYear();
+  const monthL=allJ.filter(e=>{const p=e.date.split('.');return parseInt(p[1])===thisM2&&(parseInt(p[2])||thisY2)===thisY2;}).length;
+  let statsHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  statsHTML+=`<div class="metric-card"><div class="metric-val">${totalLessons}</div><div class="metric-lbl">Занять всього</div></div>`;
+  statsHTML+=`<div class="metric-card"><div class="metric-val">${monthL}</div><div class="metric-lbl">За цей місяць</div></div>`;
+  statsHTML+='</div>';
+  if(students.length>0){
+    for(const s of students){
+      const sc=studentColor(s.name);
+      const cnt=(s.journal||[]).length;
+      const hw=s.homework||[];
+      const hwPct=hw.length>0?Math.round(hw.filter(h=>h.status==='done').length/hw.length*100):0;
+      statsHTML+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openStudentCard('${s.name}')">
+        <div style="width:8px;height:8px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
+        <div style="flex:1;font-size:13px;color:var(--text)">${s.name}</div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:500;color:${sc.color}">${cnt} зан.</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:1px">ДЗ ${hwPct}%</div>
         </div>
-        <span onclick="deleteJournalEntry('${e.studentName}',${e.sIdx})" class="j-del">🗑</span>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty" style="padding:20px 0">Журнал порожній</div>';
+      </div>`;
+    }
+  } else {
+    statsHTML+='<div class="empty" style="padding:20px 0">Занять ще немає</div>';
+  }
+  document.getElementById('t-journal-list').innerHTML=statsHTML;
 
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
