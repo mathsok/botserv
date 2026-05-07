@@ -782,8 +782,7 @@ function renderTeacher(){
       <div class="day-head${isToday?' today':''}">${isToday?'<div class="day-dot"></div>':''}${day}${isToday?' · сьогодні':''}</div>
       ${ls.map(l=>{
         const sc=studentColor(l.sname);
-        const balStr=l.bal<0?`<span class="lesson-bal debt">${l.bal}₴</span>`:`<span class="lesson-bal ok">0₴</span>`;
-        return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname}</span>${balStr}</div>`;
+        return`<div class="lesson-row"><span class="lesson-time">${l.time}</span><div class="sdot" style="background:${sc.color}"></div><span class="lesson-name">${l.sname}</span></div>`;
       }).join('')}
     </div>`;
   }
@@ -888,7 +887,10 @@ function renderTeacher(){
 function studentCardHTML(s){
   const sc=studentColor(s.name);
   const bal=s.balance;
-  const balHTML=bal<0?`<div class="s-badge debt">${bal}₴</div>`:`<div class="s-badge zero">0₴</div>`;
+  let balHTML;
+  if(bal<0) balHTML=`<div class="s-badge debt">${bal}₴</div>`;
+  else if(bal>0) balHTML=`<div class="s-badge" style="background:rgba(92,224,216,.1);color:var(--green);border:1px solid rgba(92,224,216,.2)">+${bal}₴</div>`;
+  else balHTML=`<div class="s-badge zero">0₴</div>`;
   const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
   return`<div class="student-card" onclick="openStudentCard('${s.name}')">
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
@@ -917,14 +919,11 @@ function renderWeekSchedule(students){
       </div>
       ${ls.map(l=>{
         const sc=studentColor(l.sname);
-        const balStr=l.bal<0?l.bal+'₴':'0₴';
-        const balColor=l.bal<0?'var(--red)':'var(--text3)';
         return`<div style="background:var(--bg2);border:1px solid ${isToday?'rgba(124,111,247,.25)':'var(--border)'};border-radius:14px;padding:16px 18px;margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:12px">
             <div style="font-size:26px;font-weight:500;color:${isToday?'var(--accent)':'var(--green)'};min-width:60px">${l.time}</div>
             <div style="width:9px;height:9px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
             <div style="flex:1;font-size:14px;color:var(--text)">${l.sname}</div>
-            <div style="font-size:12px;font-weight:500;color:${balColor}">${balStr}</div>
           </div>
           ${isToday?`<div style="margin-top:10px;background:rgba(124,111,247,.06);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--accent)">Сьогодні 📚</div>`:''}
         </div>`;
@@ -1752,6 +1751,8 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
 
 
 
