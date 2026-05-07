@@ -232,20 +232,30 @@ async def admin_add_teacher(message: types.Message):
 
 @dp.message(lambda m: m.from_user.id == SUPER_ADMIN_ID and m.text == "📋 Список вчителів")
 async def admin_list_teachers(message: types.Message):
+    await show_teachers_list(message)
+
+async def show_teachers_list(message):
     db = load_db()
     teachers = db.get("teachers", {})
     codes = db.get("teacher_codes", {})
     if not teachers:
         await message.answer("Вчителів ще немає.", reply_markup=menu_super_admin)
         return
-    # Reverse map: tid -> code
     tid_to_code = {v: k for k, v in codes.items()}
-    text = "📋 *Список вчителів:*\n\n"
+    text = "📋 Список вчителів:\n\n"
     for tid, t in teachers.items():
         code = tid_to_code.get(tid, "—")
-        status = "✅ Активний" if t.get("active", True) else "❌ Деактивований"
-        text += f"👤 *{t['name']}* ({t.get('subject','?')})\n🔑 Код: `{code}`\nID: {tid} · {status}\nУчнів: {len(t.get('students',{}))}\n\n"
-    await message.answer(text, parse_mode="Markdown", reply_markup=menu_super_admin)
+        status = "✅" if t.get("active", True) else "❌"
+        text += status + " " + t["name"] + " (" + t.get("subject","?") + ")\n"
+        text += "Код: " + code + " | Учнів: " + str(len(t.get("students",{}))) + "\n"
+        text += "ID: " + tid + "\n\n"
+    # Add delete buttons
+    kb_rows = []
+    for tid, t in teachers.items():
+        kb_rows.append([KeyboardButton(text="🗑 Видалити: " + t["name"])])
+    kb_rows.append([KeyboardButton(text="⬅️ Назад")])
+    kb = ReplyKeyboardMarkup(keyboard=kb_rows, resize_keyboard=True)
+    await message.answer(text, reply_markup=kb)
 
 
 # ─── АВТОРИЗАЦІЯ УЧНЯ ─────────────────────────────────────────────────────────
@@ -898,10 +908,18 @@ async def handle(message: types.Message):
     # ── Super Admin стани ──
     if uid == SUPER_ADMIN_ID:
         if isinstance(state, dict) and state.get("state") == "admin_teacher_name":
+            if message.text == "⬅️ Назад":
+                user_state[uid] = None
+                await message.answer("Скасовано.", reply_markup=menu_super_admin)
+                return
             user_state[uid] = {"state": "admin_teacher_subject", "name": message.text.strip()}
-            await message.answer(f"Який предмет викладає {message.text.strip()}?")
+            await message.answer("Який предмет викладає " + message.text.strip() + "?")
             return
         if isinstance(state, dict) and state.get("state") == "admin_teacher_subject":
+            if message.text == "⬅️ Назад":
+                user_state[uid] = None
+                await message.answer("Скасовано.", reply_markup=menu_super_admin)
+                return
             import random as _rnd
             name = state["name"]
             subject = message.text.strip()
@@ -911,7 +929,7 @@ async def handle(message: types.Message):
                 code = str(_rnd.randint(100000, 999999))
                 if code not in existing:
                     break
-            teacher_id = f"t_{code}"
+            teacher_id = "t_" + code
             db2["teachers"][teacher_id] = {
                 "name": name, "subject": subject,
                 "students": {}, "links": {}, "notes": [],
@@ -921,9 +939,34 @@ async def handle(message: types.Message):
             save_db(db2)
             user_state[uid] = None
             await message.answer(
-                "\u2705 Вчитель " + name + " (" + subject + ") створений!\n\nДодайте цей код вчителю:\n" + code + "\n\nВін введе його після /start",
+                "✅ Вчитель " + name + " (" + subject + ") створений!\n\n"
+                "Код входу: " + code + "\n\n"
+                "Надайте цей код вчителю — він введе його після /start",
                 reply_markup=menu_super_admin
             )
+            return
+
+        # Delete teacher
+        if message.text and message.text.startswith("🗑 Видалити: "):
+            tname = message.text.replace("🗑 Видалити: ", "").strip()
+            db2 = load_db()
+            tid_to_delete = None
+            for tid, t in db2["teachers"].items():
+                if t["name"] == tname:
+                    tid_to_delete = tid
+                    break
+            if tid_to_delete:
+                del db2["teachers"][tid_to_delete]
+                # Remove code
+                db2["teacher_codes"] = {k: v for k, v in db2.get("teacher_codes", {}).items() if v != tid_to_delete}
+                save_db(db2)
+                await message.answer("🗑 Вчитель " + tname + " видалений.", reply_markup=menu_super_admin)
+            else:
+                await message.answer("Вчителя не знайдено.", reply_markup=menu_super_admin)
+            return
+
+        if message.text == "📋 Список вчителів":
+            await show_teachers_list(message)
             return
 
     # ── Матеріали до заняття ──
