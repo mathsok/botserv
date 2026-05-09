@@ -1266,8 +1266,13 @@ async function markLesson(){
   }
 
   // Спочатку відмічаємо заняття — щоб запис в журналі існував
+  // Prevent double submit
+  const confirmBtn=document.querySelector('#modal-mark-lesson .btn-primary');
+  if(confirmBtn){confirmBtn.disabled=true;confirmBtn.textContent='⏳ Зачекайте...';}
+  let _btnRestored=false;
+  const restoreBtn=()=>{if(!_btnRestored&&confirmBtn){confirmBtn.disabled=false;confirmBtn.textContent='Підтвердити';_btnRestored=true;}};
   const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action,date:lessonDate,reschedule:rescheduleData});
-  if(!res.ok){toast('Помилка');return}
+  if(!res.ok){restoreBtn();toast('Помилка');return}
 
   // Надсилаємо матеріали (журнал вже є, FormData вже готова)
   let materialsSent=false;
@@ -1282,8 +1287,11 @@ async function markLesson(){
 
   const s=(appData.students||[]).find(x=>x.name===name);
   if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:lessonDate,topic,materials:[]})}
-  renderTeacher();closeModal('modal-mark-lesson');
-  toast(materialsSent?'✅ Заняття відмічено! Матеріали надіслано учню.':'✅ Заняття відмічено!');
+  renderTeacher();
+  closeModal('modal-mark-lesson');
+  if(action==='reschedule') toast('🔄 Заняття успішно перенесено!');
+  else if(action==='cancel') toast('❌ Заняття скасовано.');
+  else toast(materialsSent?'✅ Заняття відмічено! Матеріали надіслано.':'✅ Заняття відмічено!');
 }
 
 // SEND HW
@@ -1850,6 +1858,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
