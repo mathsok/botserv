@@ -509,7 +509,11 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="form-group"><label class="form-label">Тема заняття</label><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
     <div class="form-group">
       <label class="form-label">Дата заняття</label>
-      <input class="form-input" id="mark-date" type="date">
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="mark-day" type="number" min="1" max="31" placeholder="ДД" style="width:64px;flex-shrink:0;text-align:center">
+        <input class="form-input" id="mark-month" type="number" min="1" max="12" placeholder="ММ" style="width:64px;flex-shrink:0;text-align:center">
+        <input class="form-input" id="mark-year" type="number" min="2024" max="2099" placeholder="РРРР" style="flex:1;text-align:center">
+      </div>
     </div>
     <div class="form-group"><label class="form-label">Дія</label>
       <select class="form-input" id="mark-action" onchange="updateMarkLessonUI()">
@@ -520,18 +524,13 @@ select.form-input{appearance:none;cursor:pointer}
     </div>
     <div id="reschedule-section" style="display:none">
       <div style="background:var(--bg3);border-radius:var(--r2);padding:12px;margin-bottom:14px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Перенос заняття</div>
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">Початкова дата і час</label>
-          <div style="display:flex;gap:8px">
-            <input class="form-input" id="reschedule-from-date" type="date" style="flex:1">
-            <input class="form-input" id="reschedule-from-time" type="time" style="width:100px;flex-shrink:0">
-          </div>
-        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Новий час заняття</div>
         <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Нова дата і час</label>
-          <div style="display:flex;gap:8px">
-            <input class="form-input" id="reschedule-to-date" type="date" style="flex:1">
+          <label class="form-label">Нова дата</label>
+          <div style="display:flex;gap:6px">
+            <input class="form-input" id="reschedule-to-day" type="number" min="1" max="31" placeholder="ДД" style="width:64px;flex-shrink:0;text-align:center">
+            <input class="form-input" id="reschedule-to-month" type="number" min="1" max="12" placeholder="ММ" style="width:64px;flex-shrink:0;text-align:center">
+            <input class="form-input" id="reschedule-to-year" type="number" min="2024" max="2099" placeholder="РРРР" style="flex:1;text-align:center">
             <input class="form-input" id="reschedule-to-time" type="time" style="width:100px;flex-shrink:0">
           </div>
         </div>
@@ -1188,10 +1187,9 @@ function showMarkLesson(){
   document.getElementById('lesson-file-input').value='';
   // Set default date to today in local timezone
   const now=new Date();
-  const dd=String(now.getDate()).padStart(2,'0');
-  const mm=String(now.getMonth()+1).padStart(2,'0');
-  const yyyy=now.getFullYear();
-  document.getElementById('mark-date').value=yyyy+'-'+mm+'-'+dd;
+  document.getElementById('mark-day').value=now.getDate();
+  document.getElementById('mark-month').value=now.getMonth()+1;
+  document.getElementById('mark-year').value=now.getFullYear();
   // Show/hide reschedule section
   updateMarkLessonUI();
   openModal('modal-mark-lesson');
@@ -1208,29 +1206,29 @@ async function markLesson(){
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
   if(!topic){toast('Введіть тему');return}
-  // Get custom date from input
-  const dateInput=document.getElementById('mark-date').value;
+  // Get custom date from DD/MM/YYYY fields
+  const _d=document.getElementById('mark-day').value;
+  const _m=document.getElementById('mark-month').value;
+  const _y=document.getElementById('mark-year').value;
   let lessonDate='';
-  if(dateInput){
-    const [y,m,d]=dateInput.split('-');
-    lessonDate=d+'.'+m+'.'+y;
+  if(_d&&_m&&_y){
+    lessonDate=String(_d).padStart(2,'0')+'.'+String(_m).padStart(2,'0')+'.'+_y;
   } else {
     const now=new Date();
     lessonDate=String(now.getDate()).padStart(2,'0')+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+now.getFullYear();
   }
-  // Reschedule data
+  // Reschedule data - only "to" date needed, "from" is already in mark-date
   let rescheduleData=null;
   if(action==='reschedule'){
-    const fromDate=document.getElementById('reschedule-from-date').value;
-    const fromTime=document.getElementById('reschedule-from-time').value;
-    const toDate=document.getElementById('reschedule-to-date').value;
+    const toDay=document.getElementById('reschedule-to-day').value;
+    const toMon=document.getElementById('reschedule-to-month').value;
+    const toYr=document.getElementById('reschedule-to-year').value;
     const toTime=document.getElementById('reschedule-to-time').value;
-    if(!fromDate||!fromTime||!toDate||!toTime){toast('Вкажіть дати переносу');return}
-    const [fy,fm,fd]=fromDate.split('-');
-    const [ty,tm,td]=toDate.split('-');
+    if(!toDay||!toMon||!toYr||!toTime){toast('Вкажіть нову дату переносу');return}
+    const toDate=String(toDay).padStart(2,'0')+'.'+String(toMon).padStart(2,'0')+'.'+toYr;
     rescheduleData={
-      fromDate:fd+'.'+fm+'.'+fy, fromTime,
-      toDate:td+'.'+tm+'.'+ty, toTime
+      fromDate:lessonDate, fromTime:'',
+      toDate, toTime
     };
   }
 
@@ -1832,6 +1830,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
