@@ -176,28 +176,43 @@ async def mark_lesson(request):
             "materials":[]
         })
     save_db(db)
-    # Notify student about lesson date (not mark date)
+    # Notify student/parent about lesson
     u_id = s.get("u_id") or s.get("su_id")
-    if u_id and action == "done":
-        cur = s.get("currency","UAH")
-        sym = "$" if cur=="USD" else "€" if cur=="EUR" else "₴"
-        bal = s.get("balance",0)
-        bal_str = (sym+str(abs(bal))) if cur in ("USD","EUR") else (str(bal)+sym)
+    p_id = s.get("p_id")
+    notify_ids = [i for i in [u_id, p_id] if i]
+    cur = s.get("currency","UAH")
+    sym = "$" if cur=="USD" else "\u20ac" if cur=="EUR" else "\u20b4"
+    bal = s.get("balance",0)
+    bal_str = (sym+str(abs(bal))) if cur in ("USD","EUR") else (str(bal)+sym)
+    if notify_ids and action == "done":
+        msg = "\u2705 \u0417\u0430\u043d\u044f\u0442\u0442\u044f \u0432\u0456\u0434\u043c\u0456\u0447\u0435\u043d\u043e!\n\U0001f4c5 "+date_str+"\n\U0001f4d6 "+topic+"\n\U0001f4b3 \u0411\u0430\u043b\u0430\u043d\u0441: "+bal_str
         try:
             async with aiohttp_client.ClientSession() as session:
-                msg = "\u2705 \u0417\u0430\u043d\u044f\u0442\u0442\u044f \u0432\u0456\u0434\u043c\u0456\u0447\u0435\u043d\u043e!\n\U0001f4c5 "+date_str+"\n\U0001f4d6 "+topic+"\n\U0001f4b3 \u0411\u0430\u043b\u0430\u043d\u0441: "+bal_str
-                await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",
-                    json={"chat_id":u_id,"text":msg})
+                for nid in notify_ids:
+                    await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",
+                        json={"chat_id":nid,"text":msg})
         except Exception as e:
             print("[MARK LESSON] notify error:", e)
-    elif u_id and action == "reschedule" and reschedule:
+    elif notify_ids and action == "reschedule" and reschedule:
+        from_info = reschedule.get("fromDate","")+" "+reschedule.get("fromTime","") if reschedule.get("fromTime") else reschedule.get("fromDate","")
+        to_info = reschedule.get("toDate","")+" "+reschedule.get("toTime","")
+        msg2 = "\U0001f504 \u0417\u0430\u043d\u044f\u0442\u0442\u044f \u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e!\n\U0001f4c5 \u0417: "+from_info+"\n\U0001f4c5 \u041d\u0430: "+to_info
         try:
             async with aiohttp_client.ClientSession() as session:
-                msg2 = "\U0001f504 \u0417\u0430\u043d\u044f\u0442\u0442\u044f \u043f\u0435\u0440\u0435\u043d\u0435\u0441\u0435\u043d\u043e!\n\U0001f4c5 \u0417: "+reschedule.get("fromDate","")+" "+reschedule.get("fromTime","")+"\n\U0001f4c5 \u041d\u0430: "+reschedule.get("toDate","")+" "+reschedule.get("toTime","")
-                await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",
-                    json={"chat_id":u_id,"text":msg2})
+                for nid in notify_ids:
+                    await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",
+                        json={"chat_id":nid,"text":msg2})
         except Exception as e:
             print("[RESCHEDULE] notify error:", e)
+    elif notify_ids and action == "cancel":
+        msg3 = "\u274c \u0417\u0430\u043d\u044f\u0442\u0442\u044f "+date_str+" \u0441\u043a\u0430\u0441\u043e\u0432\u0430\u043d\u043e"
+        try:
+            async with aiohttp_client.ClientSession() as session:
+                for nid in notify_ids:
+                    await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",
+                        json={"chat_id":nid,"text":msg3})
+        except Exception as e:
+            print("[CANCEL] notify error:", e)
 
 async def send_hw(request):
     body = await request.json()
