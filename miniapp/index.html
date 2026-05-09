@@ -1241,26 +1241,14 @@ async function markLesson(){
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
   if(!topic&&action==='done'){toast('Введіть тему');return}
-  // Get lesson date from date picker
-  const dateVal=document.getElementById('mark-date').value;
-  let lessonDate='';
-  if(dateVal){
-    const [y,m,d]=dateVal.split('-');
-    lessonDate=d+'.'+m+'.'+y;
-  } else {
-    const now=new Date();
-    lessonDate=String(now.getDate()).padStart(2,'0')+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+now.getFullYear();
-  }
-  // Reschedule - only new DD.MM + time
+  // Get lesson date from custom picker
+  const lessonDate = getPickerDate('mark-date-picker') || (()=>{const n=new Date();return String(n.getDate()).padStart(2,'0')+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+n.getFullYear();})();
+  // Reschedule - use picker date and time
   let rescheduleData=null;
   if(action==='reschedule'){
-    const toDay=document.getElementById('reschedule-to-day').value;
-    const toMon=document.getElementById('reschedule-to-month').value;
-    const toTime=document.getElementById('reschedule-to-time').value;
-    if(!toDay||!toMon||!toTime){toast('Вкажіть нову дату переносу');return}
-    // Use current year for reschedule
-    const curYear=new Date().getFullYear();
-    const toDate=String(toDay).padStart(2,'0')+'.'+String(toMon).padStart(2,'0')+'.'+curYear;
+    const toDate=getPickerDate('reschedule-date-picker');
+    const toTime=getPickerTime('reschedule-date-picker');
+    if(!toDate){toast('Вкажіть нову дату переносу');return}
     rescheduleData={fromDate:lessonDate,fromTime:'',toDate,toTime};
   }
 
@@ -1862,6 +1850,8 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
 
 
 
