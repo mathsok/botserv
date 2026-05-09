@@ -879,77 +879,8 @@ function renderTeacher(){
   const previewEl=document.getElementById('t-students-preview');
   if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
-  // Pie chart attendance for lessons tab
-  const nowS=new Date();
-  const thisMS=nowS.getMonth()+1,thisYS=nowS.getFullYear();
-  let conducted=0,cancelled=0,rescheduled=0;
-  for(const s of students){
-    for(const e of (s.journal||[])){
-      const p=e.date.split('.');
-      const m=parseInt(p[1]),y=parseInt(p[2])||thisYS;
-      if(m===thisMS&&y===thisYS){
-        const topic=(e.topic||'');
-        if(topic.startsWith('❌')||topic.toLowerCase().includes('скасов'))cancelled++;
-        else if(topic.startsWith('🔄')||topic.toLowerCase().includes('перенес'))rescheduled++;
-        else conducted++;
-      }
-    }
-  }
-  const totalM2=conducted+cancelled+rescheduled;
-  const totalAll2=students.flatMap(s=>s.journal||[]).length;
-
-  function pieSlice2(cx,cy,r,startA,endA,color){
-    if(endA-startA>=359.99)return`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
-    const s1=startA*Math.PI/180,e1=endA*Math.PI/180;
-    const x1=cx+r*Math.cos(s1),y1=cy+r*Math.sin(s1);
-    const x2=cx+r*Math.cos(e1),y2=cy+r*Math.sin(e1);
-    return`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${endA-startA>180?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`;
-  }
-
-  let pieSVG2='';
-  if(totalM2>0){
-    let a=-90;
-    const slices=[[conducted,'#5ce0d8'],[cancelled,'#e24b4a'],[rescheduled,'#4a4a5a']];
-    for(const [cnt,col] of slices){
-      if(!cnt)continue;
-      const ang=cnt/totalM2*360;
-      pieSVG2+=pieSlice2(60,60,50,a,a+ang,col);
-      a+=ang;
-    }
-    pieSVG2+=`<circle cx="60" cy="60" r="28" fill="var(--bg2)"/>`;
-    pieSVG2+=`<text x="60" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="500">${totalM2}</text>`;
-    pieSVG2+=`<text x="60" y="70" text-anchor="middle" fill="var(--text2)" font-size="9">цей місяць</text>`;
-  } else {
-    pieSVG2=`<circle cx="60" cy="60" r="50" fill="#1e1e2a"/><circle cx="60" cy="60" r="28" fill="var(--bg2)"/><text x="60" y="64" text-anchor="middle" fill="var(--text3)" font-size="10">Немає</text>`;
-  }
-
-  const pct=(n)=>totalM2>0?Math.round(n/totalM2*100):0;
-
-  document.getElementById('t-journal-list').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-      <div class="metric-card"><div class="metric-val">${totalAll2}</div><div class="metric-lbl">Занять всього</div></div>
-      <div class="metric-card"><div class="metric-val">${totalM2}</div><div class="metric-lbl">За цей місяць</div></div>
-    </div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Відвідуваність за поточний місяць</div>
-      <div style="display:flex;align-items:center;justify-content:space-around;gap:12px">
-        <svg width="120" height="120" viewBox="0 0 120 120">${pieSVG2}</svg>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#5ce0d8;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Проведено</div><div style="font-size:11px;color:var(--text2)">${conducted} · ${pct(conducted)}%</div></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#e24b4a;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Скасовано</div><div style="font-size:11px;color:var(--text2)">${cancelled} · ${pct(cancelled)}%</div></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#4a4a5a;flex-shrink:0"></div>
-            <div><div style="font-size:13px;color:var(--text)">Перенесено</div><div style="font-size:11px;color:var(--text2)">${rescheduled} · ${pct(rescheduled)}%</div></div>
-          </div>
-        </div>
-      </div>
-    </div>`;
+  // Analytics dashboard
+  renderAnalytics(appData._analyticsTab||'attendance', appData._analyticsPeriod||'month', students);
 
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
@@ -1413,6 +1344,204 @@ async function doDeleteStudent(){
   if(res.ok){appData.students=(appData.students||[]).filter(s=>s.name!==currentStudent.name);renderTeacher();goBack();toast('🗑 Видалений')}
 }
 
+// ── ANALYTICS ──
+function renderAnalytics(tab, period, students){
+  if(!students) students=appData.students||[];
+  appData._analyticsTab=tab;
+  appData._analyticsPeriod=period;
+
+  const el=document.getElementById('t-journal-list');
+  if(!el)return;
+
+  // Period boundaries
+  const now=new Date();
+  function inPeriod(dateStr, per){
+    const p=dateStr.split('.');
+    if(p.length<2)return false;
+    const d=new Date(parseInt(p[2]||now.getFullYear()),parseInt(p[1])-1,parseInt(p[0]));
+    if(per==='week'){
+      const wStart=new Date(now);wStart.setDate(now.getDate()-now.getDay()+1);wStart.setHours(0,0,0,0);
+      return d>=wStart&&d<=now;
+    }
+    if(per==='month') return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+    if(per==='quarter'){
+      const q=Math.floor(now.getMonth()/3);
+      const qStart=new Date(now.getFullYear(),q*3,1);
+      return d>=qStart&&d<=now;
+    }
+    return true;
+  }
+  function inPrevPeriod(dateStr, per){
+    const p=dateStr.split('.');
+    if(p.length<2)return false;
+    const d=new Date(parseInt(p[2]||now.getFullYear()),parseInt(p[1])-1,parseInt(p[0]));
+    if(per==='week'){
+      const wStart=new Date(now);wStart.setDate(now.getDate()-now.getDay()-6);wStart.setHours(0,0,0,0);
+      const wEnd=new Date(now);wEnd.setDate(now.getDate()-now.getDay());wEnd.setHours(23,59,59,999);
+      return d>=wStart&&d<=wEnd;
+    }
+    if(per==='month'){
+      const pm=now.getMonth()===0?11:now.getMonth()-1;
+      const py=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+      return d.getMonth()===pm&&d.getFullYear()===py;
+    }
+    if(per==='quarter'){
+      const q=Math.floor(now.getMonth()/3);
+      const pqStart=new Date(now.getFullYear(),Math.max(0,q-1)*3,1);
+      const pqEnd=new Date(now.getFullYear(),q*3,0);
+      return d>=pqStart&&d<=pqEnd;
+    }
+    return false;
+  }
+
+  const periodLabel={'week':'Тиждень','month':'Місяць','quarter':'Квартал'};
+
+  // Tab + Period switcher HTML
+  const switcherHTML=`
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button onclick="renderAnalytics('attendance','${period}',null)" style="flex:1;padding:8px;border-radius:9px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${tab==='attendance'?'var(--accent)':'var(--bg3)'};color:${tab==='attendance'?'#fff':'var(--text2)'}">📊 Відвідуваність</button>
+      <button onclick="renderAnalytics('finance','${period}',null)" style="flex:1;padding:8px;border-radius:9px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${tab==='finance'?'var(--accent)':'var(--bg3)'};color:${tab==='finance'?'#fff':'var(--text2)'}">💰 Фінанси</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      ${['week','month','quarter'].map(p=>`<button onclick="renderAnalytics('${tab}','${p}',null)" style="flex:1;padding:7px;border-radius:8px;border:none;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;background:${period===p?'var(--bg3)':'transparent'};color:${period===p?'var(--text)':'var(--text2)'};border:1px solid ${period===p?'var(--border2)':'transparent'}">${periodLabel[p]}</button>`).join('')}
+    </div>`;
+
+  if(tab==='attendance'){
+    // Current period stats
+    const allJ=students.flatMap(s=>(s.journal||[]).map(e=>({...e,sname:s.name})));
+    let conducted=0,cancelled=0,rescheduled=0;
+    for(const e of allJ){
+      if(!inPeriod(e.date,period))continue;
+      const t=e.topic||'';
+      if(t.startsWith('❌'))cancelled++;
+      else if(t.startsWith('🔄'))rescheduled++;
+      else conducted++;
+    }
+    const totalM=conducted+cancelled+rescheduled;
+    const totalAll=allJ.length;
+
+    // Pie chart
+    function pieSliceA(cx,cy,r,startA,endA,color){
+      if(endA-startA>=359.99)return`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
+      const s1=startA*Math.PI/180,e1=endA*Math.PI/180;
+      const x1=cx+r*Math.cos(s1),y1=cy+r*Math.sin(s1);
+      const x2=cx+r*Math.cos(e1),y2=cy+r*Math.sin(e1);
+      return`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${endA-startA>180?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`;
+    }
+    let pieSVG='';
+    if(totalM>0){
+      let a=-90;
+      for(const [cnt,col] of [[conducted,'#5ce0d8'],[cancelled,'#e24b4a'],[rescheduled,'#4a4a5a']]){
+        if(!cnt)continue;
+        const ang=cnt/totalM*360;
+        pieSVG+=pieSliceA(60,60,50,a,a+ang,col);a+=ang;
+      }
+    } else {
+      pieSVG=`<circle cx="60" cy="60" r="50" fill="#1e1e2a"/>`;
+    }
+    pieSVG+=`<circle cx="60" cy="60" r="28" fill="var(--bg2)"/>`;
+    pieSVG+=totalM>0?`<text x="60" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="500">${totalM}</text><text x="60" y="70" text-anchor="middle" fill="var(--text2)" font-size="9">${periodLabel[period].toLowerCase()}</text>`:`<text x="60" y="64" text-anchor="middle" fill="var(--text3)" font-size="10">Немає</text>`;
+
+    const pct=(n)=>totalM>0?Math.round(n/totalM*100):0;
+
+    el.innerHTML=switcherHTML+`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="metric-card"><div class="metric-val">${totalAll}</div><div class="metric-lbl">Всього занять</div></div>
+        <div class="metric-card"><div class="metric-val">${totalM}</div><div class="metric-lbl">За ${periodLabel[period].toLowerCase()}</div></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Відвідуваність за ${periodLabel[period].toLowerCase()}</div>
+        <div style="display:flex;align-items:center;justify-content:space-around;gap:12px">
+          <svg width="120" height="120" viewBox="0 0 120 120">${pieSVG}</svg>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#5ce0d8;flex-shrink:0"></div><div><div style="font-size:13px;color:var(--text)">Проведено</div><div style="font-size:11px;color:var(--text2)">${conducted} · ${pct(conducted)}%</div></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#e24b4a;flex-shrink:0"></div><div><div style="font-size:13px;color:var(--text)">Скасовано</div><div style="font-size:11px;color:var(--text2)">${cancelled} · ${pct(cancelled)}%</div></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#4a4a5a;flex-shrink:0"></div><div><div style="font-size:13px;color:var(--text)">Перенесено</div><div style="font-size:11px;color:var(--text2)">${rescheduled} · ${pct(rescheduled)}%</div></div></div>
+          </div>
+        </div>
+      </div>`;
+
+  } else {
+    // FINANCE tab
+    // Collect income per period
+    let curIncome=0, prevIncome=0;
+    const curByStudent={}, prevByStudent={};
+    for(const s of students){
+      const cur=s.currency||'UAH';
+      const sym=cur==='USD'?'$':cur==='EUR'?'€':'₴';
+      let c=0,p=0;
+      for(const e of (s.journal||[])){
+        const t=e.topic||'';
+        if(t.startsWith('❌')||t.startsWith('🔄'))continue;
+        if(inPeriod(e.date,period)){c+=s.price||0;}
+        if(inPrevPeriod(e.date,period)){p+=s.price||0;}
+      }
+      curIncome+=c;prevIncome+=p;
+      if(c>0||p>0) curByStudent[s.name]={cur:c,prev:p,sym};
+    }
+
+    const diff=curIncome-prevIncome;
+    const diffPct=prevIncome>0?Math.round(Math.abs(diff)/prevIncome*100):0;
+    const diffColor=diff>=0?'var(--green)':'var(--red)';
+    const diffSign=diff>=0?'+':'';
+    const prevLabel={'week':'мин. тиждень','month':'мин. місяць','quarter':'мин. квартал'};
+
+    // Bar chart: current vs previous per student
+    const students_with_data=Object.keys(curByStudent);
+    const maxVal=Math.max(...students_with_data.map(n=>Math.max(curByStudent[n].cur,curByStudent[n].prev)),1);
+    const barH=60,barW=22,gap=8,groupGap=20;
+    const chartW=students_with_data.length*(barW*2+gap+groupGap)||100;
+    let bars='',labels='';
+    students_with_data.forEach((name,i)=>{
+      const x=i*(barW*2+gap+groupGap);
+      const d=curByStudent[name];
+      const h1=Math.max(2,Math.round(d.prev/maxVal*barH));
+      const h2=Math.max(2,Math.round(d.cur/maxVal*barH));
+      bars+=`<rect x="${x}" y="${barH-h1}" width="${barW}" height="${h1}" rx="3" fill="rgba(124,111,247,.3)"/>`;
+      bars+=`<rect x="${x+barW+gap}" y="${barH-h2}" width="${barW}" height="${h2}" rx="3" fill="var(--accent)"/>`;
+      const short=name.split(' ')[0].slice(0,6);
+      labels+=`<text x="${x+barW}" y="${barH+14}" text-anchor="middle" fill="var(--text3)" font-size="9">${short}</text>`;
+    });
+    const svgChart=students_with_data.length?`<svg width="${chartW}" height="${barH+20}" viewBox="0 0 ${chartW} ${barH+20}" style="overflow:visible">${bars}${labels}</svg>`:'';
+
+    el.innerHTML=switcherHTML+`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="metric-card">
+          <div class="metric-val" style="font-size:20px">${curIncome}₴</div>
+          <div class="metric-lbl">За ${periodLabel[period].toLowerCase()}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="font-size:18px;color:${diffColor}">${diffSign}${diff}₴</div>
+          <div class="metric-lbl">Vs ${prevLabel[period]}</div>
+        </div>
+      </div>
+      ${svgChart?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Порівняння по учнях</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:3px;background:rgba(124,111,247,.3)"></div><span style="font-size:10px;color:var(--text2)">${prevLabel[period]}</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:3px;background:var(--accent)"></div><span style="font-size:10px;color:var(--text2)">Цей ${periodLabel[period].toLowerCase()}</span></div>
+        </div>
+        <div style="overflow-x:auto">${svgChart}</div>
+      </div>`:''}
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">По учнях</div>
+        ${students_with_data.length?students_with_data.map(name=>{
+          const d=curByStudent[name];
+          const sc=studentColor(name);
+          return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:7px;height:7px;border-radius:50%;background:${sc.color};flex-shrink:0"></div>
+            <div style="flex:1;font-size:13px;color:var(--text)">${name}</div>
+            <div style="text-align:right">
+              <div style="font-size:13px;font-weight:500;color:var(--text)">${d.sym}${d.cur}</div>
+              <div style="font-size:10px;color:var(--text3)">${d.sym}${d.prev} мин.</div>
+            </div>
+          </div>`;
+        }).join(''):'<div class="empty" style="padding:10px 0">Даних немає</div>'}
+      </div>`;
+  }
+}
+
+
 function showTeacherTab(tab){
   ['home','students','schedule','lessons'].forEach(t=>{
     const el=document.getElementById('t-'+t);
@@ -1871,6 +2000,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
