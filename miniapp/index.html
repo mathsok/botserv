@@ -484,7 +484,17 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="modal-handle"></div>
     <div class="modal-title">Новий учень</div>
     <div class="form-group"><label class="form-label">Ім'я учня</label><input class="form-input" id="new-student-name" placeholder="Іван Петренко"></div>
-    <div class="form-group"><label class="form-label">Ціна заняття (₴)</label><input class="form-input" id="new-student-price" placeholder="500" type="number"></div>
+    <div class="form-group">
+      <label class="form-label">Ціна заняття</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="new-student-price" placeholder="500" type="number" style="flex:1">
+        <select class="form-input" id="new-student-currency" style="width:90px;flex-shrink:0">
+          <option value="UAH">₴ UAH</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label">Дні занять</label><div id="days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div><div id="day-times"></div></div>
     <button class="btn btn-primary" onclick="addStudent()">Додати учня</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-student')">Скасувати</button>
@@ -497,12 +507,35 @@ select.form-input{appearance:none;cursor:pointer}
     <div class="modal-title">Відмітити заняття</div>
     <div class="form-group"><label class="form-label">Учень</label><select class="form-input" id="mark-student"></select></div>
     <div class="form-group"><label class="form-label">Тема заняття</label><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
+    <div class="form-group">
+      <label class="form-label">Дата заняття</label>
+      <input class="form-input" id="mark-date" type="date">
+    </div>
     <div class="form-group"><label class="form-label">Дія</label>
-      <select class="form-input" id="mark-action">
+      <select class="form-input" id="mark-action" onchange="updateMarkLessonUI()">
         <option value="done">✅ Проведено (списати баланс)</option>
         <option value="cancel">❌ Скасовано (без списання)</option>
         <option value="reschedule">🔄 Перенесено</option>
       </select>
+    </div>
+    <div id="reschedule-section" style="display:none">
+      <div style="background:var(--bg3);border-radius:var(--r2);padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Перенос заняття</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Початкова дата і час</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" id="reschedule-from-date" type="date" style="flex:1">
+            <input class="form-input" id="reschedule-from-time" type="time" style="width:100px;flex-shrink:0">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Нова дата і час</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" id="reschedule-to-date" type="date" style="flex:1">
+            <input class="form-input" id="reschedule-to-time" type="time" style="width:100px;flex-shrink:0">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Матеріали (необов'язково)</label>
@@ -638,7 +671,11 @@ const urlRole=params.get('role'),urlTid=params.get('tid'),urlName=params.get('na
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 function avatarColor(n){let h=0;for(let c of n)h+=c.charCodeAt(0);return COLORS[h%COLORS.length]}
 function today(){const d=new Date().getDay();return DAYS[d===0?6:d-1]}
-function fmtBal(b){return(b>=0?'+':'')+b+'₴'}
+function fmtBal(b, currency){
+  const sym = currency==='USD'?'$':currency==='EUR'?'€':'₴';
+  if(currency==='USD'||currency==='EUR') return (b>=0?'+':'') + sym + Math.abs(b);
+  return (b>=0?'+':'') + b + sym;
+}
 function monthShort(m){return MONTHS[parseInt(m)]||m}
 
 function toast(msg,ms=2500){
@@ -887,10 +924,13 @@ function renderTeacher(){
 function studentCardHTML(s){
   const sc=studentColor(s.name);
   const bal=s.balance;
+  const cur=s.currency||'UAH';
+  const sym=cur==='USD'?'$':cur==='EUR'?'€':'₴';
+  const balFmt=(v)=>cur==='USD'||cur==='EUR'?sym+Math.abs(v):Math.abs(v)+sym;
   let balHTML;
-  if(bal<0) balHTML=`<div class="s-badge debt">${bal}₴</div>`;
-  else if(bal>0) balHTML=`<div class="s-badge" style="background:rgba(92,224,216,.1);color:var(--green);border:1px solid rgba(92,224,216,.2)">+${bal}₴</div>`;
-  else balHTML=`<div class="s-badge zero">0₴</div>`;
+  if(bal<0) balHTML=`<div class="s-badge debt">-${balFmt(bal)}</div>`;
+  else if(bal>0) balHTML=`<div class="s-badge" style="background:rgba(92,224,216,.1);color:var(--green);border:1px solid rgba(92,224,216,.2)">+${balFmt(bal)}</div>`;
+  else balHTML=`<div class="s-badge zero">0${sym}</div>`;
   const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
   return`<div class="student-card" onclick="openStudentCard('${s.name}')">
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
@@ -939,8 +979,9 @@ function openStudentCard(name){
   const sc=studentColor(name);
   document.getElementById('sc-name').textContent=s.name;
   const bal=s.balance;
-  document.getElementById('sc-balance').textContent=fmtBal(bal);
-  document.getElementById('sc-price').textContent='Ціна: '+s.price+'₴/заняття';
+  document.getElementById('sc-balance').textContent=fmtBal(bal,s.currency||'UAH');
+  const _sym=(s.currency==='USD'?'$':s.currency==='EUR'?'€':'₴');
+  document.getElementById('sc-price').textContent='Ціна: '+(_sym==='₴'?s.price+_sym:_sym+s.price)+'/заняття';
   document.getElementById('sc-balance-hero').style.background=bal<0?'linear-gradient(135deg,#e24b4a,#f07060)':('linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)');
   document.getElementById('sc-sessions').innerHTML=(s.sessions||[]).length
     ?(s.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
@@ -1119,6 +1160,7 @@ function formatTimeInput(input){
 async function addStudent(){
   const name=document.getElementById('new-student-name').value.trim();
   const price=parseInt(document.getElementById('new-student-price').value)||0;
+  const currency=document.getElementById('new-student-currency').value||'UAH';
   if(!name){toast('Введіть ім\'я');return}
   const selectedDays=[...document.querySelectorAll('#days-picker .btn-sm-primary')].map(b=>b.dataset.day);
   if(!selectedDays.length){toast('Оберіть хоча б один день');return}
@@ -1129,7 +1171,7 @@ async function addStudent(){
     sessions.push({day,time:timeVal});
   }
   try{
-    const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,sessions});
+    const res=await api('/api/add-student','POST',{tid:appData.tid,name,price,currency,sessions});
     if(res.ok||res.student){
       if(!appData.students)appData.students=[];
       appData.students.push(res.student||{name,price,balance:0,sessions,homework:[],journal:[],links:{},u_code:res.u_code||'????',p_code:res.p_code||'????',su_code:res.su_code||'????',u_id:null,p_id:null,su_id:null});
@@ -1144,7 +1186,21 @@ function showMarkLesson(){
   document.getElementById('mark-action').value='done';
   document.getElementById('lesson-file-label').textContent='';
   document.getElementById('lesson-file-input').value='';
+  // Set default date to today in local timezone
+  const now=new Date();
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mm=String(now.getMonth()+1).padStart(2,'0');
+  const yyyy=now.getFullYear();
+  document.getElementById('mark-date').value=yyyy+'-'+mm+'-'+dd;
+  // Show/hide reschedule section
+  updateMarkLessonUI();
   openModal('modal-mark-lesson');
+}
+
+function updateMarkLessonUI(){
+  const action=document.getElementById('mark-action').value;
+  const rescheduleEl=document.getElementById('reschedule-section');
+  if(rescheduleEl) rescheduleEl.style.display=action==='reschedule'?'block':'none';
 }
 
 async function markLesson(){
@@ -1152,6 +1208,31 @@ async function markLesson(){
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
   if(!topic){toast('Введіть тему');return}
+  // Get custom date from input
+  const dateInput=document.getElementById('mark-date').value;
+  let lessonDate='';
+  if(dateInput){
+    const [y,m,d]=dateInput.split('-');
+    lessonDate=d+'.'+m+'.'+y;
+  } else {
+    const now=new Date();
+    lessonDate=String(now.getDate()).padStart(2,'0')+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+now.getFullYear();
+  }
+  // Reschedule data
+  let rescheduleData=null;
+  if(action==='reschedule'){
+    const fromDate=document.getElementById('reschedule-from-date').value;
+    const fromTime=document.getElementById('reschedule-from-time').value;
+    const toDate=document.getElementById('reschedule-to-date').value;
+    const toTime=document.getElementById('reschedule-to-time').value;
+    if(!fromDate||!fromTime||!toDate||!toTime){toast('Вкажіть дати переносу');return}
+    const [fy,fm,fd]=fromDate.split('-');
+    const [ty,tm,td]=toDate.split('-');
+    rescheduleData={
+      fromDate:fd+'.'+fm+'.'+fy, fromTime,
+      toDate:td+'.'+tm+'.'+ty, toTime
+    };
+  }
 
   // Читаємо файли ДО будь-яких запитів і зберігаємо в FormData одразу
   const lessonInput=document.getElementById('lesson-file-input');
@@ -1167,7 +1248,7 @@ async function markLesson(){
   }
 
   // Спочатку відмічаємо заняття — щоб запис в журналі існував
-  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action});
+  const res=await api('/api/mark-lesson','POST',{tid:appData.tid,name,topic,action,date:lessonDate,reschedule:rescheduleData});
   if(!res.ok){toast('Помилка');return}
 
   // Надсилаємо матеріали (журнал вже є, FormData вже готова)
@@ -1182,7 +1263,7 @@ async function markLesson(){
   }
 
   const s=(appData.students||[]).find(x=>x.name===name);
-  if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:new Date().toLocaleDateString('uk-UA'),topic,materials:[]})}
+  if(s&&action==='done'){s.balance-=s.price;s.journal=s.journal||[];s.journal.push({date:lessonDate,topic,materials:[]})}
   renderTeacher();closeModal('modal-mark-lesson');
   toast(materialsSent?'✅ Заняття відмічено! Матеріали надіслано учню.':'✅ Заняття відмічено!');
 }
@@ -1332,8 +1413,8 @@ function renderStudent(){
   if(canBal){
     heroEl.style.display='';
     const bal=d.balance??0;
-    document.getElementById('s-balance').textContent=fmtBal(bal);
-    document.getElementById('s-price-sub').textContent='Ціна заняття: '+(d.price||'—')+'₴';
+    document.getElementById('s-balance').textContent=fmtBal(bal,d.currency||'UAH');
+    const _csym=(d.currency==='USD'?'$':d.currency==='EUR'?'€':'₴');document.getElementById('s-price-sub').textContent='Ціна заняття: '+(_csym==='₴'?(d.price||'—')+_csym:_csym+(d.price||'—'));
     if(bal<0)heroEl.style.background='linear-gradient(135deg,#e24b4a,#f07060)';
     document.getElementById('s-balance-actions').innerHTML=
       (role==='parent'||role==='super'?'<button class="balance-btn" onclick="showPayModal()">💳 Поповнити</button>':'')+
@@ -1751,6 +1832,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
