@@ -826,8 +826,10 @@ function renderTeacher(){
   for(const s of students){
     for(const e of (s.journal||[])){
       const parts=e.date.split('.');
-      const d=parseInt(parts[0]),m=parseInt(parts[1]),y=parseInt(parts[2])||thisYear;
-      if(m===thisMonth&&y===thisYear) monthIncome+=s.price||0;
+      const m=parseInt(parts[1]),y=parseInt(parts[2])||thisYear;
+      const t=(e.topic||'');
+      // Only count conducted lessons, not cancelled/rescheduled
+      if(m===thisMonth&&y===thisYear&&!t.startsWith('❌')&&!t.startsWith('🔄')) monthIncome+=s.price||0;
     }
   }
   const incomeEl=document.getElementById('t-stat-income');
@@ -886,9 +888,9 @@ function renderTeacher(){
       const p=e.date.split('.');
       const m=parseInt(p[1]),y=parseInt(p[2])||thisYS;
       if(m===thisMS&&y===thisYS){
-        const topic=(e.topic||'').toLowerCase();
-        if(topic.includes('скасов')||topic.includes('cancel'))cancelled++;
-        else if(topic.includes('перенес')||topic.includes('reschedule'))rescheduled++;
+        const topic=(e.topic||'');
+        if(topic.startsWith('❌')||topic.toLowerCase().includes('скасов'))cancelled++;
+        else if(topic.startsWith('🔄')||topic.toLowerCase().includes('перенес'))rescheduled++;
         else conducted++;
       }
     }
@@ -1243,13 +1245,15 @@ async function markLesson(){
   if(!topic&&action==='done'){toast('Введіть тему');return}
 
   // Get lesson date from custom picker
-  const lessonDate = getPickerDate('mark-date-picker') || (()=>{const n=new Date();return String(n.getDate()).padStart(2,'0')+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+n.getFullYear();})();
+  const _picker=document.getElementById('mark-date-picker');
+  const lessonDate = (_picker&&_picker._day) ? (String(_picker._day).padStart(2,'0')+'.'+String(_picker._month).padStart(2,'0')+'.'+_picker._year) : (()=>{const n=new Date();return String(n.getDate()).padStart(2,'0')+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+n.getFullYear();})();
 
   // Reschedule
   let rescheduleData=null;
   if(action==='reschedule'){
-    const toDate=getPickerDate('reschedule-date-picker');
-    const toTime=getPickerTime('reschedule-date-picker');
+    const _rp=document.getElementById('reschedule-date-picker');
+    const toDate=_rp&&_rp._day?(String(_rp._day).padStart(2,'0')+'.'+String(_rp._month).padStart(2,'0')+'.'+_rp._year):'';
+    const toTime=_rp&&_rp._hour!=null?(String(_rp._hour).padStart(2,'0')+':'+String(_rp._min).padStart(2,'0')):'';
     if(!toDate){toast('Вкажіть нову дату переносу');return}
     rescheduleData={fromDate:lessonDate,fromTime:'',toDate,toTime};
   }
@@ -1867,6 +1871,8 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
 
 
 
