@@ -507,10 +507,10 @@ input[type="time"]{font-variant-numeric:tabular-nums}
     <div class="modal-handle"></div>
     <div class="modal-title">Відмітити заняття</div>
     <div class="form-group"><label class="form-label">Учень</label><select class="form-input" id="mark-student"></select></div>
-    <div class="form-group"><label class="form-label">Тема заняття</label><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
+    <div class="form-group" id="mark-topic-group"><label class="form-label">Тема заняття</label><input class="form-input" id="mark-topic" placeholder="Квадратні рівняння"></div>
     <div class="form-group">
       <label class="form-label">Дата заняття</label>
-      <input class="form-input" id="mark-date" type="date">
+      <div id="mark-date-picker"></div>
     </div>
     <div class="form-group"><label class="form-label">Дія</label>
       <select class="form-input" id="mark-action" onchange="updateMarkLessonUI()">
@@ -524,12 +524,7 @@ input[type="time"]{font-variant-numeric:tabular-nums}
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Новий час заняття</div>
         <div class="form-group" style="margin-bottom:0">
           <label class="form-label">Нова дата і час</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input class="form-input" id="reschedule-to-day" type="number" min="1" max="31" placeholder="ДД" style="width:58px;flex-shrink:0;text-align:center">
-            <span style="color:var(--text2);font-size:16px;flex-shrink:0">.</span>
-            <input class="form-input" id="reschedule-to-month" type="number" min="1" max="12" placeholder="ММ" style="width:58px;flex-shrink:0;text-align:center">
-            <input class="form-input" id="reschedule-to-time" type="time" style="flex:1">
-          </div>
+          <div id="reschedule-date-picker"></div>
         </div>
       </div>
     </div>
@@ -673,6 +668,49 @@ function fmtBal(b, currency){
   return (b>=0?'+':'') + b + sym;
 }
 function monthShort(m){return MONTHS[parseInt(m)]||m}
+
+// ── Custom Date/Time Picker ──
+function makeDateTimePicker(containerId, opts={}){
+  // opts: {showTime, label}
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const now = new Date();
+  el._day = opts.defaultDay || now.getDate();
+  el._month = opts.defaultMonth || (now.getMonth()+1);
+  el._year = opts.defaultYear || now.getFullYear();
+  el._hour = opts.defaultHour || now.getHours();
+  el._min = opts.defaultMin || 0;
+
+  function render(){
+    const dOpts = Array.from({length:31},(_,i)=>`<option value="${i+1}" ${el._day===i+1?'selected':''}>${String(i+1).padStart(2,'0')}</option>`).join('');
+    const mOpts = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'].map((m,i)=>`<option value="${i+1}" ${el._month===i+1?'selected':''}>${String(i+1).padStart(2,'0')} ${m}</option>`).join('');
+    const yOpts = [2024,2025,2026,2027].map(y=>`<option value="${y}" ${el._year===y?'selected':''}>${y}</option>`).join('');
+    const hOpts = Array.from({length:24},(_,i)=>`<option value="${i}" ${el._hour===i?'selected':''}>${String(i).padStart(2,'0')}</option>`).join('');
+    const minOpts = [0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}" ${el._min===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('');
+    el.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select class="form-input" style="width:70px" onchange="document.getElementById('${containerId}')._day=+this.value">${dOpts}</select>
+      <select class="form-input" style="width:100px" onchange="document.getElementById('${containerId}')._month=+this.value">${mOpts}</select>
+      <select class="form-input" style="width:80px" onchange="document.getElementById('${containerId}')._year=+this.value">${yOpts}</select>
+      ${opts.showTime?`<span style="color:var(--text2);font-size:18px">·</span>
+      <select class="form-input" style="width:66px" onchange="document.getElementById('${containerId}')._hour=+this.value">${hOpts}</select>
+      <span style="color:var(--text2)">:</span>
+      <select class="form-input" style="width:66px" onchange="document.getElementById('${containerId}')._min=+this.value">${minOpts}</select>`:''}
+    </div>`;
+  }
+  render();
+}
+
+function getPickerDate(containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return '';
+  return String(el._day).padStart(2,'0')+'.'+String(el._month).padStart(2,'0')+'.'+el._year;
+}
+
+function getPickerTime(containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return '';
+  return String(el._hour).padStart(2,'0')+':'+String(el._min).padStart(2,'0');
+}
 
 function toast(msg,ms=2500){
   const el=document.getElementById('toast');
@@ -1182,11 +1220,9 @@ function showMarkLesson(){
   document.getElementById('mark-action').value='done';
   document.getElementById('lesson-file-label').textContent='';
   document.getElementById('lesson-file-input').value='';
-  // Set default date to today in local timezone
-  const now=new Date();
-  const dd=String(now.getDate()).padStart(2,'0');
-  const mm=String(now.getMonth()+1).padStart(2,'0');
-  document.getElementById('mark-date').value=now.getFullYear()+'-'+mm+'-'+dd;
+  // Init date pickers
+  makeDateTimePicker('mark-date-picker');
+  makeDateTimePicker('reschedule-date-picker',{showTime:true});
   // Show/hide reschedule section
   updateMarkLessonUI();
   openModal('modal-mark-lesson');
@@ -1196,13 +1232,15 @@ function updateMarkLessonUI(){
   const action=document.getElementById('mark-action').value;
   const rescheduleEl=document.getElementById('reschedule-section');
   if(rescheduleEl) rescheduleEl.style.display=action==='reschedule'?'block':'none';
+  const topicGrp=document.getElementById('mark-topic-group');
+  if(topicGrp) topicGrp.style.display=action==='done'?'':'none';
 }
 
 async function markLesson(){
   const name=document.getElementById('mark-student').value;
   const topic=document.getElementById('mark-topic').value.trim();
   const action=document.getElementById('mark-action').value;
-  if(!topic){toast('Введіть тему');return}
+  if(!topic&&action==='done'){toast('Введіть тему');return}
   // Get lesson date from date picker
   const dateVal=document.getElementById('mark-date').value;
   let lessonDate='';
@@ -1824,6 +1862,8 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
 
 
 
