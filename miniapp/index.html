@@ -646,6 +646,14 @@ input[type="time"]{font-variant-numeric:tabular-nums}
         </select>
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">Учасники групи</label>
+      <div id="group-members-list" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="group-member-input" placeholder="Ім'я учасника" style="flex:1">
+        <button class="btn-sm btn-sm-primary" onclick="addGroupMemberField()" style="padding:0 16px;font-size:20px;border-radius:var(--r2)">+</button>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label">Дні занять</label><div id="group-days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div><div id="group-day-times"></div></div>
     <button class="btn btn-primary" onclick="addGroup()">Створити групу</button>
     <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-group')">Скасувати</button>
@@ -1975,9 +1983,12 @@ function showAddMenu(){
 }
 
 function showAddGroup(){
+  _groupMembers=[];
   document.getElementById('new-group-name').value='';
   document.getElementById('new-group-price').value='';
   document.getElementById('new-group-currency').value='UAH';
+  document.getElementById('group-members-list').innerHTML='';
+  document.getElementById('group-member-input').value='';
   document.getElementById('group-days-picker').innerHTML=DAYS.map((d,i)=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleGroupDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
   document.getElementById('group-day-times').innerHTML='';
   openModal('modal-add-group');
