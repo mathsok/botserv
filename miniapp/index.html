@@ -297,7 +297,7 @@ input[type="time"]{font-variant-numeric:tabular-nums}
   <div id="t-home" style="display:flex;flex-direction:column;min-height:100vh">
     <div class="t-app-header">
       <div><div class="t-app-name" id="t-teacher-name">Кабінет вчителя</div><div class="t-app-sub" id="t-teacher-sub"></div></div>
-      <button class="add-pill" onclick="showAddStudent()">+ Учень</button>
+      <button class="add-pill" onclick="showAddMenu()">+ Додати</button>
     </div>
     <div class="screen-body">
       <div class="metrics-grid">
@@ -325,7 +325,7 @@ input[type="time"]{font-variant-numeric:tabular-nums}
   </div>
   <!-- STUDENTS TAB -->
   <div id="t-students" style="display:none;flex-direction:column;min-height:100vh">
-    <div class="t-app-header"><div class="t-app-name">Учні</div><button class="add-pill" onclick="showAddStudent()">+ Додати</button></div>
+    <div class="t-app-header"><div class="t-app-name">Учні</div><button class="add-pill" onclick="showAddMenu()">+ Додати</button></div>
     <div class="screen-body" style="padding:0 14px 14px"><div id="t-students-list"></div></div>
     <nav class="bottom-nav">
       <button class="nav-btn" onclick="showTeacherTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Головна</span></button>
@@ -629,6 +629,48 @@ input[type="time"]{font-variant-numeric:tabular-nums}
   </div>
 </div>
 
+<!-- ADD GROUP MODAL -->
+<div class="modal-overlay" id="modal-add-group">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Нова група</div>
+    <div class="form-group"><label class="form-label">Назва групи</label><input class="form-input" id="new-group-name" placeholder="Група А · Алгебра"></div>
+    <div class="form-group">
+      <label class="form-label">Ціна за учня</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="new-group-price" placeholder="300" type="number" style="flex:1">
+        <select class="form-input" id="new-group-currency" style="width:90px;flex-shrink:0">
+          <option value="UAH">₴ UAH</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Дні занять</label><div id="group-days-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div><div id="group-day-times"></div></div>
+    <button class="btn btn-primary" onclick="addGroup()">Створити групу</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-group')">Скасувати</button>
+  </div>
+</div>
+
+<!-- ADD MENU MODAL -->
+<div class="modal-overlay" id="modal-add-menu">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Додати</div>
+    <div class="action-card" onclick="closeModal('modal-add-menu');showAddStudent()" style="margin-bottom:8px">
+      <div class="action-icon" style="background:rgba(124,111,247,.1)"><svg viewBox="0 0 24 24" stroke="#7c6ff7" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div><div class="action-label">Учень</div><div class="action-sub">Один учень, індивідуальні заняття</div></div>
+      <div class="chevron-r">›</div>
+    </div>
+    <div class="action-card" onclick="closeModal('modal-add-menu');showAddGroup()">
+      <div class="action-icon" style="background:rgba(92,224,216,.1)"><svg viewBox="0 0 24 24" stroke="#5ce0d8" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div><div class="action-label">Група</div><div class="action-sub">Кілька учнів, спільні заняття</div></div>
+      <div class="chevron-r">›</div>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-menu')">Скасувати</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-notes">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -811,7 +853,20 @@ function renderTeacher(){
   document.getElementById('t-teacher-sub').textContent=(appData.subject||'')+(students.length?' · '+students.length+' учнів':'');
 
   // Stats
-  const todayL=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===t).map(x=>({...x,name:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
+  // Build today lessons - groups take priority
+  const processedGroups=new Set();
+  const todayLRaw=[];
+  for(const s of students){
+    if(s.group){
+      if(processedGroups.has(s.group))continue;
+      processedGroups.add(s.group);
+      const g=(appData.groups||{})[s.group];
+      if(g)(g.sessions||[]).filter(x=>x.day===t).forEach(x=>todayLRaw.push({...x,name:s.group,bal:0,isGroup:true}));
+    } else {
+      (s.sessions||[]).filter(x=>x.day===t).forEach(x=>todayLRaw.push({...x,name:s.name,bal:s.balance}));
+    }
+  }
+  const todayL=todayLRaw.sort((a,b)=>a.time.localeCompare(b.time));
   const debts=students.filter(s=>s.balance<0);
   document.getElementById('t-stat-students').textContent=students.length;
   document.getElementById('t-stat-today').textContent=todayL.length;
@@ -861,30 +916,62 @@ function renderTeacher(){
   }
   document.getElementById('t-schedule-preview').innerHTML=schedHTML||'<div class="empty" style="padding:20px 0">Занять немає</div>';
 
-  // Students list
-  document.getElementById('t-students-list').innerHTML=students.length?students.map(s=>{
-    const sc=studentColor(s.name);
-    const bal=s.balance;
-    const balHTML=bal<0?`<div class="s-badge debt">${bal}₴</div>`:`<div class="s-badge zero">0₴</div>`;
-    const sched=(s.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
-    return`<div class="student-card" onclick="openStudentCard('${s.name}')">
+  // Students list - groups first, then individual students
+  const groups = appData.groups || {};
+  const groupNames = Object.keys(groups);
+  const soloStudents = students.filter(s=>!s.group);
+  let listHTML = '';
+
+  // Group cards
+  for(const gname of groupNames){
+    const g = groups[gname];
+    const sc = studentColor(gname);
+    const members = g.members||[];
+    const sched = (g.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
+    const sym = g.currency==='USD'?'$':g.currency==='EUR'?'€':'₴';
+    const totalPer = (g.price||0);
+    const totalBal = members.reduce((sum,mname)=>{
+      const s = students.find(x=>x.name===mname);
+      return sum+(s?.balance||0);
+    },0);
+    const balColor = totalBal<0?'var(--red)':totalBal>0?'var(--green)':'var(--text3)';
+    listHTML += `<div class="student-card" onclick="openGroupCard('${gname}')" style="border:1px solid ${sc.color}22">
       <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
-      <div class="s-avatar" style="background:${sc.bg};color:${sc.color}">${initials(s.name)}</div>
-      <div class="s-info"><div class="s-name">${s.name}</div><div class="s-sched">${sched||'Розклад не встановлено'}</div></div>
-      ${balHTML}
+      <div class="s-avatar" style="background:${sc.bg};color:${sc.color};font-size:18px">👥</div>
+      <div class="s-info">
+        <div class="s-name">${gname}</div>
+        <div class="s-sched">${members.length} учасників · ${sched||'Розклад не встановлено'}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:2px">${sym==='₴'?totalPer+sym:sym+totalPer}/учн.</div>
+        <div style="font-size:12px;font-weight:500;color:${balColor}">${totalBal>0?'+':''+(totalBal===0?'0':totalBal)}${sym==='₴'?sym:''}</div>
+      </div>
     </div>`;
-  }).join(''):'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
+  }
+
+  // Solo students
+  for(const s of soloStudents){
+    listHTML += studentCardHTML(s);
+  }
+
+  document.getElementById('t-students-list').innerHTML = listHTML||'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
 
   // Students preview (first 3 for home tab)
   const previewEl=document.getElementById('t-students-preview');
-  if(previewEl)previewEl.innerHTML=students.length?students.slice(0,3).map(s=>studentCardHTML(s)).join(''):'<div class="empty" style="padding:16px 0">Учнів немає</div>';
+  const _grps=appData.groups||[];
+  const _gNames=new Set(_grps.flatMap(g=>g.members||[]));
+  const _solo=students.filter(s=>!_gNames.has(s.name));
+  const _previewItems=[..._grps.map(g=>groupCardHTML(g)),..._solo.map(s=>studentCardHTML(s))].slice(0,3);
+  if(previewEl)previewEl.innerHTML=_previewItems.length?_previewItems.join(''):'<div class="empty" style="padding:16px 0">Учнів та груп немає</div>';
 
   // Analytics dashboard
   renderAnalytics(appData._analyticsTab||'attendance', appData._analyticsPeriod||'month', students);
 
+  // Update student/group selectors
+  const allItems=[...(appData.groups||[]).map(g=>({id:g.group_id,label:'👥 '+g.name})),...students.map(s=>({id:s.name,label:s.name}))];
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
-    if(sel)sel.innerHTML=students.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+    if(sel)sel.innerHTML=allItems.map(item=>`<option value="${item.id}">${item.label}</option>`).join('');
   });
 }
 
@@ -940,6 +1027,7 @@ function renderWeekSchedule(students){
 }
 
 function openStudentCard(name){
+  currentGroup=null;
   const s=(appData.students||[]).find(x=>x.name===name);
   if(!s)return;
   currentStudent=s;
@@ -1294,6 +1382,7 @@ async function subBalance(){
 
 function showEditPrice(){document.getElementById('edit-price-val').value=currentStudent.price;openModal('modal-edit-price')}
 async function editPrice(){
+  if(currentGroup){await saveGroupPrice();return;}
   const price=parseInt(document.getElementById('edit-price-val').value)||0;
   const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,price});
   if(res.ok){currentStudent.price=price;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-price');toast('✅ Ціну змінено')}
@@ -1328,6 +1417,7 @@ async function saveSchedule(){
   const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
   const time=document.getElementById('edit-schedule-time').value;
   const sessions=days.map(day=>({day,time}));
+  if(currentGroup){await saveGroupSchedule();return;}
   const res=await api('/api/edit-student','POST',{tid:appData.tid,name:currentStudent.name,sessions});
   if(res.ok){currentStudent.sessions=sessions;openStudentCard(currentStudent.name);renderTeacher();closeModal('modal-edit-schedule');toast('✅ Розклад оновлено')}
   else toast('Помилка');
@@ -1877,9 +1967,458 @@ async function submitPay(){
   }catch(e){toast('Помилка зʼєднання')}
 }
 
+
+// ── GROUPS ──
+
+function showAddMenu(){
+  openModal('modal-add-menu');
+}
+
+function showAddGroup(){
+  document.getElementById('new-group-name').value='';
+  document.getElementById('new-group-price').value='';
+  document.getElementById('new-group-currency').value='UAH';
+  document.getElementById('group-days-picker').innerHTML=DAYS.map((d,i)=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleGroupDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
+  document.getElementById('group-day-times').innerHTML='';
+  openModal('modal-add-group');
+}
+
+function toggleGroupDay(btn){
+  btn.classList.toggle('btn-sm-primary');
+  btn.classList.toggle('btn-sm-ghost');
+  const day=btn.dataset.day;
+  const timesEl=document.getElementById('group-day-times');
+  const existing=document.getElementById('gtime-row-'+day);
+  if(btn.classList.contains('btn-sm-primary')){
+    const row=document.createElement('div');
+    row.id='gtime-row-'+day;
+    row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    const di=DAYS.indexOf(day);
+    row.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:28px">${DAY_SHORT[di]}</div><input class="form-input" id="gtime-input-${day}" type="text" placeholder="16:00" maxlength="5" oninput="formatTimeInput(this)" style="flex:1;padding:10px 12px">`;
+    timesEl.appendChild(row);
+  } else {
+    if(existing)existing.remove();
+  }
+}
+
+async function addGroup(){
+  const name=document.getElementById('new-group-name').value.trim();
+  const price=parseInt(document.getElementById('new-group-price').value)||0;
+  const currency=document.getElementById('new-group-currency').value||'UAH';
+  if(!name){toast('Введіть назву групи');return}
+  const selectedDays=[...document.querySelectorAll('#group-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  if(!selectedDays.length){toast('Оберіть хоча б один день');return}
+  const sessions=[];
+  for(const day of selectedDays){
+    const timeVal=(document.getElementById('gtime-input-'+day)?.value||'').trim();
+    if(!timeVal||!/^\d{1,2}:\d{2}$/.test(timeVal)){toast('Введіть час для '+day);return}
+    sessions.push({day,time:timeVal});
+  }
+  try{
+    const res=await api('/api/add-group','POST',{tid:appData.tid,name,price,currency,sessions});
+    if(res.ok){
+      if(!appData.groups)appData.groups=[];
+      appData.groups.push({...res.group,group_id:res.group_id});
+      renderTeacher();
+      closeModal('modal-add-group');
+      toast('✅ Група "'+name+'" створена!');
+    } else toast('Помилка: '+(res.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+function groupCardHTML(g){
+  const sc=studentColor(g.name);
+  const memberCount=g.members?.length||0;
+  const sched=(g.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
+  const cur=g.currency||'UAH';
+  const sym=cur==='USD'?'$':cur==='EUR'?'€':'₴';
+  const priceStr=cur==='USD'||cur==='EUR'?sym+(g.price||0):(g.price||0)+sym;
+  return`<div class="student-card" onclick="openGroupCard('${g.group_id}')">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
+    <div class="s-avatar" style="background:${sc.bg};color:${sc.color};font-size:10px;font-weight:700">${memberCount}<br>учн.</div>
+    <div class="s-info">
+      <div class="s-name">${g.name}</div>
+      <div class="s-sched">${sched||'Розклад не встановлено'} · ${priceStr}/учень</div>
+    </div>
+    <div style="font-size:18px;color:var(--text3)">›</div>
+  </div>`;
+}
+
+let currentGroup=null;
+
+async function openGroupCard(groupId){
+  try{
+    const res=await fetch('/api/group/'+appData.tid+'/'+groupId);
+    const g=await res.json();
+    currentGroup={...g,group_id:groupId};
+    showGroupScreen(g,groupId);
+  }catch(e){toast('Помилка завантаження')}
+}
+
+function showGroupScreen(g,groupId){
+  // Build group screen dynamically
+  const sc=studentColor(g.name);
+  const cur=g.currency||'UAH';
+  const sym=cur==='USD'?'$':cur==='EUR'?'€':'₴';
+  const priceStr=cur==='USD'||cur==='EUR'?sym+(g.price||0):(g.price||0)+sym;
+  const sched=(g.sessions||[]).map(x=>x.day+' '+x.time).join(', ');
+  const members=g.members_data||[];
+  const totalIncome=(g.members?.length||0)*(g.price||0);
+
+  // Update student card screen content
+  document.getElementById('sc-name').textContent=g.name;
+  document.getElementById('sc-balance').textContent=(members.length)+'  учнів · '+priceStr+'/учень';
+  document.getElementById('sc-price').textContent='Разом за заняття: '+(cur==='USD'||cur==='EUR'?sym+totalIncome:totalIncome+sym);
+  document.getElementById('sc-balance-hero').style.background='linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)';
+
+  // Override balance actions
+  document.getElementById('sc-balance-actions').innerHTML=`
+    <button class="balance-btn" onclick="showEditGroupSchedule()">📅 Розклад</button>
+    <button class="balance-btn" onclick="showEditGroupPrice()">💰 Ціна</button>
+    <button class="balance-btn" onclick="showAddMemberModal('${groupId}')">+ Учень</button>`;
+
+  // Sessions
+  document.getElementById('sc-sessions').innerHTML=(g.sessions||[]).length
+    ?(g.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
+    :'<div style="color:var(--text3);font-size:13px">Розклад не встановлено</div>';
+
+  // Stats
+  const statsEl=document.getElementById('sc-stats');
+  if(statsEl) statsEl.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="metric-card"><div class="metric-val">${members.length}</div><div class="metric-lbl">Учасників</div></div>
+      <div class="metric-card"><div class="metric-val">${(g.journal||[]).length}</div><div class="metric-lbl">Занять</div></div>
+    </div>`;
+
+  // Members list
+  const journalEl=document.getElementById('sc-journal');
+  if(journalEl) journalEl.innerHTML=`
+    <div style="margin-bottom:8px">
+      ${members.map(m=>{
+        const msc=studentColor(m.name);
+        const bal=m.balance||0;
+        const balColor=bal<0?'var(--red)':bal>0?'var(--green)':'var(--text3)';
+        const balStr=bal<0?bal+'₴':bal>0?'+'+bal+'₴':'0₴';
+        return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openGroupMemberCard('${m.name}','${groupId}')">
+          <div style="width:34px;height:34px;border-radius:9px;background:${msc.bg};color:${msc.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${initials(m.name)}</div>
+          <div style="flex:1"><div style="font-size:13px;color:var(--text)">${m.name}</div></div>
+          <div style="font-size:12px;font-weight:500;color:${balColor}">${balStr}</div>
+          <span onclick="event.stopPropagation();removeMemberFromGroup('${m.name}','${groupId}')" style="color:var(--text3);font-size:16px;padding:0 4px;cursor:pointer">×</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // Codes - hide for group
+  document.getElementById('sc-codes').innerHTML='<div style="color:var(--text3);font-size:13px">Коди налаштовуються для кожного учасника окремо</div>';
+
+  // Links
+  document.getElementById('sc-links').innerHTML='<div style="color:var(--text3);font-size:13px">Посилання — у кожного учасника</div>';
+
+  // Journal
+  renderStudentCardJournal({name:g.name,journal:g.journal||[]});
+
+  // Change header delete action
+  document.querySelector('#screen-student-card .header-action').textContent='Видалити групу';
+  document.querySelector('#screen-student-card .header-action').onclick=()=>deleteGroup(groupId);
+
+  screenStack.push(document.querySelector('.screen.active')?.id||'screen-teacher');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-student-card').classList.add('active');
+}
+
+async function openGroupMemberCard(name, groupId){
+  const s=(appData.students||[]).find(x=>x.name===name);
+  if(!s){
+    // Fetch fresh
+    try{
+      const res=await fetch('/api/student/'+appData.tid+'/'+encodeURIComponent(name));
+      const data=await res.json();
+      openStudentCard(name);
+    }catch(e){toast('Помилка')}
+    return;
+  }
+  openStudentCard(name);
+}
+
+function showAddMemberModal(groupId){
+  const name=prompt("Введіть ім'я нового учасника:");
+  if(!name||!name.trim())return;
+  addGroupMember(groupId,name.trim());
+}
+
+async function addGroupMember(groupId,name){
+  try{
+    const res=await api('/api/add-group-member','POST',{tid:appData.tid,group_id:groupId,name});
+    if(res.ok){
+      if(!appData.students)appData.students=[];
+      if(!appData.students.find(s=>s.name===name)){
+        appData.students.push({...res.student,name});
+      }
+      await openGroupCard(groupId);
+      renderTeacher();
+      toast('✅ '+name+' доданий до групи!');
+    } else toast('Помилка: '+(res.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+async function removeMemberFromGroup(name,groupId){
+  if(!confirm('Видалити '+name+' з групи?'))return;
+  try{
+    await api('/api/remove-group-member','POST',{tid:appData.tid,group_id:groupId,name});
+    await openGroupCard(groupId);
+    renderTeacher();
+    toast('🗑 '+name+' видалений з групи');
+  }catch(e){toast('Помилка')}
+}
+
+async function deleteGroup(groupId){
+  if(!confirm('Видалити групу "'+(currentGroup?.name||'')+'"?'))return;
+  try{
+    await api('/api/delete-group','POST',{tid:appData.tid,group_id:groupId});
+    appData.groups=(appData.groups||[]).filter(g=>g.group_id!==groupId);
+    renderTeacher();
+    goBack();
+    toast('🗑 Групу видалено');
+  }catch(e){toast('Помилка')}
+}
+
+function showEditGroupSchedule(){
+  if(!currentGroup)return;
+  const dp=document.getElementById('edit-days-picker');
+  const selectedDays=(currentGroup.sessions||[]).map(s=>s.day);
+  dp.innerHTML=DAYS.map((d,i)=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
+  const time=(currentGroup.sessions||[])[0]?.time||'16:00';
+  document.getElementById('edit-schedule-time').value=time;
+  openModal('modal-edit-schedule');
+}
+
+async function saveGroupSchedule(){
+  if(!currentGroup)return;
+  const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  const time=document.getElementById('edit-schedule-time').value;
+  const sessions=days.map(day=>({day,time}));
+  try{
+    await api('/api/edit-group','POST',{tid:appData.tid,group_id:currentGroup.group_id,sessions});
+    currentGroup.sessions=sessions;
+    await openGroupCard(currentGroup.group_id);
+    renderTeacher();
+    closeModal('modal-edit-schedule');
+    toast('✅ Розклад оновлено');
+  }catch(e){toast('Помилка')}
+}
+
+function showEditGroupPrice(){
+  document.getElementById('edit-price-val').value=currentGroup?.price||0;
+  openModal('modal-edit-price');
+}
+
+async function saveGroupPrice(){
+  if(!currentGroup)return;
+  const price=parseInt(document.getElementById('edit-price-val').value)||0;
+  try{
+    await api('/api/edit-group','POST',{tid:appData.tid,group_id:currentGroup.group_id,price});
+    currentGroup.price=price;
+    await openGroupCard(currentGroup.group_id);
+    renderTeacher();
+    closeModal('modal-edit-price');
+    toast('✅ Ціну оновлено');
+  }catch(e){toast('Помилка')}
+}
+
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
 });
+
+// ── GROUPS ──
+
+let _groupMembers = [];
+
+function showAddGroup(){
+  _groupMembers = [];
+  document.getElementById('group-name').value = '';
+  document.getElementById('group-price').value = '';
+  document.getElementById('group-currency').value = 'UAH';
+  document.getElementById('group-members-list').innerHTML = '';
+  document.getElementById('group-member-input').value = '';
+  // Init days picker
+  const dp = document.getElementById('group-days-picker');
+  dp.innerHTML = DAYS.map((d,i)=>`<button class="btn-sm btn-sm-ghost" data-day="${d}" onclick="toggleGroupDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
+  document.getElementById('group-day-times').innerHTML = '';
+  openModal('modal-add-group');
+}
+
+function toggleGroupDay(btn){
+  btn.classList.toggle('btn-sm-primary');
+  btn.classList.toggle('btn-sm-ghost');
+  const day = btn.dataset.day;
+  const timesEl = document.getElementById('group-day-times');
+  const existing = document.getElementById('group-time-row-'+day);
+  if(btn.classList.contains('btn-sm-primary')){
+    const row = document.createElement('div');
+    row.id = 'group-time-row-'+day;
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    const di = DAYS.indexOf(day);
+    row.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--text2);min-width:28px">${DAY_SHORT[di]}</div><input class="form-input" id="group-time-input-${day}" type="text" placeholder="16:00" maxlength="5" oninput="formatTimeInput(this)" style="flex:1;padding:10px 12px">`;
+    timesEl.appendChild(row);
+  } else {
+    if(existing) existing.remove();
+  }
+}
+
+function addGroupMemberField(){
+  const input = document.getElementById('group-member-input');
+  const name = input.value.trim();
+  if(!name){toast('Введіть ім'я');return}
+  if(_groupMembers.includes(name)){toast('Вже є в списку');return}
+  _groupMembers.push(name);
+  input.value = '';
+  renderGroupMembersList();
+}
+
+function renderGroupMembersList(){
+  document.getElementById('group-members-list').innerHTML = _groupMembers.map((m,i)=>
+    `<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:6px">
+      <div style="flex:1;font-size:13px">${m}</div>
+      <span onclick="_groupMembers.splice(${i},1);renderGroupMembersList()" style="color:var(--red);cursor:pointer;font-size:16px">×</span>
+    </div>`
+  ).join('');
+}
+
+async function createGroup(){
+  const name = document.getElementById('group-name').value.trim();
+  const price = parseInt(document.getElementById('group-price').value)||0;
+  const currency = document.getElementById('group-currency').value;
+  if(!name){toast('Введіть назву групи');return}
+  if(_groupMembers.length === 0){toast('Додайте хоча б одного учасника');return}
+  const selectedDays = [...document.querySelectorAll('#group-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
+  if(!selectedDays.length){toast('Оберіть хоча б один день');return}
+  const sessions = [];
+  for(const day of selectedDays){
+    const timeVal = (document.getElementById('group-time-input-'+day)?.value||'').trim();
+    if(!timeVal||!/^\d{1,2}:\d{2}$/.test(timeVal)){toast('Введіть час для '+day);return}
+    sessions.push({day, time:timeVal});
+  }
+  try{
+    const res = await api('/api/add-group','POST',{
+      tid: appData.tid, name, price, currency, sessions,
+      members: _groupMembers.map(m=>({name:m}))
+    });
+    if(res.ok){
+      // Reload teacher data
+      const data = await api('/api/teacher/'+appData.tid);
+      appData = {...appData, ...data, tid: appData.tid};
+      renderTeacher();
+      closeModal('modal-add-group');
+      toast('✅ Група "'+name+'" створена! ('+_groupMembers.length+' учасників)');
+    } else toast('Помилка: '+(res.error||'невідома'));
+  }catch(e){toast('Помилка зʼєднання')}
+}
+
+function openGroupCard(groupName){
+  const groups = appData.groups || {};
+  const g = groups[groupName];
+  if(!g) return;
+  currentGroup = {name: groupName, ...g};
+
+  document.getElementById('gc-name').textContent = '👥 '+groupName;
+
+  const sc = studentColor(groupName);
+  document.getElementById('gc-sessions').innerHTML = (g.sessions||[]).length
+    ? g.sessions.map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
+    : '<div style="color:var(--text3);font-size:13px">Розклад не встановлено</div>';
+
+  const sym = g.currency==='USD'?'$':g.currency==='EUR'?'€':'₴';
+  const members = g.members||[];
+  const totalPrice = (g.price||0) * members.length;
+  document.getElementById('gc-price-info').innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:13px;color:var(--text2)">За учня</span>
+        <span style="font-size:13px;font-weight:500;color:var(--text)">${sym==='₴'?g.price+sym:sym+g.price}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-size:13px;color:var(--text2)">За групу (${members.length} уч.)</span>
+        <span style="font-size:14px;font-weight:600;color:${sc.color}">${sym==='₴'?totalPrice+sym:sym+totalPrice}</span>
+      </div>
+    </div>`;
+
+  document.getElementById('gc-members').innerHTML = members.length
+    ? members.map(mname=>{
+        const s = (appData.students||[]).find(x=>x.name===mname)||{};
+        const bal = s.balance||0;
+        const balColor = bal<0?'var(--red)':bal>0?'var(--green)':'var(--text3)';
+        const msc = studentColor(mname);
+        return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="closeModal('modal-group-card');openStudentCard('${mname}')">
+          <div style="width:32px;height:32px;border-radius:8px;background:${msc.bg};color:${msc.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials(mname)}</div>
+          <div style="flex:1;font-size:13px;color:var(--text)">${mname}</div>
+          <div style="font-size:12px;font-weight:500;color:${balColor}">${bal>0?'+':''+(bal===0?'0':bal)}${sym==='₴'?sym:''}</div>
+          <span onclick="event.stopPropagation();removeGroupMember('${mname}')" style="color:var(--text3);font-size:16px;padding:2px 4px;cursor:pointer">×</span>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:8px 0">Учасників немає</div>';
+
+  openModal('modal-group-card');
+}
+
+async function removeGroupMember(mname){
+  if(!confirm('Видалити '+mname+' з групи?'))return;
+  const res = await api('/api/remove-group-member','POST',{tid:appData.tid,group:currentGroup.name,name:mname});
+  if(res.ok){
+    const data = await api('/api/teacher/'+appData.tid);
+    appData = {...appData,...data,tid:appData.tid};
+    renderTeacher();
+    openGroupCard(currentGroup.name);
+    toast('🗑 '+mname+' видалений з групи');
+  }
+}
+
+async function deleteGroup(){
+  if(!confirm('Видалити групу "'+currentGroup.name+'" і всіх її учасників?'))return;
+  const res = await api('/api/delete-group','POST',{tid:appData.tid,name:currentGroup.name});
+  if(res.ok){
+    const data = await api('/api/teacher/'+appData.tid);
+    appData = {...appData,...data,tid:appData.tid};
+    renderTeacher();
+    closeModal('modal-group-card');
+    toast('🗑 Групу видалено');
+  }
+}
+
+function showAddGroupMember(){
+  const name = prompt('Ім'я нового учасника:');
+  if(!name||!name.trim())return;
+  api('/api/add-group-member','POST',{tid:appData.tid,group:currentGroup.name,name:name.trim()}).then(res=>{
+    if(res.ok){
+      api('/api/teacher/'+appData.tid).then(data=>{
+        appData={...appData,...data,tid:appData.tid};
+        renderTeacher();
+        openGroupCard(currentGroup.name);
+        toast('✅ '+name+' доданий до групи. Коди: учень '+res.u_code+', батьки '+res.p_code);
+      });
+    } else toast('Помилка');
+  });
+}
+
+function showEditGroupSchedule(){
+  closeModal('modal-group-card');
+  // Reuse existing edit schedule logic but for group
+  const dp = document.getElementById('edit-days-picker');
+  const selectedDays = (currentGroup.sessions||[]).map(s=>s.day);
+  dp.innerHTML = DAYS.map((d,i)=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
+  const time = (currentGroup.sessions||[])[0]?.time||'16:00';
+  document.getElementById('edit-schedule-time').value = time;
+  // Override save to edit group instead
+  window._editingGroup = true;
+  openModal('modal-edit-schedule');
+}
+
+function showEditGroupPrice(){
+  document.getElementById('edit-price-val').value = currentGroup.price;
+  window._editingGroup = true;
+  closeModal('modal-group-card');
+  openModal('modal-edit-price');
+}
+
 
 // ── STUDENT OWN LINKS ──
 function showStudentLinksModal(){
@@ -2000,6 +2539,12 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
+
+
+
+
 
 
 
