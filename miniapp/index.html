@@ -968,7 +968,7 @@ function renderTeacher(){
   renderAnalytics(appData._analyticsTab||'attendance', appData._analyticsPeriod||'month', students);
 
   // Update student/group selectors
-  const allItems=[...(appData.groups||[]).map(g=>({id:g.group_id,label:'👥 '+g.name})),...students.map(s=>({id:s.name,label:s.name}))];
+  const allItems=[...Object.keys(appData.groups||{}).map(gn=>({id:'__group__'+gn,label:'👥 '+gn})),...students.filter(s=>!s.group).map(s=>({id:s.name,label:s.name}))];
   ['mark-student','hw-student'].forEach(id=>{
     const sel=document.getElementById(id);
     if(sel)sel.innerHTML=allItems.map(item=>`<option value="${item.id}">${item.label}</option>`).join('');
@@ -2046,189 +2046,7 @@ function groupCardHTML(g){
 
 let currentGroup=null;
 
-async function openGroupCard(groupId){
-  try{
-    const res=await fetch('/api/group/'+appData.tid+'/'+groupId);
-    const g=await res.json();
-    currentGroup={...g,group_id:groupId};
-    showGroupScreen(g,groupId);
-  }catch(e){toast('Помилка завантаження')}
-}
-
-function showGroupScreen(g,groupId){
-  // Build group screen dynamically
-  const sc=studentColor(g.name);
-  const cur=g.currency||'UAH';
-  const sym=cur==='USD'?'$':cur==='EUR'?'€':'₴';
-  const priceStr=cur==='USD'||cur==='EUR'?sym+(g.price||0):(g.price||0)+sym;
-  const sched=(g.sessions||[]).map(x=>x.day+' '+x.time).join(', ');
-  const members=g.members_data||[];
-  const totalIncome=(g.members?.length||0)*(g.price||0);
-
-  // Update student card screen content
-  document.getElementById('sc-name').textContent=g.name;
-  document.getElementById('sc-balance').textContent=(members.length)+'  учнів · '+priceStr+'/учень';
-  document.getElementById('sc-price').textContent='Разом за заняття: '+(cur==='USD'||cur==='EUR'?sym+totalIncome:totalIncome+sym);
-  document.getElementById('sc-balance-hero').style.background='linear-gradient(135deg,'+sc.color+'22,'+sc.color+'11)';
-
-  // Override balance actions
-  document.getElementById('sc-balance-actions').innerHTML=`
-    <button class="balance-btn" onclick="showEditGroupSchedule()">📅 Розклад</button>
-    <button class="balance-btn" onclick="showEditGroupPrice()">💰 Ціна</button>
-    <button class="balance-btn" onclick="showAddMemberModal('${groupId}')">+ Учень</button>`;
-
-  // Sessions
-  document.getElementById('sc-sessions').innerHTML=(g.sessions||[]).length
-    ?(g.sessions||[]).map(x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:500;color:var(--green);min-width:48px">${x.time}</div><div style="font-size:13px;color:var(--text)">${x.day}</div></div>`).join('')
-    :'<div style="color:var(--text3);font-size:13px">Розклад не встановлено</div>';
-
-  // Stats
-  const statsEl=document.getElementById('sc-stats');
-  if(statsEl) statsEl.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="metric-card"><div class="metric-val">${members.length}</div><div class="metric-lbl">Учасників</div></div>
-      <div class="metric-card"><div class="metric-val">${(g.journal||[]).length}</div><div class="metric-lbl">Занять</div></div>
-    </div>`;
-
-  // Members list
-  const journalEl=document.getElementById('sc-journal');
-  if(journalEl) journalEl.innerHTML=`
-    <div style="margin-bottom:8px">
-      ${members.map(m=>{
-        const msc=studentColor(m.name);
-        const bal=m.balance||0;
-        const balColor=bal<0?'var(--red)':bal>0?'var(--green)':'var(--text3)';
-        const balStr=bal<0?bal+'₴':bal>0?'+'+bal+'₴':'0₴';
-        return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openGroupMemberCard('${m.name}','${groupId}')">
-          <div style="width:34px;height:34px;border-radius:9px;background:${msc.bg};color:${msc.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${initials(m.name)}</div>
-          <div style="flex:1"><div style="font-size:13px;color:var(--text)">${m.name}</div></div>
-          <div style="font-size:12px;font-weight:500;color:${balColor}">${balStr}</div>
-          <span onclick="event.stopPropagation();removeMemberFromGroup('${m.name}','${groupId}')" style="color:var(--text3);font-size:16px;padding:0 4px;cursor:pointer">×</span>
-        </div>`;
-      }).join('')}
-    </div>`;
-
-  // Codes - hide for group
-  document.getElementById('sc-codes').innerHTML='<div style="color:var(--text3);font-size:13px">Коди налаштовуються для кожного учасника окремо</div>';
-
-  // Links
-  document.getElementById('sc-links').innerHTML='<div style="color:var(--text3);font-size:13px">Посилання — у кожного учасника</div>';
-
-  // Journal
-  renderStudentCardJournal({name:g.name,journal:g.journal||[]});
-
-  // Change header delete action
-  document.querySelector('#screen-student-card .header-action').textContent='Видалити групу';
-  document.querySelector('#screen-student-card .header-action').onclick=()=>deleteGroup(groupId);
-
-  screenStack.push(document.querySelector('.screen.active')?.id||'screen-teacher');
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-student-card').classList.add('active');
-}
-
-async function openGroupMemberCard(name, groupId){
-  const s=(appData.students||[]).find(x=>x.name===name);
-  if(!s){
-    // Fetch fresh
-    try{
-      const res=await fetch('/api/student/'+appData.tid+'/'+encodeURIComponent(name));
-      const data=await res.json();
-      openStudentCard(name);
-    }catch(e){toast('Помилка')}
-    return;
-  }
-  openStudentCard(name);
-}
-
-function showAddMemberModal(groupId){
-  const name=prompt("Введіть ім'я нового учасника:");
-  if(!name||!name.trim())return;
-  addGroupMember(groupId,name.trim());
-}
-
-async function addGroupMember(groupId,name){
-  try{
-    const res=await api('/api/add-group-member','POST',{tid:appData.tid,group_id:groupId,name});
-    if(res.ok){
-      if(!appData.students)appData.students=[];
-      if(!appData.students.find(s=>s.name===name)){
-        appData.students.push({...res.student,name});
-      }
-      await openGroupCard(groupId);
-      renderTeacher();
-      toast('✅ '+name+' доданий до групи!');
-    } else toast('Помилка: '+(res.error||'невідома'));
-  }catch(e){toast('Помилка зʼєднання')}
-}
-
-async function removeMemberFromGroup(name,groupId){
-  if(!confirm('Видалити '+name+' з групи?'))return;
-  try{
-    await api('/api/remove-group-member','POST',{tid:appData.tid,group_id:groupId,name});
-    await openGroupCard(groupId);
-    renderTeacher();
-    toast('🗑 '+name+' видалений з групи');
-  }catch(e){toast('Помилка')}
-}
-
-async function deleteGroup(groupId){
-  if(!confirm('Видалити групу "'+(currentGroup?.name||'')+'"?'))return;
-  try{
-    await api('/api/delete-group','POST',{tid:appData.tid,group_id:groupId});
-    appData.groups=(appData.groups||[]).filter(g=>g.group_id!==groupId);
-    renderTeacher();
-    goBack();
-    toast('🗑 Групу видалено');
-  }catch(e){toast('Помилка')}
-}
-
-function showEditGroupSchedule(){
-  if(!currentGroup)return;
-  const dp=document.getElementById('edit-days-picker');
-  const selectedDays=(currentGroup.sessions||[]).map(s=>s.day);
-  dp.innerHTML=DAYS.map((d,i)=>`<button class="btn-sm ${selectedDays.includes(d)?'btn-sm-primary':'btn-sm-ghost'}" data-day="${d}" onclick="toggleDay(this)" style="font-size:12px">${DAY_SHORT[i]}</button>`).join('');
-  const time=(currentGroup.sessions||[])[0]?.time||'16:00';
-  document.getElementById('edit-schedule-time').value=time;
-  openModal('modal-edit-schedule');
-}
-
-async function saveGroupSchedule(){
-  if(!currentGroup)return;
-  const days=[...document.querySelectorAll('#edit-days-picker .btn-sm-primary')].map(b=>b.dataset.day);
-  const time=document.getElementById('edit-schedule-time').value;
-  const sessions=days.map(day=>({day,time}));
-  try{
-    await api('/api/edit-group','POST',{tid:appData.tid,group_id:currentGroup.group_id,sessions});
-    currentGroup.sessions=sessions;
-    await openGroupCard(currentGroup.group_id);
-    renderTeacher();
-    closeModal('modal-edit-schedule');
-    toast('✅ Розклад оновлено');
-  }catch(e){toast('Помилка')}
-}
-
-function showEditGroupPrice(){
-  document.getElementById('edit-price-val').value=currentGroup?.price||0;
-  openModal('modal-edit-price');
-}
-
-async function saveGroupPrice(){
-  if(!currentGroup)return;
-  const price=parseInt(document.getElementById('edit-price-val').value)||0;
-  try{
-    await api('/api/edit-group','POST',{tid:appData.tid,group_id:currentGroup.group_id,price});
-    currentGroup.price=price;
-    await openGroupCard(currentGroup.group_id);
-    renderTeacher();
-    closeModal('modal-edit-price');
-    toast('✅ Ціну оновлено');
-  }catch(e){toast('Помилка')}
-}
-
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
-});
-
+async 
 // ── GROUPS ──
 
 let _groupMembers = [];
@@ -2268,7 +2086,7 @@ function toggleGroupDay(btn){
 function addGroupMemberField(){
   const input = document.getElementById('group-member-input');
   const name = input.value.trim();
-  if(!name){toast('Введіть ім'я');return}
+  if(!name){toast("Введіть імя");return}
   if(_groupMembers.includes(name)){toast('Вже є в списку');return}
   _groupMembers.push(name);
   input.value = '';
@@ -2385,7 +2203,7 @@ async function deleteGroup(){
 }
 
 function showAddGroupMember(){
-  const name = prompt('Ім'я нового учасника:');
+  const name = prompt('Введіть імя нового учасника:');
   if(!name||!name.trim())return;
   api('/api/add-group-member','POST',{tid:appData.tid,group:currentGroup.name,name:name.trim()}).then(res=>{
     if(res.ok){
@@ -2539,6 +2357,12 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
+
+
+
+
+
 
 
 
