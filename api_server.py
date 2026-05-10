@@ -41,7 +41,10 @@ def teacher_to_response(tid, tdata):
     students = []
     for sname, sdata in tdata.get("students", {}).items():
         students.append({**sdata, "name": sname})
-    return {"tid": tid, "name": tdata.get("name",""), "subject": tdata.get("subject",""), "students": students, "links": tdata.get("links",{})}
+    groups = []
+    for gid, gdata in tdata.get("groups", {}).items():
+        groups.append({**gdata, "group_id": gid})
+    return {"tid": tid, "name": tdata.get("name",""), "subject": tdata.get("subject",""), "students": students, "groups": groups, "links": tdata.get("links",{})}
 
 cors = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 
@@ -151,11 +154,55 @@ async def mark_lesson(request):
     body = await request.json()
     db = load_db()
     tid = str(body["tid"])
-    name = body["name"]
+    name = body["name"]  # could be student name or group_id
     topic = body.get("topic","")
     action = body.get("action","done")
     custom_date = body.get("date","")
     reschedule = body.get("reschedule",None)
+    is_group = name.startswith("g_")
+    if is_group:
+        g = db["teachers"].get(tid,{}).get("groups",{}).get(name)
+        if not g:
+            return web.Response(text=json.dumps({"error":"group not found"}), status=404, content_type="application/json", headers=cors)
+        # Process each member
+        from datetime import datetime
+        date_str = custom_date if custom_date else datetime.now().strftime("%d.%m.%Y")
+        results = []
+        for mname in g.get("members",[]):
+            s = db["teachers"].get(tid,{}).get("students",{}).get(mname)
+            if not s: continue
+            if action == "done":
+                s["balance"] -= s.get("price", g["price"])
+                s.setdefault("journal",[]).append({"date":date_str,"topic":topic,"materials":[]})
+            elif action == "cancel":
+                s.setdefault("journal",[]).append({"date":date_str,"topic":"❌ Скасовано: "+topic,"materials":[]})
+            elif action == "reschedule" and reschedule:
+                s.setdefault("journal",[]).append({"date":date_str,"topic":"🔄 Перенесено: "+topic,"reschedule":reschedule,"materials":[]})
+            results.append({"name":mname,"balance":s.get("balance",0)})
+        # Also add to group journal
+        if action == "done":
+            g.setdefault("journal",[]).append({"date":date_str,"topic":topic,"materials":[]})
+        save_db(db)
+        # Notify all members
+        async with aiohttp_client.ClientSession() as session:
+            for mname in g.get("members",[]):
+                s = db["teachers"].get(tid,{}).get("students",{}).get(mname,{})
+                u_id = s.get("u_id") or s.get("su_id")
+                p_id = s.get("p_id")
+                for nid in [i for i in [u_id,p_id] if i]:
+                    try:
+                        if action=="done":
+                            cur=s.get("currency","UAH");sym="$" if cur=="USD" else "€" if cur=="EUR" else "₴"
+                            bal=s.get("balance",0);bal_str=(sym+str(abs(bal))) if cur in ("USD","EUR") else (str(bal)+sym)
+                            msg="✅ Заняття відмічено!\n📅 "+date_str+"\n📖 "+topic+"\n💳 Баланс: "+bal_str
+                        elif action=="cancel":
+                            msg="❌ Заняття "+date_str+" скасовано"
+                        elif action=="reschedule" and reschedule:
+                            msg="🔄 Заняття перенесено!\n📅 З: "+reschedule.get("fromDate","")+"\n📅 На: "+reschedule.get("toDate","")+" "+reschedule.get("toTime","")
+                        else: continue
+                        await session.post("https://api.telegram.org/bot"+BOT_TOKEN+"/sendMessage",json={"chat_id":nid,"text":msg})
+                    except: pass
+        return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
     s = db["teachers"].get(tid,{}).get("students",{}).get(name)
     if not s:
         return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
@@ -214,6 +261,7 @@ async def mark_lesson(request):
         except Exception as e:
             print("[CANCEL] notify error:", e)
 
+    return web.Response(text=json.dumps({"ok":True,"balance":s.get("balance",0)}), content_type="application/json", headers=cors)
 async def send_hw(request):
     body = await request.json()
     db = load_db()
@@ -647,6 +695,257 @@ async def delete_student_own_link(request):
         save_db(db)
     return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
 
+
+async def add_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    if tid not in db["teachers"]:
+        return web.Response(text=json.dumps({"error":"teacher not found"}), status=404, content_type="application/json", headers=cors)
+    import random as rnd
+    group_id = "g_" + str(rnd.randint(10000,99999))
+    while group_id in db["teachers"][tid].get("groups",{}):
+        group_id = "g_" + str(rnd.randint(10000,99999))
+    group = {
+        "name": body.get("name",""),
+        "subject": body.get("subject",""),
+        "price": body.get("price",0),
+        "currency": body.get("currency","UAH"),
+        "sessions": body.get("sessions",[]),
+        "members": [],
+        "homework": [],
+        "journal": []
+    }
+    db["teachers"][tid].setdefault("groups",{})[group_id] = group
+    save_db(db)
+    return web.Response(text=json.dumps({"ok":True,"group_id":group_id,"group":group}), content_type="application/json", headers=cors)
+
+async def edit_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_id = body["group_id"]
+    g = db["teachers"].get(tid,{}).get("groups",{}).get(group_id)
+    if not g:
+        return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
+    if "price" in body: g["price"] = body["price"]
+    if "sessions" in body: g["sessions"] = body["sessions"]
+    if "name" in body: g["name"] = body["name"]
+    if "currency" in body: g["currency"] = body["currency"]
+    save_db(db)
+    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
+
+async def delete_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_id = body["group_id"]
+    groups = db["teachers"].get(tid,{}).get("groups",{})
+    if group_id in groups:
+        # Remove group_id from all member students
+        for sname in groups[group_id].get("members",[]):
+            s = db["teachers"].get(tid,{}).get("students",{}).get(sname)
+            if s: s.pop("group_id", None)
+        del groups[group_id]
+        save_db(db)
+    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
+
+async def add_group_member(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_id = body["group_id"]
+    name = body["name"]
+    g = db["teachers"].get(tid,{}).get("groups",{}).get(group_id)
+    if not g:
+        return web.Response(text=json.dumps({"error":"group not found"}), status=404, content_type="application/json", headers=cors)
+    # Create student if not exists
+    students = db["teachers"][tid].setdefault("students",{})
+    if name not in students:
+        codes = get_existing_codes(db)
+        u_code = new_code(codes); codes.add(u_code)
+        p_code = new_code(codes); codes.add(p_code)
+        su_code = new_code(codes)
+        students[name] = {
+            "price": g["price"], "currency": g.get("currency","UAH"),
+            "balance": 0, "sessions": g["sessions"],
+            "homework": [], "journal": [], "links": {},
+            "u_code": u_code, "u_id": None,
+            "p_code": p_code, "p_id": None,
+            "su_code": su_code, "su_id": None,
+            "group_id": group_id
+        }
+    else:
+        students[name]["group_id"] = group_id
+    if name not in g["members"]:
+        g["members"].append(name)
+    save_db(db)
+    s = students[name]
+    return web.Response(text=json.dumps({"ok":True,"student":{**s,"name":name},"u_code":s["u_code"],"p_code":s["p_code"],"su_code":s["su_code"]}), content_type="application/json", headers=cors)
+
+async def remove_group_member(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_id = body["group_id"]
+    name = body["name"]
+    g = db["teachers"].get(tid,{}).get("groups",{}).get(group_id)
+    if g and name in g["members"]:
+        g["members"].remove(name)
+    s = db["teachers"].get(tid,{}).get("students",{}).get(name)
+    if s: s.pop("group_id", None)
+    save_db(db)
+    return web.Response(text=json.dumps({"ok":True}), content_type="application/json", headers=cors)
+
+async def get_group(request):
+    tid = request.match_info["tid"]
+    group_id = request.match_info["group_id"]
+    db = load_db()
+    g = db["teachers"].get(tid,{}).get("groups",{}).get(group_id)
+    if not g:
+        return web.Response(text=json.dumps({"error":"not found"}), status=404, content_type="application/json", headers=cors)
+    # Include member student data
+    members_data = []
+    for name in g.get("members",[]):
+        s = db["teachers"].get(tid,{}).get("students",{}).get(name,{})
+        members_data.append({**s,"name":name})
+    return web.Response(text=json.dumps({**g,"group_id":group_id,"members_data":members_data}, ensure_ascii=False), content_type="application/json", headers=cors)
+
+
+async def add_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_name = body["name"]
+    price = body.get("price", 0)
+    currency = body.get("currency", "UAH")
+    sessions = body.get("sessions", [])
+    members_raw = body.get("members", [])  # list of {name, ...}
+
+    if tid not in db["teachers"]:
+        return web.Response(text=json.dumps({"error": "teacher not found"}), status=404, content_type="application/json", headers=cors)
+
+    codes = get_existing_codes(db)
+    added_members = []
+
+    for m in members_raw:
+        mname = m.get("name", "").strip()
+        if not mname:
+            continue
+        u_code = new_code(codes); codes.add(u_code)
+        p_code = new_code(codes); codes.add(p_code)
+        su_code = new_code(codes); codes.add(su_code)
+        student = {
+            "price": price, "currency": currency, "balance": 0,
+            "sessions": sessions, "homework": [], "journal": [], "links": {},
+            "u_code": u_code, "u_id": None,
+            "p_code": p_code, "p_id": None,
+            "su_code": su_code, "su_id": None,
+            "group": group_name
+        }
+        db["teachers"][tid]["students"][mname] = student
+        added_members.append({"name": mname, "u_code": u_code, "p_code": p_code, "su_code": su_code})
+
+    # Store group metadata
+    if "groups" not in db["teachers"][tid]:
+        db["teachers"][tid]["groups"] = {}
+    db["teachers"][tid]["groups"][group_name] = {
+        "price": price, "currency": currency, "sessions": sessions,
+        "members": [m["name"] for m in added_members]
+    }
+
+    save_db(db)
+    return web.Response(text=json.dumps({"ok": True, "members": added_members}, ensure_ascii=False), content_type="application/json", headers=cors)
+
+
+async def edit_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_name = body["name"]
+    t = db["teachers"].get(tid, {})
+    g = t.get("groups", {}).get(group_name)
+    if not g:
+        return web.Response(text=json.dumps({"error": "not found"}), status=404, content_type="application/json", headers=cors)
+
+    if "price" in body:
+        g["price"] = body["price"]
+        for mname in g.get("members", []):
+            if mname in t.get("students", {}):
+                t["students"][mname]["price"] = body["price"]
+    if "sessions" in body:
+        g["sessions"] = body["sessions"]
+        for mname in g.get("members", []):
+            if mname in t.get("students", {}):
+                t["students"][mname]["sessions"] = body["sessions"]
+    if "currency" in body:
+        g["currency"] = body["currency"]
+        for mname in g.get("members", []):
+            if mname in t.get("students", {}):
+                t["students"][mname]["currency"] = body["currency"]
+
+    save_db(db)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+
+
+async def delete_group(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_name = body["name"]
+    t = db["teachers"].get(tid, {})
+    g = t.get("groups", {}).get(group_name)
+    if g:
+        for mname in g.get("members", []):
+            t.get("students", {}).pop(mname, None)
+        t.get("groups", {}).pop(group_name, None)
+        save_db(db)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+
+
+async def add_group_member(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_name = body["group"]
+    mname = body["name"].strip()
+    t = db["teachers"].get(tid, {})
+    g = t.get("groups", {}).get(group_name)
+    if not g or not mname:
+        return web.Response(text=json.dumps({"error": "not found"}), status=404, content_type="application/json", headers=cors)
+
+    codes = get_existing_codes(db)
+    u_code = new_code(codes); codes.add(u_code)
+    p_code = new_code(codes); codes.add(p_code)
+    su_code = new_code(codes)
+
+    t["students"][mname] = {
+        "price": g["price"], "currency": g.get("currency", "UAH"), "balance": 0,
+        "sessions": g["sessions"], "homework": [], "journal": [], "links": {},
+        "u_code": u_code, "u_id": None,
+        "p_code": p_code, "p_id": None,
+        "su_code": su_code, "su_id": None,
+        "group": group_name
+    }
+    g["members"].append(mname)
+    save_db(db)
+    return web.Response(text=json.dumps({"ok": True, "u_code": u_code, "p_code": p_code, "su_code": su_code}), content_type="application/json", headers=cors)
+
+
+async def remove_group_member(request):
+    body = await request.json()
+    db = load_db()
+    tid = str(body["tid"])
+    group_name = body["group"]
+    mname = body["name"]
+    t = db["teachers"].get(tid, {})
+    g = t.get("groups", {}).get(group_name)
+    if g:
+        g["members"] = [m for m in g.get("members", []) if m != mname]
+        t.get("students", {}).pop(mname, None)
+        save_db(db)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json", headers=cors)
+
 app = web.Application(client_max_size=50*1024*1024)
 app.router.add_route("OPTIONS", "/{path_info:.*}", options_handler)
 app.router.add_get("/", handle_index)
@@ -676,6 +975,17 @@ app.router.add_post("/api/add-note", add_note)
 app.router.add_post("/api/delete-note", delete_note)
 app.router.add_post("/api/add-student-own-link", add_student_own_link)
 app.router.add_post("/api/delete-student-own-link", delete_student_own_link)
+app.router.add_post("/api/add-group", add_group)
+app.router.add_post("/api/edit-group", edit_group)
+app.router.add_post("/api/delete-group", delete_group)
+app.router.add_post("/api/add-group-member", add_group_member)
+app.router.add_post("/api/remove-group-member", remove_group_member)
+app.router.add_get("/api/group/{tid}/{group_id}", get_group)
+app.router.add_post("/api/add-group", add_group)
+app.router.add_post("/api/edit-group", edit_group)
+app.router.add_post("/api/delete-group", delete_group)
+app.router.add_post("/api/add-group-member", add_group_member)
+app.router.add_post("/api/remove-group-member", remove_group_member)
 app.router.add_static("/miniapp", STATIC_DIR)
 
 if __name__ == "__main__":
