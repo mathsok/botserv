@@ -911,7 +911,9 @@ function renderTeacher(){
 
   let schedHTML='';
   for(const day of days3){
-    const ls=students.flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance}))).sort((a,b)=>a.time.localeCompare(b.time));
+    const groupSessions=groupsList.flatMap(g=>(g.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:'👥 '+(g.name||g.group_id),bal:0,isGroup:true})));
+    const studentSessions=students.filter(s=>!groupMemberNames.has(s.name)).flatMap(s=>(s.sessions||[]).filter(x=>x.day===day).map(x=>({...x,sname:s.name,bal:s.balance})));
+    const ls=[...groupSessions,...studentSessions].sort((a,b)=>a.time.localeCompare(b.time));
     if(!ls.length)continue;
     const isToday=day===t;
     schedHTML+=`<div class="day-block">
@@ -925,52 +927,36 @@ function renderTeacher(){
   document.getElementById('t-schedule-preview').innerHTML=schedHTML||'<div class="empty" style="padding:20px 0">Занять немає</div>';
 
   // Students list - groups first, then individual students
-  const groups = appData.groups || {};
-  const groupNames = Object.keys(groups);
-  const soloStudents = students.filter(s=>!s.group);
+  const groupsList = Array.isArray(appData.groups) ? appData.groups : Object.entries(appData.groups||{}).map(([gid,g])=>({...g,group_id:gid,name:g.name||gid}));
+  const groupMemberNames = new Set(groupsList.flatMap(g=>g.members||[]));
+  const soloStudents = students.filter(s=>!groupMemberNames.has(s.name)&&!s.group_id);
   let listHTML = '';
-
-  // Group cards
-  for(const gname of groupNames){
-    const g = groups[gname];
-    const sc = studentColor(gname);
-    const members = g.members||[];
+  for(const g of groupsList){
+    const gid = g.group_id||g.name;
+    const sc = studentColor(g.name||gid);
+    const memberCount = (g.members||[]).length;
     const sched = (g.sessions||[]).map(x=>DAY_SHORT[DAYS.indexOf(x.day)]+' '+x.time).join(' · ');
-    const sym = g.currency==='USD'?'$':g.currency==='EUR'?'€':'₴';
-    const totalPer = (g.price||0);
-    const totalBal = members.reduce((sum,mname)=>{
-      const s = students.find(x=>x.name===mname);
-      return sum+(s?.balance||0);
-    },0);
-    const balColor = totalBal<0?'var(--red)':totalBal>0?'var(--green)':'var(--text3)';
-    listHTML += `<div class="student-card" onclick="openGroupCard('${gname}')" style="border:1px solid ${sc.color}22">
+    const cur = g.currency||'UAH';
+    const sym = cur==='USD'?'$':cur==='EUR'?'€':'₴';
+    const priceStr = cur==='USD'||cur==='EUR'?sym+(g.price||0):(g.price||0)+sym;
+    listHTML += `<div class="student-card" onclick="openGroupCard('${gid}')">
       <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${sc.color}"></div>
       <div class="s-avatar" style="background:${sc.bg};color:${sc.color};font-size:18px">👥</div>
       <div class="s-info">
-        <div class="s-name">${gname}</div>
-        <div class="s-sched">${members.length} учасників · ${sched||'Розклад не встановлено'}</div>
+        <div class="s-name">${g.name||gid}</div>
+        <div class="s-sched">${memberCount} учасників · ${sched||'Розклад не встановлено'}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:2px">${sym==='₴'?totalPer+sym:sym+totalPer}/учн.</div>
-        <div style="font-size:12px;font-weight:500;color:${balColor}">${totalBal>0?'+':''+(totalBal===0?'0':totalBal)}${sym==='₴'?sym:''}</div>
-      </div>
+      <div style="font-size:12px;color:var(--text2)">${priceStr}/учень</div>
     </div>`;
   }
-
-  // Solo students
   for(const s of soloStudents){
     listHTML += studentCardHTML(s);
   }
-
   document.getElementById('t-students-list').innerHTML = listHTML||'<div class="empty"><div class="empty-icon">👥</div>Учнів немає</div>';
 
   // Students preview (first 3 for home tab)
   const previewEl=document.getElementById('t-students-preview');
-  const _grps=appData.groups||[];
-  const _gNames=new Set(_grps.flatMap(g=>g.members||[]));
-  const _solo=students.filter(s=>!_gNames.has(s.name));
-  const _previewItems=[..._grps.map(g=>groupCardHTML(g)),..._solo.map(s=>studentCardHTML(s))].slice(0,3);
-  if(previewEl)previewEl.innerHTML=_previewItems.length?_previewItems.join(''):'<div class="empty" style="padding:16px 0">Учнів та груп немає</div>';
+  if(previewEl)previewEl.innerHTML=soloStudents.slice(0,3).map(s=>studentCardHTML(s)).join('')||'<div class="empty" style="padding:16px 0">Учнів немає</div>';
 
   // Analytics dashboard
   renderAnalytics(appData._analyticsTab||'attendance', appData._analyticsPeriod||'month', students);
@@ -2367,6 +2353,7 @@ async function deleteNote(noteId){
     renderNotes();
   }catch(e){toast('Помилка')}
 }
+
 
 
 
